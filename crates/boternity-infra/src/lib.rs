@@ -4,4 +4,7 @@
 //! SQLite storage, OS keychain integration, filesystem adapters, and cryptographic
 //! operations (AES-256-GCM vault, SHA-256 hashing).
 
+pub mod crypto;
+pub mod keychain;
+pub mod secret;
 pub mod sqlite;

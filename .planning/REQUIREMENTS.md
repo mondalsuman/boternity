@@ -208,13 +208,121 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (Populated during roadmap creation) | | |
+| IDEN-01 | Phase 1 | Pending |
+| IDEN-02 | Phase 1 | Pending |
+| IDEN-03 | Phase 1 | Pending |
+| IDEN-04 | Phase 1 | Pending |
+| IDEN-05 | Phase 1 | Pending |
+| IDEN-06 | Phase 1 | Pending |
+| IDEN-07 | Phase 10 | Pending |
+| IDEN-08 | Phase 10 | Pending |
+| MEMO-01 | Phase 2 | Pending |
+| MEMO-02 | Phase 3 | Pending |
+| MEMO-03 | Phase 3 | Pending |
+| MEMO-04 | Phase 3 | Pending |
+| MEMO-05 | Phase 10 | Pending |
+| MEMO-06 | Phase 3 | Pending |
+| AGNT-01 | Phase 2 | Pending |
+| AGNT-02 | Phase 5 | Pending |
+| AGNT-03 | Phase 5 | Pending |
+| AGNT-04 | Phase 5 | Pending |
+| AGNT-05 | Phase 5 | Pending |
+| AGNT-06 | Phase 5 | Pending |
+| AGNT-07 | Phase 7 | Pending |
+| AGNT-08 | Phase 7 | Pending |
+| AGNT-09 | Phase 7 | Pending |
+| AGNT-10 | Phase 7 | Pending |
+| AGNT-11 | Phase 7 | Pending |
+| AGNT-12 | Phase 5 | Pending |
+| AGNT-13 | Phase 5 | Pending |
+| SKIL-01 | Phase 6 | Pending |
+| SKIL-02 | Phase 6 | Pending |
+| SKIL-03 | Phase 6 | Pending |
+| SKIL-04 | Phase 6 | Pending |
+| SKIL-05 | Phase 6 | Pending |
+| SKIL-06 | Phase 7 | Pending |
+| SKIL-07 | Phase 6 | Pending |
+| SKIL-08 | Phase 6 | Pending |
+| SKIL-09 | Phase 6 | Pending |
+| SKIL-10 | Phase 6 | Pending |
+| WKFL-01 | Phase 8 | Pending |
+| WKFL-02 | Phase 8 | Pending |
+| WKFL-03 | Phase 8 | Pending |
+| WKFL-04 | Phase 8 | Pending |
+| WKFL-05 | Phase 8 | Pending |
+| WKFL-06 | Phase 8 | Pending |
+| WKFL-07 | Phase 8 | Pending |
+| WKFL-08 | Phase 8 | Pending |
+| WKFL-09 | Phase 8 | Pending |
+| LLMP-01 | Phase 2 | Pending |
+| LLMP-02 | Phase 2 | Pending |
+| LLMP-03 | Phase 3 | Pending |
+| LLMP-04 | Phase 3 | Pending |
+| LLMP-05 | Phase 3 | Pending |
+| LLMP-06 | Phase 3 | Pending |
+| LLMP-07 | Phase 3 | Pending |
+| LLMP-08 | Phase 3 | Pending |
+| LLMP-09 | Phase 3 | Pending |
+| LLMP-10 | Phase 3 | Pending |
+| LLMP-11 | Phase 2 | Pending |
+| MCPI-01 | Phase 9 | Pending |
+| MCPI-02 | Phase 9 | Pending |
+| MCPI-03 | Phase 9 | Pending |
+| MCPI-04 | Phase 9 | Pending |
+| MCPI-05 | Phase 9 | Pending |
+| CHAT-01 | Phase 4 | Pending |
+| CHAT-02 | Phase 4 | Pending |
+| CHAT-03 | Phase 4 | Pending |
+| CHAT-04 | Phase 2 | Pending |
+| CHAT-05 | Phase 2 | Pending |
+| CHAT-06 | Phase 8 | Pending |
+| OBSV-01 | Phase 2 | Pending |
+| OBSV-02 | Phase 5 | Pending |
+| OBSV-03 | Phase 10 | Pending |
+| OBSV-04 | Phase 10 | Pending |
+| OBSV-05 | Phase 10 | Pending |
+| OBSV-06 | Phase 5 | Pending |
+| OBSV-07 | Phase 2 | Pending |
+| CLII-01 | Phase 1 | Pending |
+| CLII-02 | Phase 6 | Pending |
+| CLII-03 | Phase 2 | Pending |
+| CLII-04 | Phase 10 | Pending |
+| CLII-05 | Phase 8 | Pending |
+| CLII-06 | Phase 7 | Pending |
+| APIL-01 | Phase 1 | Pending |
+| APIL-02 | Phase 10 | Pending |
+| APIL-03 | Phase 10 | Pending |
+| SECU-01 | Phase 1 | Pending |
+| SECU-02 | Phase 1 | Pending |
+| SECU-03 | Phase 1 | Pending |
+| SECU-04 | Phase 1 | Pending |
+| SECU-05 | Phase 1 | Pending |
+| SECU-06 | Phase 6 | Pending |
+| SECU-07 | Phase 6 | Pending |
+| WEBU-01 | Phase 4 | Pending |
+| WEBU-02 | Phase 4 | Pending |
+| WEBU-03 | Phase 4 | Pending |
+| WEBU-04 | Phase 10 | Pending |
+| WEBU-05 | Phase 8 | Pending |
+| WEBU-06 | Phase 10 | Pending |
+| WEBU-07 | Phase 10 | Pending |
+| WEBU-08 | Phase 10 | Pending |
+| WEBU-09 | Phase 4 | Pending |
+| WEBU-10 | Phase 4 | Pending |
+| INFR-01 | Phase 1 | Pending |
+| INFR-02 | Phase 3 | Pending |
+| INFR-03 | Phase 5 | Pending |
+| INFR-04 | Phase 10 | Pending |
+| INFR-05 | Phase 4 | Pending |
+| INFR-06 | Phase 1 | Pending |
+| INFR-07 | Phase 1 | Pending |
+| INFR-08 | Phase 1 | Pending |
 
 **Coverage:**
-- v1 requirements: 89 total
-- Mapped to phases: 0 (pending roadmap)
-- Unmapped: 89
+- v1 requirements: 109 total (corrected from initial count of 89)
+- Mapped to phases: 109
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-10*
-*Last updated: 2026-02-10 after initial definition*
+*Last updated: 2026-02-10 after roadmap creation*

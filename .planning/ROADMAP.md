@@ -1,0 +1,234 @@
+# Roadmap: Boternity
+
+## Overview
+
+Boternity is built in 10 phases following the dependency chain: foundation types and traits first, then single-agent chat with one LLM provider, expanding to multi-provider with persistent memory, layering on the web UI and fleet dashboard, adding hierarchical agent orchestration with the event bus, building the skill system with WASM sandboxing, delivering the interactive builder agent, composing workflows and pipelines, integrating MCP bidirectionally, and finishing with full observability dashboards, cost controls, and platform polish. Each phase delivers a coherent, verifiable capability that unblocks the next. Security constraints (SOUL.md immutability, budget enforcement, memory poisoning prevention, MCP sanitization) are addressed in the phase where their attack surface first appears.
+
+## Phases
+
+**Phase Numbering:**
+- Integer phases (1, 2, 3): Planned milestone work
+- Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
+
+Decimal phases appear between their surrounding integers in numeric order.
+
+- [ ] **Phase 1: Foundation + Bot Identity** - Monorepo scaffold, crate structure, SQLite storage, bot CRUD with immutable SOUL.md, secrets vault, basic CLI and REST API
+- [ ] **Phase 2: Single-Agent Chat + LLM** - LLM provider abstraction, Anthropic Claude integration, streaming chat via CLI, session memory, chat persistence, structured logging
+- [ ] **Phase 3: Multi-Provider + Memory** - Additional LLM providers with fallback chains, long-term vector memory, shared memory with trust partitioning, per-bot storage
+- [ ] **Phase 4: Web UI Core + Fleet Dashboard** - React app scaffold, chat interface with streaming, fleet dashboard, soul editor with version history, PWA foundation
+- [ ] **Phase 5: Agent Hierarchy + Event System** - Sub-agent spawning (sequential + parallel), depth cap enforcement, message passing, event bus, WebSocket live updates, budget enforcement
+- [ ] **Phase 6: Skill System + WASM Sandbox** - Skill definition and execution, local skills, WASM sandbox for untrusted skills, registry discovery, permission model, trust tiers
+- [ ] **Phase 7: Builder System** - Universal builder agent, CLI wizard, web builder bot, adaptive question flow, skill creation and attachment via builder
+- [ ] **Phase 8: Workflows + Pipelines** - YAML workflow engine, visual builder, SDK, triggers (manual/cron/event), bot-to-bot communication, workflow composition
+- [ ] **Phase 9: MCP Integration** - MCP tool consumption, bot-as-MCP-server exposure, MCP bot management interface, tool sanitization, MCP authentication
+- [ ] **Phase 10: Observability + Cost + Polish** - Visual trace explorer, cost dashboards, budget alerts, gRPC + protocol multiplexing, memory browser, config export, bot templates, scriptable CLI, responsive PWA
+
+## Phase Details
+
+### Phase 1: Foundation + Bot Identity
+**Goal**: A bot with a distinct, immutable identity exists in the system -- users can create bots with SOUL.md, store secrets securely, and manage bots via CLI and REST API, all backed by SQLite with a clean repository abstraction.
+**Depends on**: Nothing (first phase)
+**Requirements**: IDEN-01, IDEN-02, IDEN-03, IDEN-04, IDEN-05, IDEN-06, SECU-01, SECU-02, SECU-03, SECU-04, SECU-05, CLII-01, APIL-01, INFR-01, INFR-06, INFR-07, INFR-08
+**Success Criteria** (what must be TRUE):
+  1. User can create a bot via CLI and REST API, and the bot persists in SQLite with SOUL.md, IDENTITY.md, and USER.md files on disk
+  2. SOUL.md is read-only at runtime -- no API endpoint or bot action can modify it; edits require explicit admin CLI/API command; SHA-256 hash is verified at bot startup
+  3. User can store and retrieve API keys via the encrypted vault, OS keychain, or environment variables -- secrets never appear in logs or API responses
+  4. User can list, configure, and delete bots via CLI commands and REST endpoints, with all operations reflected consistently in both interfaces
+  5. The Turborepo + Cargo workspace builds successfully with boternity-types, boternity-core, boternity-infra, and boternity-api crates, and boternity-core has zero dependencies on boternity-infra
+**Plans**: TBD
+
+Plans:
+- [ ] 01-01: Monorepo scaffold and crate structure
+- [ ] 01-02: SQLite storage layer with repository traits
+- [ ] 01-03: Bot identity system (SOUL.md, IDENTITY.md, USER.md)
+- [ ] 01-04: Secrets vault and security foundation
+- [ ] 01-05: CLI bot lifecycle and REST API
+- [ ] 01-06: Soul versioning and immutability enforcement
+
+### Phase 2: Single-Agent Chat + LLM
+**Goal**: Users can have a streaming conversation with a bot powered by a single LLM provider -- the bot reads its soul, maintains session context, and delivers responses token-by-token via CLI.
+**Depends on**: Phase 1
+**Requirements**: LLMP-01, LLMP-02, LLMP-11, CHAT-04, CHAT-05, CLII-03, AGNT-01, MEMO-01, OBSV-01, OBSV-07
+**Success Criteria** (what must be TRUE):
+  1. User can start a CLI chat session with a bot and see streaming token-by-token responses from Anthropic Claude, with the bot's personality reflecting its SOUL.md
+  2. Session memory extracts and persists key points from each conversation -- when the user starts a new session, the bot can reference previous session context
+  3. Chat history is persisted and retrievable -- user can view past conversations for any bot
+  4. Every LLM call produces a structured trace with timing, token count, and decision context visible in logs
+**Plans**: TBD
+
+Plans:
+- [ ] 02-01: LLM provider abstraction and Anthropic integration
+- [ ] 02-02: Agent engine with single-agent execution
+- [ ] 02-03: Streaming chat (CLI) with session memory
+- [ ] 02-04: Chat persistence and structured observability
+
+### Phase 3: Multi-Provider + Memory
+**Goal**: Bots can use any of multiple LLM providers with automatic failover, remember things long-term via vector embeddings, share knowledge across bots safely, and store files and structured data.
+**Depends on**: Phase 2
+**Requirements**: LLMP-03, LLMP-04, LLMP-05, LLMP-06, LLMP-07, LLMP-08, LLMP-09, LLMP-10, MEMO-02, MEMO-03, MEMO-04, MEMO-06, INFR-02
+**Success Criteria** (what must be TRUE):
+  1. User can configure any bot to use OpenAI, Google Gemini, Mistral, AWS Bedrock, Claude.ai subscription, or GLM 4.7 -- switching providers requires only a config change, not code changes
+  2. User can set a fallback provider chain (e.g., Claude -> OpenAI -> Gemini) and the system automatically fails over when the primary provider is down or rate-limited
+  3. Bot can semantically recall relevant information from past conversations -- user asks "what did we discuss about X?" and the bot retrieves related memories via vector search
+  4. Shared memory works across bots with trust-level partitioning -- Bot A can write to shared memory and Bot B can read it, but provenance is tracked and write validation prevents poisoning
+  5. User can upload files and structured data to a bot's persistent storage and the bot can reference them in conversation
+**Plans**: TBD
+
+Plans:
+- [ ] 03-01: Additional LLM provider implementations
+- [ ] 03-02: Fallback chains and automatic failover
+- [ ] 03-03: Long-term vector memory (LanceDB)
+- [ ] 03-04: Shared memory with trust partitioning
+- [ ] 03-05: Per-bot persistent storage
+
+### Phase 4: Web UI Core + Fleet Dashboard
+**Goal**: Users can manage their bot fleet and chat with bots through a web interface -- the dashboard shows all bots at a glance, the chat interface streams responses in real-time, and the soul editor provides version-controlled identity management.
+**Depends on**: Phase 3
+**Requirements**: WEBU-01, WEBU-02, WEBU-03, WEBU-09, WEBU-10, CHAT-01, CHAT-02, CHAT-03, INFR-05
+**Success Criteria** (what must be TRUE):
+  1. User opens the web dashboard and sees all bots with their status, last activity, and key metrics in a fleet overview
+  2. User can chat with any bot in the web UI and see streaming token-by-token responses, with support for multiple simultaneous chat sessions including multiple sessions with the same bot
+  3. User can edit a bot's SOUL.md in the web editor, see version history with diffs, and roll back to any previous version
+  4. The web app is installable as a PWA and works on mobile devices with responsive layout
+**Plans**: TBD
+
+Plans:
+- [ ] 04-01: React app scaffold with routing, state, and ShadCN UI
+- [ ] 04-02: Fleet dashboard and bot management views
+- [ ] 04-03: Chat interface with streaming and parallel sessions
+- [ ] 04-04: Soul editor with version history and diff view
+- [ ] 04-05: PWA setup and responsive design
+
+### Phase 5: Agent Hierarchy + Event System
+**Goal**: Bots can decompose complex tasks by spawning sub-agents up to 3 levels deep, communicating via message passing, with an event bus driving real-time UI updates and budget enforcement preventing runaway costs.
+**Depends on**: Phase 4
+**Requirements**: AGNT-02, AGNT-03, AGNT-04, AGNT-05, AGNT-06, AGNT-12, AGNT-13, OBSV-02, OBSV-06, INFR-03
+**Success Criteria** (what must be TRUE):
+  1. A bot's agent can spawn sequential and parallel sub-agents to handle sub-tasks, with results flowing back to the parent via message passing -- user sees the task decomposed and completed
+  2. Sub-agent depth is enforced at exactly 3 levels -- a 4th-level spawn attempt fails gracefully with an explanation, not a crash
+  3. WebSocket live updates show agent spawning, execution progress, and completion in real-time in the web UI
+  4. Per-request token budget is enforced -- when a sub-agent tree approaches the budget limit, execution pauses with an alert rather than silently running up costs
+  5. Cycle detection catches and breaks infinite sub-agent spawning loops before they exhaust resources
+**Plans**: TBD
+
+Plans:
+- [ ] 05-01: Sub-agent spawning engine (sequential + parallel)
+- [ ] 05-02: Depth cap, cycle detection, and circuit breakers
+- [ ] 05-03: Message passing and shared workspace
+- [ ] 05-04: Event bus and WebSocket live updates
+- [ ] 05-05: Token budget enforcement per request
+
+### Phase 6: Skill System + WASM Sandbox
+**Goal**: Agents can be extended with modular skills -- local skills run with permissions, untrusted registry skills run in a WASM sandbox, and users can discover, install, and manage skills from agentskills.io and community registries.
+**Depends on**: Phase 5
+**Requirements**: SKIL-01, SKIL-02, SKIL-03, SKIL-04, SKIL-05, SKIL-07, SKIL-08, SKIL-09, SKIL-10, SECU-06, SECU-07, CLII-02
+**Success Criteria** (what must be TRUE):
+  1. User can create a local skill following the agentskills.io spec and attach it to an agent -- the agent uses the skill in conversation
+  2. User can search and install skills from skills.sh and ComposioHQ/awesome-claude-skills via CLI -- installed registry skills run inside a WASM sandbox with declared capabilities
+  3. Skill permission model works -- skills declare required capabilities at install time, user approves or denies, and the runtime enforces those grants (a skill cannot access capabilities it was not granted)
+  4. Skill inheritance works -- a child skill extends a parent skill's features and the agent sees the combined capabilities
+  5. Defense-in-depth is observable -- untrusted skills are sandboxed at WASM level, WASI capabilities are restricted, and OS-level sandboxing provides a second barrier
+**Plans**: TBD
+
+Plans:
+- [ ] 06-01: Skill definition format and local skill execution
+- [ ] 06-02: Skill inheritance hierarchy
+- [ ] 06-03: WASM sandbox (Wasmtime + WASI)
+- [ ] 06-04: Registry discovery and installation (skills.sh + ComposioHQ)
+- [ ] 06-05: Permission model and trust tiers
+- [ ] 06-06: Skill browser UI and CLI skill management
+
+### Phase 7: Builder System
+**Goal**: Users can create fully-configured agents and skills through an interactive guided experience -- a universal builder agent powers both the CLI wizard and the web UI builder bot, asking adaptive questions and assembling the result.
+**Depends on**: Phase 6
+**Requirements**: AGNT-07, AGNT-08, AGNT-09, AGNT-10, AGNT-11, SKIL-06, CLII-06
+**Success Criteria** (what must be TRUE):
+  1. User can create an agent via CLI wizard -- the builder asks multi-choice questions adapted to the stated purpose, then creates the agent with appropriate skills attached
+  2. User can create an agent via web UI chat with the builder bot -- same question flow, same result, powered by the same universal builder agent
+  3. The builder adapts question depth to complexity -- a simple "email assistant" gets fewer questions than a "research analyst with multiple data sources"
+  4. Builder-created skills follow the agentskills.io spec and are immediately usable by the new agent
+**Plans**: TBD
+
+Plans:
+- [ ] 07-01: Universal builder agent implementation
+- [ ] 07-02: Adaptive question engine
+- [ ] 07-03: CLI wizard integration
+- [ ] 07-04: Web UI builder bot integration
+- [ ] 07-05: Skill creation and attachment via builder
+
+### Phase 8: Workflows + Pipelines
+**Goal**: Users can define multi-step automations that compose agents and skills into execution chains -- workflows can be defined in YAML, built visually, or written in code, and triggered manually, on schedule, or by events.
+**Depends on**: Phase 7
+**Requirements**: WKFL-01, WKFL-02, WKFL-03, WKFL-04, WKFL-05, WKFL-06, WKFL-07, WKFL-08, WKFL-09, CHAT-06, CLII-05, WEBU-05
+**Success Criteria** (what must be TRUE):
+  1. User can define a workflow in YAML that chains multiple agents and skills together, and execute it -- the workflow runs steps in the defined order with data flowing between them
+  2. User can build the same workflow visually in the web UI drag-and-drop builder, and the visual representation converts to valid YAML (and vice versa)
+  3. Workflows can be triggered manually, on a cron schedule, or by events (webhooks, bot messages) -- all three trigger types work reliably
+  4. Bot-to-bot communication works -- one bot can send structured messages to another bot, and workflows can orchestrate multi-bot collaboration
+  5. User can manage workflows via CLI (create, trigger, list, check status)
+**Plans**: TBD
+
+Plans:
+- [ ] 08-01: YAML workflow engine and execution runtime
+- [ ] 08-02: Workflow triggers (manual, cron, event-driven)
+- [ ] 08-03: TypeScript/Rust SDK for programmatic workflows
+- [ ] 08-04: Bot-to-bot communication
+- [ ] 08-05: Visual workflow builder (dnd-kit)
+- [ ] 08-06: CLI workflow management
+
+### Phase 9: MCP Integration
+**Goal**: Bots participate in the MCP ecosystem bidirectionally -- they consume external MCP tools to extend their capabilities and expose themselves as MCP servers so external tools (like Claude Code) can use bots as tools.
+**Depends on**: Phase 8
+**Requirements**: MCPI-01, MCPI-02, MCPI-03, MCPI-04, MCPI-05
+**Success Criteria** (what must be TRUE):
+  1. User can connect a bot to external MCP servers and the bot can invoke those tools during conversation -- e.g., a bot connected to a filesystem MCP server can read/write files
+  2. A bot exposes itself as an MCP server -- external tools like Claude Code can discover and invoke the bot as a tool
+  3. User can create and manage bots via the MCP server interface -- an external MCP client can perform bot CRUD operations
+  4. MCP tool descriptions are sanitized before reaching the LLM context -- injection attempts in tool descriptions are neutralized
+  5. Both MCP consumption and exposure require authentication -- unauthenticated MCP connections are rejected
+**Plans**: TBD
+
+Plans:
+- [ ] 09-01: MCP client (consume external tools)
+- [ ] 09-02: MCP server (expose bots as tools)
+- [ ] 09-03: MCP bot management interface
+- [ ] 09-04: MCP security (sanitization + authentication)
+
+### Phase 10: Observability + Cost + Polish
+**Goal**: The platform provides full visibility into what every agent is doing and why, with cost tracking and budget controls, plus the remaining polish features that complete the v1 experience.
+**Depends on**: Phase 9
+**Requirements**: OBSV-03, OBSV-04, OBSV-05, APIL-02, APIL-03, WEBU-04, WEBU-06, WEBU-07, WEBU-08, MEMO-05, IDEN-07, IDEN-08, CLII-04, INFR-04
+**Success Criteria** (what must be TRUE):
+  1. User can open the visual trace explorer in the web UI and see a real-time tree of agent decisions, timing, parent-child relationships, and LLM calls for any active or completed request
+  2. User can view cost dashboards showing token usage and provider costs broken down by bot, provider, and time period -- with a global budget that alerts and pauses execution when exceeded
+  3. User can browse and manage bot memories in the web UI -- search across memories, view individual entries, and delete specific memories
+  4. gRPC API is available alongside REST on the same port via protocol multiplexing -- programmatic clients can choose either protocol
+  5. User can export a bot's config (soul + skills, no memory) and use pre-built bot templates to create new bots for common use cases
+**Plans**: TBD
+
+Plans:
+- [ ] 10-01: Visual trace explorer
+- [ ] 10-02: Cost dashboards and budget controls
+- [ ] 10-03: gRPC API and protocol multiplexing
+- [ ] 10-04: Memory browser UI
+- [ ] 10-05: Skill browser UI polish
+- [ ] 10-06: Bot templates and config export
+- [ ] 10-07: Scriptable CLI and file upload (Tus)
+
+## Progress
+
+**Execution Order:**
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 1. Foundation + Bot Identity | 0/6 | Not started | - |
+| 2. Single-Agent Chat + LLM | 0/4 | Not started | - |
+| 3. Multi-Provider + Memory | 0/5 | Not started | - |
+| 4. Web UI Core + Fleet Dashboard | 0/5 | Not started | - |
+| 5. Agent Hierarchy + Event System | 0/5 | Not started | - |
+| 6. Skill System + WASM Sandbox | 0/6 | Not started | - |
+| 7. Builder System | 0/5 | Not started | - |
+| 8. Workflows + Pipelines | 0/6 | Not started | - |
+| 9. MCP Integration | 0/4 | Not started | - |
+| 10. Observability + Cost + Polish | 0/7 | Not started | - |

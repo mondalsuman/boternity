@@ -1,0 +1,11 @@
+{
+  "name": "boternity",
+  "private": true,
+  "scripts": {
+    "build:rust": "cargo build",
+    "build:rust:release": "cargo build --release",
+    "test:rust": "cargo test",
+    "check": "cargo check",
+    "clippy": "cargo clippy --workspace -- -D warnings"
+  }
+}

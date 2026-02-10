@@ -17,6 +17,9 @@ pub enum BotError {
 
     #[error("storage error: {0}")]
     StorageError(String),
+
+    #[error("filesystem error: {0}")]
+    FileSystemError(String),
 }
 
 /// Errors related to soul operations.
@@ -33,6 +36,12 @@ pub enum SoulError {
 
     #[error("storage error: {0}")]
     StorageError(String),
+
+    #[error("filesystem error: {0}")]
+    FileSystemError(String),
+
+    #[error("invalid soul content: {0}")]
+    InvalidContent(String),
 }
 
 /// Errors related to secret operations.

@@ -167,6 +167,18 @@ pub struct CreateBotRequest {
     pub tags: Option<Vec<String>>,
 }
 
+/// Request to update an existing bot.
+///
+/// All fields are optional -- only provided fields are applied.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct UpdateBotRequest {
+    pub name: Option<String>,
+    pub description: Option<String>,
+    pub status: Option<BotStatus>,
+    pub category: Option<BotCategory>,
+    pub tags: Option<Vec<String>>,
+}
+
 /// Generate a URL-safe slug from a display name.
 ///
 /// Rules:

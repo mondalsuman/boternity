@@ -435,6 +435,7 @@ name = "boternity-core"
 version = "0.1.0"
 dependencies = [
  "boternity-types",
+ "chrono",
  "thiserror 1.0.69",
  "tracing",
 ]

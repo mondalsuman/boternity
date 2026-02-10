@@ -1,0 +1,220 @@
+# Requirements: Boternity
+
+**Defined:** 2026-02-10
+**Core Value:** A user can create a bot with a distinct identity, give it skills through an interactive builder, and have meaningful parallel conversations with it — all running locally with full observability.
+
+## v1 Requirements
+
+### Bot Identity
+
+- [ ] **IDEN-01**: User can create a bot via CLI, web UI, REST API, gRPC API, or MCP server
+- [ ] **IDEN-02**: Each bot has a SOUL.md defining personality, values, behavior, and goals
+- [ ] **IDEN-03**: SOUL.md is immutable at runtime — edits only via admin UI/CLI, never by the bot itself
+- [ ] **IDEN-04**: Soul versioning — every update tracked with full history, rollback to any previous version
+- [ ] **IDEN-05**: Each bot has an IDENTITY.md defining display name, avatar, and description (presentation layer)
+- [ ] **IDEN-06**: Each bot reads a USER.md providing user-specific context (preferences, name, communication style)
+- [ ] **IDEN-07**: Pre-built bot templates for common use cases (assistant, researcher, coder, writer)
+- [ ] **IDEN-08**: Bot config export (soul + skill definitions) for sharing — memory stays local
+
+### Memory
+
+- [ ] **MEMO-01**: Session memory — key points extracted and saved per conversation session (short-term)
+- [ ] **MEMO-02**: Long-term vector memory — persistent per-bot embeddings for semantic recall across sessions
+- [ ] **MEMO-03**: Common shared memory — shared memory layer accessible by all bots with trust-level partitioning
+- [ ] **MEMO-04**: Write validation on shared memory — provenance tracking to prevent memory poisoning
+- [ ] **MEMO-05**: Memory search and browse UI — view, search, and manage bot memories in the web interface
+- [ ] **MEMO-06**: Per-bot persistent storage for files, knowledge bases, and structured data
+
+### Agent Architecture
+
+- [ ] **AGNT-01**: Each bot has one default agent powering it
+- [ ] **AGNT-02**: Agents can dynamically spawn sequential sub-agents
+- [ ] **AGNT-03**: Agents can dynamically spawn parallel sub-agents
+- [ ] **AGNT-04**: Sub-agent depth hard-capped at 3 levels with enforcement at AgentContext level
+- [ ] **AGNT-05**: Sub-agent communication via message passing (parent sends context, child returns result)
+- [ ] **AGNT-06**: Opt-in shared workspace for agents that need shared state
+- [ ] **AGNT-07**: Agent creation via interactive builder bot in web UI chat
+- [ ] **AGNT-08**: Agent creation via CLI wizard with multi-choice questions
+- [ ] **AGNT-09**: Universal builder agent powers both wizard and builder bot
+- [ ] **AGNT-10**: Builder asks adaptive multi-choice questions based on agent purpose (5-10 questions, then offer skip)
+- [ ] **AGNT-11**: Builder assesses required skills, creates them, and attaches to agent
+- [ ] **AGNT-12**: Per-request token budget enforcement to prevent runaway sub-agent costs
+- [ ] **AGNT-13**: Cycle detection and circuit breakers for sub-agent spawning
+
+### Skill System
+
+- [ ] **SKIL-01**: Agents are powered by one or more skills
+- [ ] **SKIL-02**: Local skill creation following agentskills.io specification (via skill-creator skill)
+- [ ] **SKIL-03**: Skill inheritance hierarchy — child skill inherits parent features plus additions
+- [ ] **SKIL-04**: Discover and install skills from skills.sh registry (via find-skills skill or CLI)
+- [ ] **SKIL-05**: Discover skills from ComposioHQ/awesome-claude-skills
+- [ ] **SKIL-06**: Universal builder agent creates skills using same mechanism for all paths
+- [ ] **SKIL-07**: Permission model — skills declare required capabilities, user approves on install
+- [ ] **SKIL-08**: WASM sandbox for untrusted registry skills (Wasmtime with WASI component model)
+- [ ] **SKIL-09**: Trust tiers — local skills run with permissions, registry skills run sandboxed
+- [ ] **SKIL-10**: Defense-in-depth — WASM + OS-level sandboxing + capability-based WASI
+
+### Workflows & Pipelines
+
+- [ ] **WKFL-01**: Define workflows in YAML config files
+- [ ] **WKFL-02**: Visual workflow builder in web UI (drag-and-drop)
+- [ ] **WKFL-03**: TypeScript/Rust SDK for programmatic workflow definition
+- [ ] **WKFL-04**: All three workflow representations are interchangeable
+- [ ] **WKFL-05**: Manual workflow trigger (user explicitly starts)
+- [ ] **WKFL-06**: Scheduled workflow trigger (cron-based)
+- [ ] **WKFL-07**: Event-driven workflow trigger (webhooks, messages, bot events)
+- [ ] **WKFL-08**: Workflows compose agents and skills into execution chains
+- [ ] **WKFL-09**: Bot-to-bot structured communication via workflows
+
+### LLM Providers
+
+- [ ] **LLMP-01**: Pluggable provider architecture with unified abstraction layer
+- [ ] **LLMP-02**: Anthropic Claude support (API)
+- [ ] **LLMP-03**: OpenAI support (API)
+- [ ] **LLMP-04**: Google Gemini support (API)
+- [ ] **LLMP-05**: Mistral support (API)
+- [ ] **LLMP-06**: AWS Bedrock models support
+- [ ] **LLMP-07**: Claude.ai subscription support (OpenClaw-style)
+- [ ] **LLMP-08**: GLM 4.7 from z.ai support
+- [ ] **LLMP-09**: Configurable fallback provider chain — user sets sequence
+- [ ] **LLMP-10**: Automatic failover when provider is down or rate-limited
+- [ ] **LLMP-11**: Streaming token delivery from all providers
+
+### MCP Integration
+
+- [ ] **MCPI-01**: Bots consume external MCP tools (connect to MCP servers)
+- [ ] **MCPI-02**: Bots expose themselves as MCP servers (other tools can use bots as tools)
+- [ ] **MCPI-03**: Create and manage bots via MCP server interface
+- [ ] **MCPI-04**: MCP tool description sanitization to prevent injection attacks
+- [ ] **MCPI-05**: Mandatory authentication on both consume and expose MCP sides
+
+### Chat System
+
+- [ ] **CHAT-01**: User can chat with any bot via web UI with streaming responses (SSE/WebSocket)
+- [ ] **CHAT-02**: User can chat with multiple bots simultaneously (parallel sessions)
+- [ ] **CHAT-03**: User can have multiple parallel sessions with the same bot
+- [ ] **CHAT-04**: Chat history persistence and retrieval
+- [ ] **CHAT-05**: User can chat with bots via CLI (interactive terminal chat)
+- [ ] **CHAT-06**: Bot-to-bot direct messaging for collaboration and task delegation
+
+### Observability & Debugging
+
+- [ ] **OBSV-01**: Distributed tracing — every agent decision, timing, parent-child relationships (OpenTelemetry)
+- [ ] **OBSV-02**: Token usage tracking per agent and per bot
+- [ ] **OBSV-03**: Cost dashboards with provider breakdown
+- [ ] **OBSV-04**: Global token/cost budget with alerts and automatic pause when exceeded
+- [ ] **OBSV-05**: Visual trace explorer in web UI — real-time agent tree with status, timing, decisions
+- [ ] **OBSV-06**: WebSocket live updates for agent spawning, workflow progress, status changes
+- [ ] **OBSV-07**: Structured logging throughout the platform
+
+### CLI
+
+- [ ] **CLII-01**: Full bot lifecycle management (create, configure, list, start, stop, delete)
+- [ ] **CLII-02**: Skill management (create, install from registry, list, remove)
+- [ ] **CLII-03**: Interactive chat with bots from terminal with streaming
+- [ ] **CLII-04**: Scriptable commands — pipe input/output for automation
+- [ ] **CLII-05**: Workflow management (create, trigger, list, status)
+- [ ] **CLII-06**: Agent creation wizard (interactive multi-choice)
+
+### API Layer
+
+- [ ] **APIL-01**: REST API for all platform operations
+- [ ] **APIL-02**: gRPC API for high-performance programmatic access
+- [ ] **APIL-03**: Protocol multiplexing — REST and gRPC on same port via content-type dispatch
+
+### Security & Secrets
+
+- [ ] **SECU-01**: Encrypted local vault (SQLite-based) for API keys and credentials
+- [ ] **SECU-02**: OS keychain integration (macOS Keychain, Linux Secret Service)
+- [ ] **SECU-03**: Environment variable fallback for secrets
+- [ ] **SECU-04**: SOUL.md immutable at runtime — prevents persistent prompt injection (CVE-2026-25253 mitigation)
+- [ ] **SECU-05**: SOUL.md hash verification at startup
+- [ ] **SECU-06**: Skill permission model with capability grants
+- [ ] **SECU-07**: WASM sandbox with defense-in-depth for untrusted skills
+
+### Web UI
+
+- [ ] **WEBU-01**: Fleet dashboard — overview of all bots, status, activity
+- [ ] **WEBU-02**: Chat interface with streaming responses and parallel session support
+- [ ] **WEBU-03**: Soul/config editor with version history and diff view
+- [ ] **WEBU-04**: Skill browser — search, preview, install skills from registries
+- [ ] **WEBU-05**: Visual workflow builder (drag-and-drop with dnd-kit)
+- [ ] **WEBU-06**: Visual trace explorer — real-time agent chains, timing, decisions
+- [ ] **WEBU-07**: Memory browser — search, view, manage bot memories
+- [ ] **WEBU-08**: Cost dashboard — token usage, provider costs, budget status
+- [ ] **WEBU-09**: Progressive Web Application (offline capable, installable)
+- [ ] **WEBU-10**: Responsive design for mobile via PWA
+
+### Infrastructure
+
+- [ ] **INFR-01**: SQLite for structured data with abstraction layer for future PostgreSQL migration
+- [ ] **INFR-02**: Embedded vector store (LanceDB) for memory embeddings
+- [ ] **INFR-03**: Event-driven architecture with typed event bus (tokio::sync::broadcast)
+- [ ] **INFR-04**: Tus protocol for resumable file uploads
+- [ ] **INFR-05**: Stale-while-revalidate cache strategy
+- [ ] **INFR-06**: Turborepo monorepo with Cargo workspace for Rust crates
+- [ ] **INFR-07**: SQLite WAL mode for concurrent read/write safety
+- [ ] **INFR-08**: Dedicated thread pools for blocking operations (SQLite, WASM)
+
+## v2 Requirements
+
+### LLM Providers
+
+- **LLMP-V2-01**: Local models via Ollama integration
+- **LLMP-V2-02**: Additional providers as ecosystem grows
+
+### API Layer
+
+- **APIL-V2-01**: GraphQL API from Rust backend (async-graphql)
+- **APIL-V2-02**: GraphQL BFF layer (GraphQL Yoga + Pothos) for frontend-optimized queries
+
+### Channels
+
+- **CHAN-V2-01**: WhatsApp channel adapter
+- **CHAN-V2-02**: Slack channel adapter
+- **CHAN-V2-03**: Discord channel adapter
+- **CHAN-V2-04**: Telegram channel adapter
+
+### Deployment
+
+- **DEPL-V2-01**: Cloud SaaS hosting option
+- **DEPL-V2-02**: Multi-user auth and multi-tenancy
+- **DEPL-V2-03**: Per-bot token/cost budgets (upgrade from global)
+
+### Advanced Features
+
+- **ADVN-V2-01**: Heartbeat mechanism — autonomous agent loops (OpenClaw-style)
+- **ADVN-V2-02**: A2A (Agent-to-Agent) protocol support for cross-platform agent communication
+- **ADVN-V2-03**: Bot marketplace for sharing bot templates
+- **ADVN-V2-04**: Voice input/output for bot chat
+- **ADVN-V2-05**: Memory export with privacy controls
+
+## Out of Scope
+
+| Feature | Reason |
+|---------|--------|
+| Real-time voice/video chat | High complexity, not core to bot management. Text-first for v1 |
+| Mobile native apps | PWA covers mobile use cases adequately for v1 |
+| Multi-user / multi-tenancy | Single-user self-hosted for v1. Complexity doesn't justify until SaaS |
+| Cloud SaaS deployment | Self-hosted only for v1. Cloud offering is v2+ |
+| Messaging channels (WhatsApp, Slack, Discord, Telegram) | Web UI + API is sufficient for v1. Channel adapters are v2 |
+| Local LLM models (Ollama) | Focus on cloud providers first. Local model support deferred to v2 |
+| GraphQL (backend or BFF) | REST + gRPC is sufficient for v1. GraphQL adds maintenance burden |
+| Bot marketplace | Config export covers sharing. Centralized marketplace is v2+ |
+| Memory export/sharing | Memory stays local for privacy in v1 |
+| Agent-to-Agent protocol (A2A) | Emerging standard, Rust SDK doesn't exist yet. Defer to v2 |
+
+## Traceability
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| (Populated during roadmap creation) | | |
+
+**Coverage:**
+- v1 requirements: 89 total
+- Mapped to phases: 0 (pending roadmap)
+- Unmapped: 89
+
+---
+*Requirements defined: 2026-02-10*
+*Last updated: 2026-02-10 after initial definition*

@@ -10,28 +10,28 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 1 of 10 (Foundation + Bot Identity)
-Plan: 3 of 6 in current phase
+Plan: 4 of 6 in current phase
 Status: In progress
-Last activity: 2026-02-10 -- Completed 01-03-PLAN.md (Bot identity system)
+Last activity: 2026-02-10 -- Completed 01-04-PLAN.md (Secrets vault + resolution chain)
 
-Progress: [███░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 3/53 (~6%)
+Progress: [████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 4/53 (~8%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: 6m 31s
-- Total execution time: 19m 53s
+- Total plans completed: 4
+- Average duration: 7m 54s
+- Total execution time: 31m 18s
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 1. Foundation + Bot Identity | 3/6 | 19m 53s | 6m 38s |
+| 1. Foundation + Bot Identity | 4/6 | 31m 18s | 7m 50s |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (4m 30s), 01-02 (5m 58s), 01-03 (9m 25s)
-- Trend: slightly increasing (01-03 larger scope with parallel plan contention)
+- Last 5 plans: 01-01 (4m 30s), 01-02 (5m 58s), 01-03 (9m 25s), 01-04 (11m 25s)
+- Trend: slightly increasing (larger scope in wave 3, parallel plan contention)
 
 *Updated after each plan completion*
 
@@ -61,6 +61,10 @@ Recent decisions affecting current work:
 - [01-03]: Free functions for content generation (generate_default_soul, etc.) -- no trait bounds needed for static calls
 - [01-03]: Simple line-based YAML frontmatter parser -- avoids serde_yaml dep for narrow use case
 - [01-03]: LocalFileSystem auto-creates parent dirs on write -- prevents missing dir errors
+- [01-04]: BoxSecretProvider with blanket impl for object-safe dynamic dispatch of RPITIT traits
+- [01-04]: Fixed Argon2id salt "boternity-vault-v1" for password KDF (password provides entropy)
+- [01-04]: Auto-generated master key in OS keychain as zero-friction default
+- [01-04]: Secret<T> generic wrapper alongside existing Redacted(String)
 
 ### Pending Todos
 
@@ -74,6 +78,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-10T21:43:09Z
-Stopped at: Completed 01-03-PLAN.md
+Last session: 2026-02-10T21:45:33Z
+Stopped at: Completed 01-04-PLAN.md
 Resume file: None

@@ -5,6 +5,7 @@
 //! operations (AES-256-GCM vault, SHA-256 hashing).
 
 pub mod crypto;
+pub mod filesystem;
 pub mod keychain;
 pub mod secret;
 pub mod sqlite;

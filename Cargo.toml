@@ -24,6 +24,13 @@ sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite"] }
 
 # CLI argument parsing
 clap = { version = "4.5", features = ["derive", "env"] }
+clap_complete = "4.5"
+
+# CLI interaction
+dialoguer = { version = "0.11", features = ["password"] }
+indicatif = "0.17"
+comfy-table = "7"
+console = "0.15"
 
 # Serialization
 serde = { version = "1", features = ["derive"] }

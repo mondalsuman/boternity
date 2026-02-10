@@ -5,6 +5,10 @@ edition.workspace = true
 license.workspace = true
 description = "CLI and REST API application layer for Boternity"
 
+[[bin]]
+name = "bnity"
+path = "src/main.rs"
+
 [dependencies]
 boternity-types = { workspace = true }
 boternity-core = { workspace = true }
@@ -12,6 +16,11 @@ boternity-infra = { workspace = true }
 axum = { workspace = true }
 tokio = { workspace = true }
 clap = { workspace = true }
+clap_complete = { workspace = true }
+dialoguer = { workspace = true }
+indicatif = { workspace = true }
+comfy-table = { workspace = true }
+console = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 tower-http = { workspace = true }
@@ -20,3 +29,4 @@ tracing-subscriber = { workspace = true }
 anyhow = { workspace = true }
 uuid = { workspace = true }
 chrono = { workspace = true }
+sha2 = { workspace = true }

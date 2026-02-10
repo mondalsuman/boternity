@@ -35,15 +35,15 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. User can store and retrieve API keys via the encrypted vault, OS keychain, or environment variables -- secrets never appear in logs or API responses
   4. User can list, configure, and delete bots via CLI commands and REST endpoints, with all operations reflected consistently in both interfaces
   5. The Turborepo + Cargo workspace builds successfully with boternity-types, boternity-core, boternity-infra, and boternity-api crates, and boternity-core has zero dependencies on boternity-infra
-**Plans**: TBD
+**Plans**: 6 plans
 
 Plans:
-- [ ] 01-01: Monorepo scaffold and crate structure
-- [ ] 01-02: SQLite storage layer with repository traits
-- [ ] 01-03: Bot identity system (SOUL.md, IDENTITY.md, USER.md)
-- [ ] 01-04: Secrets vault and security foundation
-- [ ] 01-05: CLI bot lifecycle and REST API
-- [ ] 01-06: Soul versioning and immutability enforcement
+- [ ] 01-01-PLAN.md -- Monorepo scaffold, Cargo workspace, Turborepo config, domain types, repository traits
+- [ ] 01-02-PLAN.md -- SQLite storage layer with WAL mode, split pools, migrations, repository implementations
+- [ ] 01-03-PLAN.md -- Bot identity system (SOUL.md, IDENTITY.md, USER.md), BotService, SoulService, filesystem adapters
+- [ ] 01-04-PLAN.md -- Secrets vault (AES-256-GCM), OS keychain integration, env var fallback, resolution chain
+- [ ] 01-05-PLAN.md -- CLI (`bnity`) bot lifecycle commands, REST API with auth and envelope responses
+- [ ] 01-06-PLAN.md -- Soul versioning (history, rollback, diff) and immutability enforcement (SHA-256 integrity)
 
 ### Phase 2: Single-Agent Chat + LLM
 **Goal**: Users can have a streaming conversation with a bot powered by a single LLM provider -- the bot reads its soul, maintains session context, and delivers responses token-by-token via CLI.
@@ -222,7 +222,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation + Bot Identity | 0/6 | Not started | - |
+| 1. Foundation + Bot Identity | 0/6 | Planned | - |
 | 2. Single-Agent Chat + LLM | 0/4 | Not started | - |
 | 3. Multi-Provider + Memory | 0/5 | Not started | - |
 | 4. Web UI Core + Fleet Dashboard | 0/5 | Not started | - |

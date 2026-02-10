@@ -450,11 +450,15 @@ dependencies = [
  "boternity-types",
  "chrono",
  "keyring",
+ "serde",
+ "serde_json",
  "sha2",
  "sqlx",
+ "tempfile",
  "thiserror 1.0.69",
  "tokio",
  "tracing",
+ "uuid",
 ]
 
 [[package]]

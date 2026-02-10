@@ -10,28 +10,28 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 1 of 10 (Foundation + Bot Identity)
-Plan: 1 of 6 in current phase
+Plan: 2 of 6 in current phase
 Status: In progress
-Last activity: 2026-02-10 -- Completed 01-01-PLAN.md (monorepo scaffold + domain types)
+Last activity: 2026-02-10 -- Completed 01-02-PLAN.md (SQLite storage layer)
 
-Progress: [█░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 1/53 (~2%)
+Progress: [██░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 2/53 (~4%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 1
-- Average duration: 4m 30s
-- Total execution time: 4m 30s
+- Total plans completed: 2
+- Average duration: 5m 14s
+- Total execution time: 10m 28s
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 1. Foundation + Bot Identity | 1/6 | 4m 30s | 4m 30s |
+| 1. Foundation + Bot Identity | 2/6 | 10m 28s | 5m 14s |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (4m 30s)
-- Trend: baseline
+- Last 5 plans: 01-01 (4m 30s), 01-02 (5m 58s)
+- Trend: stable
 
 *Updated after each plan completion*
 
@@ -52,6 +52,11 @@ Recent decisions affecting current work:
 - [01-01]: Identity defaults: claude-sonnet-4-20250514, temperature 0.7, max_tokens 4096
 - [01-01]: Redacted wrapper pattern for secret values (custom Debug/Display)
 - [01-01]: Repository traits return impl Future (RPITIT) not Box<dyn Future>
+- [01-02]: Split read/write SQLite pools (8 readers, 1 writer) with WAL mode on both
+- [01-02]: Private BotRow struct for SQLite-to-domain mapping (no sqlx derives on domain types)
+- [01-02]: Secrets scope stored as string not FK (allows pre-provisioned keys)
+- [01-02]: Sort field whitelist in list() to prevent SQL injection
+- [01-02]: Transaction for soul save (INSERT + UPDATE version_count atomically)
 
 ### Pending Todos
 
@@ -65,6 +70,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-10T21:20:39Z
-Stopped at: Completed 01-01-PLAN.md
+Last session: 2026-02-10T21:30:24Z
+Stopped at: Completed 01-02-PLAN.md
 Resume file: None

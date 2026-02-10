@@ -7,4 +7,5 @@
 pub mod bot;
 pub mod fs;
 pub mod hash;
+pub mod secret;
 pub mod soul;

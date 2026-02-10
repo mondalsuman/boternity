@@ -414,6 +414,7 @@ dependencies = [
 name = "boternity-api"
 version = "0.1.0"
 dependencies = [
+ "aes-gcm",
  "anyhow",
  "axum",
  "boternity-core",
@@ -429,6 +430,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+ "sqlx",
  "tokio",
  "tower-http",
  "tracing",

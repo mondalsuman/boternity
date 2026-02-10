@@ -6,6 +6,7 @@
 //! to the appropriate command handler or starts the REST API server.
 
 mod cli;
+mod http;
 mod state;
 
 use clap::Parser;
@@ -132,12 +133,39 @@ async fn main() -> anyhow::Result<()> {
         }
 
         Commands::Serve { port, host } => {
-            // Will be fully implemented in Task 2
+            // Ensure an API key exists, print it if new
+            let api_key = http::extractors::auth::ensure_api_key(&state).await?;
+            if api_key.starts_with("bnity_") {
+                println!();
+                println!(
+                    "  {} API key generated (save this -- it won't be shown again):",
+                    console::style("🔑").bold()
+                );
+                println!();
+                println!("  {}", console::style(&api_key).yellow().bold());
+                println!();
+            }
+
+            let addr = format!("{host}:{port}");
+            let listener = tokio::net::TcpListener::bind(&addr).await?;
+
             println!(
-                "Starting server on {}:{}...",
-                host, port
+                "  {} Boternity API listening on {}",
+                console::style("⚡").bold(),
+                console::style(format!("http://{addr}")).cyan()
             );
-            println!("REST API server not yet implemented. Use Task 2.");
+            println!(
+                "  {}",
+                console::style("Press Ctrl+C to stop").dim()
+            );
+
+            let router = http::router::build_router(state);
+
+            axum::serve(listener, router)
+                .with_graceful_shutdown(shutdown_signal())
+                .await?;
+
+            println!("\n  Server stopped.");
         }
 
         Commands::Completions { .. } => unreachable!("handled above"),
@@ -149,4 +177,29 @@ async fn main() -> anyhow::Result<()> {
     }
 
     Ok(())
+}
+
+/// Wait for Ctrl+C or SIGTERM for graceful shutdown.
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        tokio::signal::ctrl_c()
+            .await
+            .expect("failed to install Ctrl+C handler");
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+            .expect("failed to install SIGTERM handler")
+            .recv()
+            .await;
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        _ = ctrl_c => {},
+        _ = terminate => {},
+    }
 }

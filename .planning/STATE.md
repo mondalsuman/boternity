@@ -10,29 +10,29 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 2 of 10 (Single-Agent Chat + LLM)
-Plan: 6 of 8 in current phase (02-01, 02-02, 02-03, 02-04, 02-05, 02-06 complete)
+Plan: 8 of 8 in current phase (02-01, 02-02, 02-03, 02-04, 02-05, 02-06, 02-08 complete; 02-07 code committed, summary pending)
 Status: In progress
-Last activity: 2026-02-11 -- Completed 02-06-PLAN.md (Memory extraction, context summarization, title generation)
+Last activity: 2026-02-12 -- Completed 02-08-PLAN.md (Session and memory management CLI)
 
-Progress: [████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 12/53 (~23%)
+Progress: [█████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 13/53 (~25%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 12
-- Average duration: 6m 3s
-- Total execution time: 75m 0s
+- Total plans completed: 13
+- Average duration: 5m 54s
+- Total execution time: 81m 0s
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1. Foundation + Bot Identity | 6/6 | 49m 14s | 8m 12s |
-| 2. Single-Agent Chat + LLM | 6/8 | 25m 46s | 4m 18s |
+| 2. Single-Agent Chat + LLM | 7/8 | 31m 46s | 4m 32s |
 
 **Recent Trend:**
-- Last 5 plans: 02-03 (5m 0s), 02-04 (4m 0s), 02-05 (4m 0s), 02-06 (5m 0s)
-- Trend: Phase 2 plans consistently ~4-5 min each
+- Last 5 plans: 02-04 (4m 0s), 02-05 (4m 0s), 02-06 (5m 0s), 02-07 (pending), 02-08 (6m 0s)
+- Trend: Phase 2 plans consistently ~4-6 min each
 
 *Updated after each plan completion*
 
@@ -94,6 +94,9 @@ Recent decisions affecting current work:
 - [02-06]: Extraction prompt returns JSON array of {fact, category, importance}; empty array for nothing worth extracting
 - [02-06]: Graceful JSON parse degradation: log warning, return empty result, caller queues retry
 - [02-06]: Title generation: temperature 0.3, max_tokens 50, trims whitespace and quotes
+- [02-08]: Manual memories use Uuid::nil() session_id (not linked to any session)
+- [02-08]: ConcreteChatService type alias pins ChatService<SqliteChatRepository, SqliteMemoryRepository> on AppState
+- [02-08]: Session/memory IDs parsed from String CLI args via Uuid::parse for user-friendly errors
 
 ### Pending Todos
 
@@ -107,6 +110,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-11T23:05:04Z
-Stopped at: Completed 02-06-PLAN.md (Memory extraction, context summarization, title generation)
+Last session: 2026-02-11T23:16:02Z
+Stopped at: Completed 02-08-PLAN.md (Session and memory management CLI)
 Resume file: None

@@ -23,6 +23,14 @@ serde_json = { workspace = true }
 uuid = { workspace = true }
 serde = { workspace = true }
 
+# LLM provider HTTP + streaming
+reqwest = { workspace = true }
+reqwest-eventsource = { workspace = true }
+async-stream = { workspace = true }
+futures-util = { workspace = true }
+secrecy = { workspace = true }
+pin-project-lite = { workspace = true }
+
 [dev-dependencies]
 tokio = { workspace = true, features = ["full"] }
 tempfile = "3"

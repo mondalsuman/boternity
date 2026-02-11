@@ -7,5 +7,6 @@
 pub mod crypto;
 pub mod filesystem;
 pub mod keychain;
+pub mod llm;
 pub mod secret;
 pub mod sqlite;

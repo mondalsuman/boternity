@@ -5,33 +5,33 @@
 See: .planning/PROJECT.md (updated 2026-02-10)
 
 **Core value:** A user can create a bot with a distinct identity, give it skills through an interactive builder, and have meaningful parallel conversations with it -- all running locally with full observability.
-**Current focus:** Phase 1 - Foundation + Bot Identity
+**Current focus:** Phase 1 COMPLETE - Ready for Phase 2 (Single-Agent Chat + LLM)
 
 ## Current Position
 
-Phase: 1 of 10 (Foundation + Bot Identity)
-Plan: 4 of 6 in current phase
-Status: In progress
-Last activity: 2026-02-10 -- Completed 01-04-PLAN.md (Secrets vault + resolution chain)
+Phase: 1 of 10 (Foundation + Bot Identity) - COMPLETE
+Plan: 6 of 6 in current phase
+Status: Phase complete
+Last activity: 2026-02-11 -- Completed 01-06-PLAN.md (Soul versioning + immutability)
 
-Progress: [████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 4/53 (~8%)
+Progress: [██████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 6/53 (~11%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
-- Average duration: 7m 54s
-- Total execution time: 31m 18s
+- Total plans completed: 6
+- Average duration: 8m 16s
+- Total execution time: 49m 14s
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 1. Foundation + Bot Identity | 4/6 | 31m 18s | 7m 50s |
+| 1. Foundation + Bot Identity | 6/6 | 49m 14s | 8m 12s |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (4m 30s), 01-02 (5m 58s), 01-03 (9m 25s), 01-04 (11m 25s)
-- Trend: slightly increasing (larger scope in wave 3, parallel plan contention)
+- Last 5 plans: 01-02 (5m 58s), 01-03 (9m 25s), 01-04 (11m 25s), 01-05 (~8m 28s), 01-06 (9m 28s)
+- Trend: stable ~9 min/plan for medium-complexity plans
 
 *Updated after each plan completion*
 
@@ -65,6 +65,10 @@ Recent decisions affecting current work:
 - [01-04]: Fixed Argon2id salt "boternity-vault-v1" for password KDF (password provides entropy)
 - [01-04]: Auto-generated master key in OS keychain as zero-friction default
 - [01-04]: Secret<T> generic wrapper alongside existing Redacted(String)
+- [01-06]: LCS-based line diff in pure Rust (no external diff library)
+- [01-06]: Message field on Soul struct for version commit messages
+- [01-06]: update_soul saves DB first then file (DB failure leaves disk unchanged)
+- [01-06]: bnity check enhanced with soul integrity verification
 
 ### Pending Todos
 
@@ -78,6 +82,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-10T21:45:33Z
-Stopped at: Completed 01-04-PLAN.md
+Last session: 2026-02-11T22:20:48Z
+Stopped at: Completed 01-06-PLAN.md (Phase 1 COMPLETE)
 Resume file: None

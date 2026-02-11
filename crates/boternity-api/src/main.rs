@@ -249,6 +249,10 @@ async fn main() -> anyhow::Result<()> {
             cli::memory::forget(&state, &slug, force, cli.json).await?;
         }
 
+        Commands::Chat { slug, resume } => {
+            cli::chat::loop_runner::run_chat_loop(&state, &slug, resume).await?;
+        }
+
         Commands::Completions { .. } => unreachable!("handled above"),
 
         Commands::NewBot { name, description } => {

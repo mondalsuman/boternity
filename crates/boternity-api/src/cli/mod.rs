@@ -144,6 +144,16 @@ pub enum Commands {
         force: bool,
     },
 
+    /// Start an interactive chat session with a bot.
+    Chat {
+        /// Bot slug to chat with.
+        slug: String,
+
+        /// Resume a previous session by ID.
+        #[arg(long)]
+        resume: Option<String>,
+    },
+
     // --- Short aliases ---
     /// Create a new bot (alias for `create bot`).
     #[command(name = "new", hide = true)]

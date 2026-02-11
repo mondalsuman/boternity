@@ -4,6 +4,8 @@
 //! read/write connection pools.
 
 pub mod bot;
+pub mod chat;
+pub mod memory;
 pub mod pool;
 pub mod secret;
 pub mod soul;

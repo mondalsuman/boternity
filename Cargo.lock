@@ -468,6 +468,8 @@ dependencies = [
  "boternity-types",
  "chrono",
  "futures-util",
+ "serde",
+ "serde_json",
  "thiserror 1.0.69",
  "tokio",
  "tracing",

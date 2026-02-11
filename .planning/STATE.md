@@ -10,29 +10,29 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 2 of 10 (Single-Agent Chat + LLM)
-Plan: 4 of 8 in current phase (02-01, 02-02, 02-03, 02-04 complete)
+Plan: 5 of 8 in current phase (02-01, 02-02, 02-03, 02-04, 02-05 complete)
 Status: In progress
-Last activity: 2026-02-11 -- Completed 02-04-PLAN.md (SQLite chat and memory persistence)
+Last activity: 2026-02-11 -- Completed 02-05-PLAN.md (Agent engine and chat service)
 
-Progress: [██████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 10/53 (~19%)
+Progress: [███████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 11/53 (~21%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 10
-- Average duration: 6m 18s
-- Total execution time: 66m 0s
+- Total plans completed: 11
+- Average duration: 6m 6s
+- Total execution time: 70m 0s
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1. Foundation + Bot Identity | 6/6 | 49m 14s | 8m 12s |
-| 2. Single-Agent Chat + LLM | 4/8 | 16m 46s | 4m 12s |
+| 2. Single-Agent Chat + LLM | 5/8 | 20m 46s | 4m 9s |
 
 **Recent Trend:**
-- Last 5 plans: 02-02 (2m 46s), 02-01 (5m 0s), 02-03 (5m 0s), 02-04 (4m 0s)
-- Trend: Phase 2 plans executing faster than Phase 1
+- Last 5 plans: 02-01 (5m 0s), 02-03 (5m 0s), 02-04 (4m 0s), 02-05 (4m 0s)
+- Trend: Phase 2 plans consistently ~4 min each
 
 *Updated after each plan completion*
 
@@ -85,6 +85,11 @@ Recent decisions affecting current work:
 - [02-04]: save_message atomically increments session message_count (prevents drift)
 - [02-04]: get_pending_extractions filters attempt_count < 3 (max retry policy in query)
 - [02-04]: ON DELETE CASCADE on chat_sessions cascades to messages and summaries (not memories)
+- [02-05]: XML tag boundaries for system prompt sections (<soul>, <identity>, <user_context>, <session_memory>, <instructions>)
+- [02-05]: Character-based token estimation (4 chars/token) for should_summarize()
+- [02-05]: StreamInSpan unsafe pin projection to keep OTel span alive during streaming
+- [02-05]: Memory extraction interval: every 10 turns via SessionManager
+- [02-05]: ChatService<C, M> generic over ChatRepository + MemoryRepository
 
 ### Pending Todos
 
@@ -98,6 +103,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-11T22:56:08Z
-Stopped at: Completed 02-04-PLAN.md (SQLite chat and memory persistence)
+Last session: 2026-02-11T23:03:46Z
+Stopped at: Completed 02-05-PLAN.md (Agent engine and chat service)
 Resume file: None

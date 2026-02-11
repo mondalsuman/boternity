@@ -10,29 +10,29 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 2 of 10 (Single-Agent Chat + LLM)
-Plan: 5 of 8 in current phase (02-01, 02-02, 02-03, 02-04, 02-05 complete)
+Plan: 6 of 8 in current phase (02-01, 02-02, 02-03, 02-04, 02-05, 02-06 complete)
 Status: In progress
-Last activity: 2026-02-11 -- Completed 02-05-PLAN.md (Agent engine and chat service)
+Last activity: 2026-02-11 -- Completed 02-06-PLAN.md (Memory extraction, context summarization, title generation)
 
-Progress: [███████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 11/53 (~21%)
+Progress: [████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 12/53 (~23%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 11
-- Average duration: 6m 6s
-- Total execution time: 70m 0s
+- Total plans completed: 12
+- Average duration: 6m 3s
+- Total execution time: 75m 0s
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1. Foundation + Bot Identity | 6/6 | 49m 14s | 8m 12s |
-| 2. Single-Agent Chat + LLM | 5/8 | 20m 46s | 4m 9s |
+| 2. Single-Agent Chat + LLM | 6/8 | 25m 46s | 4m 18s |
 
 **Recent Trend:**
-- Last 5 plans: 02-01 (5m 0s), 02-03 (5m 0s), 02-04 (4m 0s), 02-05 (4m 0s)
-- Trend: Phase 2 plans consistently ~4 min each
+- Last 5 plans: 02-03 (5m 0s), 02-04 (4m 0s), 02-05 (4m 0s), 02-06 (5m 0s)
+- Trend: Phase 2 plans consistently ~4-5 min each
 
 *Updated after each plan completion*
 
@@ -90,6 +90,10 @@ Recent decisions affecting current work:
 - [02-05]: StreamInSpan unsafe pin projection to keep OTel span alive during streaming
 - [02-05]: Memory extraction interval: every 10 turns via SessionManager
 - [02-05]: ChatService<C, M> generic over ChatRepository + MemoryRepository
+- [02-06]: Stateless LLM utility pattern: struct with no fields, BoxLlmProvider passed per-call
+- [02-06]: Extraction prompt returns JSON array of {fact, category, importance}; empty array for nothing worth extracting
+- [02-06]: Graceful JSON parse degradation: log warning, return empty result, caller queues retry
+- [02-06]: Title generation: temperature 0.3, max_tokens 50, trims whitespace and quotes
 
 ### Pending Todos
 
@@ -103,6 +107,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-11T23:03:46Z
-Stopped at: Completed 02-05-PLAN.md (Agent engine and chat service)
+Last session: 2026-02-11T23:05:04Z
+Stopped at: Completed 02-06-PLAN.md (Memory extraction, context summarization, title generation)
 Resume file: None

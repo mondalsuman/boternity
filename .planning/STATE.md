@@ -10,28 +10,28 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 2 of 10 (Single-Agent Chat + LLM)
-Plan: 3 of 8 in current phase (02-01, 02-02, 02-03 complete)
+Plan: 4 of 8 in current phase (02-01, 02-02, 02-03, 02-04 complete)
 Status: In progress
-Last activity: 2026-02-11 -- Completed 02-03-PLAN.md (Anthropic Claude provider with SSE streaming)
+Last activity: 2026-02-11 -- Completed 02-04-PLAN.md (SQLite chat and memory persistence)
 
-Progress: [█████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 9/53 (~17%)
+Progress: [██████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 10/53 (~19%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 9
-- Average duration: 6m 29s
-- Total execution time: 62m 0s
+- Total plans completed: 10
+- Average duration: 6m 18s
+- Total execution time: 66m 0s
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1. Foundation + Bot Identity | 6/6 | 49m 14s | 8m 12s |
-| 2. Single-Agent Chat + LLM | 3/8 | 12m 46s | 4m 15s |
+| 2. Single-Agent Chat + LLM | 4/8 | 16m 46s | 4m 12s |
 
 **Recent Trend:**
-- Last 5 plans: 01-06 (9m 28s), 02-02 (2m 46s), 02-01 (5m 0s), 02-03 (5m 0s)
+- Last 5 plans: 02-02 (2m 46s), 02-01 (5m 0s), 02-03 (5m 0s), 02-04 (4m 0s)
 - Trend: Phase 2 plans executing faster than Phase 1
 
 *Updated after each plan completion*
@@ -82,6 +82,9 @@ Recent decisions affecting current work:
 - [02-03]: Model capabilities derived from model name substring matching (sonnet/opus/haiku)
 - [02-03]: Empty tool use JSON buffer produces empty JSON object (not null or parse error)
 - [02-03]: AnthropicProvider does not derive Debug (defense-in-depth for API key)
+- [02-04]: save_message atomically increments session message_count (prevents drift)
+- [02-04]: get_pending_extractions filters attempt_count < 3 (max retry policy in query)
+- [02-04]: ON DELETE CASCADE on chat_sessions cascades to messages and summaries (not memories)
 
 ### Pending Todos
 
@@ -95,6 +98,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-11T22:55:59Z
-Stopped at: Completed 02-03-PLAN.md (Anthropic Claude provider with SSE streaming)
+Last session: 2026-02-11T22:56:08Z
+Stopped at: Completed 02-04-PLAN.md (SQLite chat and memory persistence)
 Resume file: None

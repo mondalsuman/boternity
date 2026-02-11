@@ -5,6 +5,7 @@
 
 pub mod bot;
 pub mod secret;
+pub mod session;
 pub mod soul;
 pub mod status;
 

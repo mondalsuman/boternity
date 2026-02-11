@@ -7,6 +7,7 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use boternity_core::chat::service::ChatService;
 use boternity_core::service::bot::BotService;
 use boternity_core::service::secret::SecretService;
 use boternity_core::service::soul::SoulService;
@@ -16,6 +17,8 @@ use boternity_infra::filesystem::{resolve_data_dir, LocalFileSystem};
 use boternity_infra::secret::chain::build_secret_chain;
 use boternity_infra::secret::VaultSecretProvider;
 use boternity_infra::sqlite::bot::SqliteBotRepository;
+use boternity_infra::sqlite::chat::SqliteChatRepository;
+use boternity_infra::sqlite::memory::SqliteMemoryRepository;
 use boternity_infra::sqlite::pool::DatabasePool;
 use boternity_infra::sqlite::secret::SqliteSecretRepository;
 use boternity_infra::sqlite::soul::SqliteSoulRepository;
@@ -31,6 +34,8 @@ pub type ConcreteBotService = BotService<
 pub type ConcreteSoulService =
     SoulService<SqliteSoulRepository, LocalFileSystem, Sha256ContentHasher>;
 
+pub type ConcreteChatService = ChatService<SqliteChatRepository, SqliteMemoryRepository>;
+
 /// Shared application state holding all services.
 ///
 /// Used by both CLI commands and REST API handlers.
@@ -38,6 +43,7 @@ pub type ConcreteSoulService =
 pub struct AppState {
     pub bot_service: Arc<ConcreteBotService>,
     pub soul_service: Arc<ConcreteSoulService>,
+    pub chat_service: Arc<ConcreteChatService>,
     pub secret_service: Arc<SecretService>,
     pub data_dir: PathBuf,
     pub db_pool: DatabasePool,
@@ -93,9 +99,15 @@ impl AppState {
             Sha256ContentHasher::new(),
         );
 
+        // Wire chat service with its repositories
+        let chat_repo = SqliteChatRepository::new(db_pool.clone());
+        let memory_repo = SqliteMemoryRepository::new(db_pool.clone());
+        let chat_service = ChatService::new(chat_repo, memory_repo);
+
         Ok(Self {
             bot_service: Arc::new(bot_service),
             soul_service: Arc::new(api_soul_service),
+            chat_service: Arc::new(chat_service),
             secret_service: Arc::new(secret_service),
             data_dir,
             db_pool,

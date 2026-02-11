@@ -5,33 +5,34 @@
 See: .planning/PROJECT.md (updated 2026-02-10)
 
 **Core value:** A user can create a bot with a distinct identity, give it skills through an interactive builder, and have meaningful parallel conversations with it -- all running locally with full observability.
-**Current focus:** Phase 1 COMPLETE - Ready for Phase 2 (Single-Agent Chat + LLM)
+**Current focus:** Phase 2 (Single-Agent Chat + LLM) - In progress
 
 ## Current Position
 
-Phase: 1 of 10 (Foundation + Bot Identity) - COMPLETE
-Plan: 6 of 6 in current phase
-Status: Phase complete
-Last activity: 2026-02-11 -- Completed 01-06-PLAN.md (Soul versioning + immutability)
+Phase: 2 of 10 (Single-Agent Chat + LLM)
+Plan: 2 of 8 in current phase
+Status: In progress
+Last activity: 2026-02-11 -- Completed 02-02-PLAN.md (Observability crate + workspace deps)
 
-Progress: [██████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 6/53 (~11%)
+Progress: [████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 8/53 (~15%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6
-- Average duration: 8m 16s
-- Total execution time: 49m 14s
+- Total plans completed: 8
+- Average duration: 7m 0s
+- Total execution time: 52m 0s
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1. Foundation + Bot Identity | 6/6 | 49m 14s | 8m 12s |
+| 2. Single-Agent Chat + LLM | 2/8 | 2m 46s | 1m 23s |
 
 **Recent Trend:**
-- Last 5 plans: 01-02 (5m 58s), 01-03 (9m 25s), 01-04 (11m 25s), 01-05 (~8m 28s), 01-06 (9m 28s)
-- Trend: stable ~9 min/plan for medium-complexity plans
+- Last 5 plans: 01-04 (11m 25s), 01-05 (~8m 28s), 01-06 (9m 28s), 02-01 (~0m), 02-02 (2m 46s)
+- Trend: Phase 2 infrastructure plans are fast (deps + crate scaffolding)
 
 *Updated after each plan completion*
 
@@ -69,6 +70,8 @@ Recent decisions affecting current work:
 - [01-06]: Message field on Soul struct for version commit messages
 - [01-06]: update_soul saves DB first then file (DB failure leaves disk unchanged)
 - [01-06]: bnity check enhanced with soul integrity verification
+- [02-02]: OnceLock for OTel provider storage -- opentelemetry 0.31 removed global shutdown, store in OnceLock
+- [02-02]: stdout exporter for dev -- opentelemetry-stdout for local development, swappable for OTLP
 
 ### Pending Todos
 
@@ -82,6 +85,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-11T22:20:48Z
-Stopped at: Completed 01-06-PLAN.md (Phase 1 COMPLETE)
+Last session: 2026-02-11T22:45:01Z
+Stopped at: Completed 02-02-PLAN.md (Observability crate + workspace deps)
 Resume file: None

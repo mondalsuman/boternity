@@ -5,8 +5,12 @@
 //!
 //! Zero infrastructure dependencies -- only serde, uuid, chrono, thiserror.
 
+pub mod agent;
 pub mod bot;
+pub mod chat;
 pub mod error;
 pub mod identity;
+pub mod llm;
+pub mod memory;
 pub mod secret;
 pub mod soul;

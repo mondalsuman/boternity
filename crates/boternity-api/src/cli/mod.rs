@@ -5,6 +5,7 @@
 
 pub mod bot;
 pub mod chat;
+pub mod memory;
 pub mod secret;
 pub mod session;
 pub mod soul;
@@ -106,6 +107,43 @@ pub enum Commands {
         shell: Shell,
     },
 
+    /// Export a resource (session).
+    Export {
+        #[command(subcommand)]
+        resource: ExportResource,
+    },
+
+    /// Browse past sessions for a bot.
+    Sessions {
+        /// Bot slug.
+        slug: String,
+    },
+
+    /// Browse memories for a bot.
+    Memories {
+        /// Bot slug.
+        slug: String,
+    },
+
+    /// Manually inject a memory for a bot.
+    Remember {
+        /// Bot slug.
+        slug: String,
+
+        /// The fact to remember.
+        fact: String,
+    },
+
+    /// Wipe all memories for a bot.
+    Forget {
+        /// Bot slug.
+        slug: String,
+
+        /// Skip confirmation prompt.
+        #[arg(long)]
+        force: bool,
+    },
+
     // --- Short aliases ---
     /// Create a new bot (alias for `create bot`).
     #[command(name = "new", hide = true)]
@@ -166,6 +204,26 @@ pub enum DeleteResource {
         #[arg(long)]
         force: bool,
     },
+
+    /// Delete a chat session.
+    Session {
+        /// Session ID to delete.
+        id: String,
+
+        /// Skip confirmation prompt.
+        #[arg(long)]
+        force: bool,
+    },
+
+    /// Delete a single memory by ID.
+    Memory {
+        /// Memory ID to delete.
+        id: String,
+
+        /// Skip confirmation prompt.
+        #[arg(long)]
+        force: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -187,6 +245,15 @@ pub enum SetResource {
         /// Secret value (optional; prompts if omitted for security).
         #[arg(long)]
         value: Option<String>,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum ExportResource {
+    /// Export a chat session as Markdown or JSON.
+    Session {
+        /// Session ID to export.
+        id: String,
     },
 }
 

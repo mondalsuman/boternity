@@ -13,7 +13,7 @@ use clap::Parser;
 use clap_complete::generate;
 use tracing_subscriber::EnvFilter;
 
-use cli::{Cli, CloneResource, Commands, CreateResource, DeleteResource, ListResource, SetResource, SoulCommand};
+use cli::{Cli, CloneResource, Commands, CreateResource, DeleteResource, ExportResource, ListResource, SetResource, SoulCommand};
 use state::AppState;
 
 #[tokio::main]
@@ -70,6 +70,14 @@ async fn main() -> anyhow::Result<()> {
         Commands::Delete { resource } => match resource {
             DeleteResource::Bot { slug, force } => {
                 cli::bot::delete_bot(&state, &slug, force, cli.json).await?;
+            }
+            DeleteResource::Session { id, force } => {
+                let session_id = id.parse::<uuid::Uuid>().map_err(|_| anyhow::anyhow!("Invalid session ID: {id}"))?;
+                cli::session::delete_session(&state, session_id, force, cli.json).await?;
+            }
+            DeleteResource::Memory { id, force } => {
+                let memory_id = id.parse::<uuid::Uuid>().map_err(|_| anyhow::anyhow!("Invalid memory ID: {id}"))?;
+                cli::memory::delete_memory(&state, memory_id, force, cli.json).await?;
             }
         },
 
@@ -216,6 +224,29 @@ async fn main() -> anyhow::Result<()> {
                 .await?;
 
             println!("\n  Server stopped.");
+        }
+
+        Commands::Export { resource } => match resource {
+            ExportResource::Session { id } => {
+                let session_id = id.parse::<uuid::Uuid>().map_err(|_| anyhow::anyhow!("Invalid session ID: {id}"))?;
+                cli::session::export_session(&state, session_id, cli.json).await?;
+            }
+        },
+
+        Commands::Sessions { slug } => {
+            cli::session::list_sessions(&state, &slug, cli.json).await?;
+        }
+
+        Commands::Memories { slug } => {
+            cli::memory::list_memories(&state, &slug, cli.json).await?;
+        }
+
+        Commands::Remember { slug, fact } => {
+            cli::memory::remember(&state, &slug, &fact, cli.json).await?;
+        }
+
+        Commands::Forget { slug, force } => {
+            cli::memory::forget(&state, &slug, force, cli.json).await?;
         }
 
         Commands::Completions { .. } => unreachable!("handled above"),

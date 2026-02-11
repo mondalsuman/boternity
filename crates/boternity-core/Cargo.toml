@@ -8,6 +8,7 @@ description = "Business logic and repository traits for Boternity"
 [dependencies]
 boternity-types = { workspace = true }
 chrono = { workspace = true }
+futures-util = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
 

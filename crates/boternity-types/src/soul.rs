@@ -56,7 +56,26 @@ pub struct Soul {
     pub hash: String,
     /// Monotonically increasing version number per bot.
     pub version: i32,
+    /// Optional commit message describing what changed in this version.
+    pub message: Option<String>,
     pub created_at: DateTime<Utc>,
+}
+
+/// Result of a soul integrity verification check.
+///
+/// Compares the SHA-256 hash of the SOUL.md file on disk against the stored
+/// hash in the database. A mismatch indicates the file was modified outside
+/// of the Boternity update flow (potential tampering).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SoulIntegrityResult {
+    /// Whether the file hash matches the stored hash.
+    pub valid: bool,
+    /// The expected hash (from database).
+    pub expected_hash: String,
+    /// The actual hash (computed from file on disk).
+    pub actual_hash: String,
+    /// The current version number.
+    pub version: i32,
 }
 
 /// Structured data parsed from the YAML frontmatter of SOUL.md.

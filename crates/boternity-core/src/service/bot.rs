@@ -4,13 +4,13 @@
 //! with just a name produces a complete bot with SOUL.md, IDENTITY.md, and
 //! USER.md files on disk plus database records.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use boternity_types::bot::{
     Bot, BotCategory, BotId, BotStatus, CreateBotRequest, UpdateBotRequest, slugify,
 };
 use boternity_types::error::BotError;
-use boternity_types::soul::Soul;
+use boternity_types::soul::{Soul, SoulIntegrityResult};
 
 use crate::repository::bot::{BotFilter, BotRepository};
 use crate::repository::soul::SoulRepository;
@@ -46,8 +46,18 @@ impl<B: BotRepository, S: SoulRepository, F: FileSystem, H: ContentHasher>
         }
     }
 
+    /// Access the data directory.
+    pub fn data_dir(&self) -> &Path {
+        &self.data_dir
+    }
+
+    /// Access the soul service.
+    pub fn soul_service(&self) -> &SoulService<S, F, H> {
+        &self.soul_service
+    }
+
     /// Compute the directory path for a bot: `{data_dir}/bots/{slug}/`
-    fn bot_dir(&self, slug: &str) -> PathBuf {
+    pub fn bot_dir(&self, slug: &str) -> PathBuf {
         self.data_dir.join("bots").join(slug)
     }
 
@@ -271,6 +281,33 @@ impl<B: BotRepository, S: SoulRepository, F: FileSystem, H: ContentHasher>
         }
 
         Ok(())
+    }
+
+    /// Verify the integrity of a bot's SOUL.md file.
+    ///
+    /// Computes the SHA-256 hash of the file on disk and compares it against
+    /// the stored hash in the database. A mismatch is a hard block -- the bot
+    /// refuses to start with a clear error (CVE-2026-25253 mitigation).
+    ///
+    /// This is called before any bot operation that would "start" a bot.
+    pub async fn ensure_soul_integrity(&self, bot_id: &BotId) -> Result<SoulIntegrityResult, BotError> {
+        let bot = self.get_bot(bot_id).await?;
+        let soul_path = self.bot_dir(&bot.slug).join("SOUL.md");
+
+        let result = self
+            .soul_service
+            .verify_soul_integrity(bot_id, &soul_path)
+            .await
+            .map_err(|e| BotError::FileSystemError(e.to_string()))?;
+
+        if !result.valid {
+            return Err(BotError::SoulIntegrityViolation {
+                expected: result.expected_hash.clone(),
+                actual: result.actual_hash.clone(),
+            });
+        }
+
+        Ok(result)
     }
 
     /// Clone a bot: copies soul + config, not history or memories.

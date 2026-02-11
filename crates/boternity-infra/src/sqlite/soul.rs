@@ -50,6 +50,9 @@ fn row_to_soul(row: &sqlx::sqlite::SqliteRow) -> Result<Soul, RepositoryError> {
     let version: i32 = row
         .try_get("version")
         .map_err(|e| RepositoryError::Query(e.to_string()))?;
+    let message: Option<String> = row
+        .try_get("message")
+        .map_err(|e| RepositoryError::Query(e.to_string()))?;
     let created_at_str: String = row
         .try_get("created_at")
         .map_err(|e| RepositoryError::Query(e.to_string()))?;
@@ -64,6 +67,7 @@ fn row_to_soul(row: &sqlx::sqlite::SqliteRow) -> Result<Soul, RepositoryError> {
         content,
         hash,
         version,
+        message,
         created_at: parse_datetime(&created_at_str)?,
     })
 }
@@ -106,13 +110,14 @@ impl SoulRepository for SqliteSoulRepository {
 
         sqlx::query(
             "INSERT INTO soul_versions (id, bot_id, content, hash, version, message, created_at)
-             VALUES (?, ?, ?, ?, ?, NULL, ?)",
+             VALUES (?, ?, ?, ?, ?, ?, ?)",
         )
         .bind(soul.id.to_string())
         .bind(soul.bot_id.to_string())
         .bind(&soul.content)
         .bind(&soul.hash)
         .bind(soul.version)
+        .bind(&soul.message)
         .bind(format_datetime(&soul.created_at))
         .execute(&mut *tx)
         .await
@@ -264,6 +269,7 @@ mod tests {
             content: content.to_string(),
             hash,
             version,
+            message: None,
             created_at: Utc::now(),
         }
     }

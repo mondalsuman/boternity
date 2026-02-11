@@ -56,6 +56,9 @@ impl IntoResponse for AppError {
             AppError::Bot(BotError::InvalidStatus(msg)) => {
                 (StatusCode::BAD_REQUEST, "VALIDATION_ERROR", msg.clone())
             }
+            AppError::Bot(BotError::SoulIntegrityViolation { expected, actual }) => {
+                (StatusCode::CONFLICT, "SOUL_INTEGRITY_VIOLATION", format!("Soul integrity violation: expected hash {expected}, got {actual}"))
+            }
             AppError::Bot(e) => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "BOT_ERROR", e.to_string())
             }

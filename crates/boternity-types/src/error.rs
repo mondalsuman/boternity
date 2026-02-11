@@ -20,6 +20,9 @@ pub enum BotError {
 
     #[error("filesystem error: {0}")]
     FileSystemError(String),
+
+    #[error("soul integrity violation: expected hash '{expected}', got '{actual}'")]
+    SoulIntegrityViolation { expected: String, actual: String },
 }
 
 /// Errors related to soul operations.

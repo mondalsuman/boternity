@@ -5,6 +5,7 @@ members = [
     "crates/boternity-core",
     "crates/boternity-infra",
     "crates/boternity-api",
+    "crates/boternity-observe",
 ]
 
 [workspace.package]
@@ -67,8 +68,38 @@ anyhow = "1"
 # Temporary files
 tempfile = "3"
 
+# LLM provider HTTP + streaming
+reqwest = { version = "0.12", features = ["json", "stream"] }
+reqwest-eventsource = "0.6"
+eventsource-stream = "0.2"
+async-stream = "0.3"
+futures-util = "0.3"
+
+# Terminal rendering
+termimad = "0.34"
+syntect = { version = "5", default-features = false, features = ["default-fancy"] }
+
+# Async CLI input
+rustyline-async = "0.4"
+
+# Crossterm (terminal manipulation)
+crossterm = "0.28"
+
+# Secret wrapping for API keys
+secrecy = { version = "0.10", features = ["serde"] }
+
+# Pin projection for custom stream types
+pin-project-lite = "0.2"
+
+# OpenTelemetry
+opentelemetry = "0.31"
+opentelemetry_sdk = "0.31"
+opentelemetry-stdout = "0.31"
+tracing-opentelemetry = "0.32"
+
 # Workspace crates
 boternity-types = { path = "crates/boternity-types" }
 boternity-core = { path = "crates/boternity-core" }
 boternity-infra = { path = "crates/boternity-infra" }
 boternity-api = { path = "crates/boternity-api" }
+boternity-observe = { path = "crates/boternity-observe" }

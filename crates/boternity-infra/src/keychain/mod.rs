@@ -75,15 +75,17 @@ impl SecretProvider for KeychainProvider {
 
     async fn set(
         &self,
-        key: &str,
-        value: &str,
-        scope: &SecretScope,
+        _key: &str,
+        _value: &str,
+        _scope: &SecretScope,
     ) -> Result<(), RepositoryError> {
-        let entry = self.entry(key, scope)?;
-
-        entry
-            .set_password(value)
-            .map_err(|e| RepositoryError::Query(format!("keychain set error: {e}")))
+        // Keychain is read-only in the resolution chain. The vault (SQLite)
+        // is the writable backend that also maintains the key index for list().
+        // The keyring API cannot enumerate entries, so if we wrote here,
+        // list_secrets() would never find the stored keys.
+        Err(RepositoryError::Query(
+            "keychain provider is read-only in secret chain".to_string(),
+        ))
     }
 
     async fn delete(

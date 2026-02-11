@@ -179,6 +179,7 @@ pub async fn list_bots(
 
     table.set_header(vec![
         Cell::new("Name").fg(Color::White),
+        Cell::new("Slug").fg(Color::White),
         Cell::new("Status").fg(Color::White),
         Cell::new("Description").fg(Color::White),
         Cell::new("Last Active").fg(Color::White),
@@ -207,6 +208,7 @@ pub async fn list_bots(
 
         table.add_row(vec![
             Cell::new(name_display).fg(Color::Cyan),
+            Cell::new(&bot.slug).fg(Color::White),
             status_cell,
             Cell::new(desc),
             Cell::new(last_active).fg(Color::DarkGrey),

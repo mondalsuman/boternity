@@ -197,13 +197,19 @@ impl<S: SoulRepository, F: FileSystem, H: ContentHasher> SoulService<S, F, H> {
         // Compute hash
         let hash = self.hasher.compute_hash(content);
 
+        // Determine next version number
+        let next_version = match self.get_current_soul(bot_id).await? {
+            Some(current) => current.version + 1,
+            None => 1,
+        };
+
         // Create soul version
         let soul = Soul {
             id: SoulId::new(),
             bot_id: bot_id.clone(),
             content: content.to_string(),
             hash,
-            version: 1,
+            version: next_version,
             created_at: chrono::Utc::now(),
         };
 

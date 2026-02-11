@@ -4,6 +4,8 @@
 //! layer implements. It depends only on `boternity-types` -- never on
 //! `boternity-infra` or any database/IO crate.
 
+pub mod chat;
 pub mod llm;
+pub mod memory;
 pub mod repository;
 pub mod service;

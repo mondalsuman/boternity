@@ -10,6 +10,8 @@
 //!
 //! SECURITY: Error types never contain plaintext or key material.
 
+use std::path::Path;
+
 use aes_gcm::aead::{Aead, KeyInit, OsRng};
 use aes_gcm::{AeadCore, Aes256Gcm, Nonce};
 use thiserror::Error;
@@ -128,6 +130,47 @@ impl VaultCrypto {
                 Ok(Self::new(&key))
             }
             Err(e) => Err(VaultError::KeychainUnavailable(e.to_string())),
+        }
+    }
+
+    /// Load or auto-generate a master key from a file on disk.
+    ///
+    /// Zero-friction, no-prompt alternative to `from_keychain()`:
+    /// 1. Try to read existing hex-encoded key from `key_path`
+    /// 2. If not found, generate a random 32-byte key
+    /// 3. Write the new key to `key_path` with mode 0600
+    ///
+    /// The key file contains 64 hex characters (32 bytes). File permissions
+    /// are set to owner-only (0600) to prevent other users from reading it.
+    pub fn from_key_file(key_path: &Path) -> Result<Self, VaultError> {
+        if key_path.exists() {
+            let hex_key = std::fs::read_to_string(key_path)
+                .map_err(|e| VaultError::KeychainError(format!("failed to read vault key file: {e}")))?;
+            let hex_key = hex_key.trim();
+            let key_bytes = hex_decode(hex_key)
+                .map_err(|_| VaultError::KeychainError("corrupted vault key file".to_string()))?;
+            if key_bytes.len() != 32 {
+                return Err(VaultError::KeychainError(
+                    "invalid key length in vault key file".to_string(),
+                ));
+            }
+            let mut key = [0u8; 32];
+            key.copy_from_slice(&key_bytes);
+            Ok(Self::new(&key))
+        } else {
+            let key: [u8; 32] = rand_bytes();
+            let hex_key = hex_encode(&key);
+            std::fs::write(key_path, &hex_key)
+                .map_err(|e| VaultError::KeychainError(format!("failed to write vault key file: {e}")))?;
+            // Set file permissions to 0600 (owner read/write only)
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                let perms = std::fs::Permissions::from_mode(0o600);
+                std::fs::set_permissions(key_path, perms)
+                    .map_err(|e| VaultError::KeychainError(format!("failed to set key file permissions: {e}")))?;
+            }
+            Ok(Self::new(&key))
         }
     }
 

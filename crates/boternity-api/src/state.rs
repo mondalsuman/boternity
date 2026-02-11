@@ -72,19 +72,11 @@ impl AppState {
         // Wire bot service
         let bot_service = BotService::new(bot_repo, soul_service, data_dir.clone());
 
-        // Wire secret service with resolution chain
-        let vault_crypto = match VaultCrypto::from_keychain() {
-            Ok(crypto) => crypto,
-            Err(e) => {
-                tracing::warn!("Keychain unavailable ({e}), using fallback key for vault");
-                // Fallback: use a deterministic key derived from the data dir
-                // This is less secure than keychain but works on headless systems
-                VaultCrypto::from_password(&format!(
-                    "boternity-fallback-{}",
-                    data_dir.display()
-                ))?
-            }
-        };
+        // Wire secret service with resolution chain.
+        // The vault master key is stored in a file (vault.key) rather than the
+        // OS keychain to avoid repeated password prompts on every CLI invocation.
+        let vault_key_path = data_dir.join("vault.key");
+        let vault_crypto = VaultCrypto::from_key_file(&vault_key_path)?;
 
         let vault_provider = VaultSecretProvider::new(secret_repo, vault_crypto);
         // KeychainProvider is not included in the secret chain. Each keychain

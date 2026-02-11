@@ -54,13 +54,17 @@ Plans:
   2. Session memory extracts and persists key points from each conversation -- when the user starts a new session, the bot can reference previous session context
   3. Chat history is persisted and retrievable -- user can view past conversations for any bot
   4. Every LLM call produces a structured trace with timing, token count, and decision context visible in logs
-**Plans**: TBD
+**Plans**: 8 plans
 
 Plans:
-- [ ] 02-01: LLM provider abstraction and Anthropic integration
-- [ ] 02-02: Agent engine with single-agent execution
-- [ ] 02-03: Streaming chat (CLI) with session memory
-- [ ] 02-04: Chat persistence and structured observability
+- [ ] 02-01-PLAN.md -- Domain types (LLM, chat, agent, memory) and trait abstractions (LlmProvider, BoxLlmProvider, ChatRepository, MemoryRepository)
+- [ ] 02-02-PLAN.md -- Observability crate (boternity-observe) with OTel tracing setup and workspace dependency additions
+- [ ] 02-03-PLAN.md -- Anthropic Claude provider with SSE streaming state machine
+- [ ] 02-04-PLAN.md -- SQLite chat/memory persistence (migrations + repository implementations)
+- [ ] 02-05-PLAN.md -- Agent engine, system prompt builder, and chat service
+- [ ] 02-06-PLAN.md -- Memory extraction, context summarization, and session title generation
+- [ ] 02-07-PLAN.md -- Interactive CLI streaming chat with markdown rendering and full session management
+- [ ] 02-08-PLAN.md -- CLI session browser, memory browser, export, and management commands
 
 ### Phase 3: Multi-Provider + Memory
 **Goal**: Bots can use any of multiple LLM providers with automatic failover, remember things long-term via vector embeddings, share knowledge across bots safely, and store files and structured data.
@@ -223,7 +227,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation + Bot Identity | 0/6 | Planned | - |
-| 2. Single-Agent Chat + LLM | 0/4 | Not started | - |
+| 2. Single-Agent Chat + LLM | 0/8 | Planned | - |
 | 3. Multi-Provider + Memory | 0/5 | Not started | - |
 | 4. Web UI Core + Fleet Dashboard | 0/5 | Not started | - |
 | 5. Agent Hierarchy + Event System | 0/5 | Not started | - |

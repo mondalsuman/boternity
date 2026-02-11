@@ -27,10 +27,25 @@ pub fn build_router(state: AppState) -> Router {
         .route("/bots/{id}", delete(handlers::bot::delete_bot))
         .route("/bots/{id}/clone", post(handlers::bot::clone_bot))
         // Soul
-        .route("/bots/{id}/soul", get(handlers::soul::get_soul))
+        .route(
+            "/bots/{id}/soul",
+            get(handlers::soul::get_soul).put(handlers::soul::update_soul),
+        )
         .route(
             "/bots/{id}/soul/versions",
             get(handlers::soul::get_soul_versions),
+        )
+        .route(
+            "/bots/{id}/soul/versions/{version}",
+            get(handlers::soul::get_soul_version),
+        )
+        .route(
+            "/bots/{id}/soul/rollback",
+            post(handlers::soul::rollback_soul),
+        )
+        .route(
+            "/bots/{id}/soul/verify",
+            get(handlers::soul::verify_soul),
         )
         // Secrets
         .route("/secrets", get(handlers::secret::list_secrets))

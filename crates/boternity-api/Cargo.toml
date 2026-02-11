@@ -32,3 +32,4 @@ chrono = { workspace = true }
 sha2 = { workspace = true }
 aes-gcm = { workspace = true }
 sqlx = { workspace = true }
+tempfile = { workspace = true }

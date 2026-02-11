@@ -13,7 +13,7 @@ use clap::Parser;
 use clap_complete::generate;
 use tracing_subscriber::EnvFilter;
 
-use cli::{Cli, CloneResource, Commands, CreateResource, DeleteResource, ListResource, SetResource};
+use cli::{Cli, CloneResource, Commands, CreateResource, DeleteResource, ListResource, SetResource, SoulCommand};
 use state::AppState;
 
 #[tokio::main]
@@ -85,13 +85,47 @@ async fn main() -> anyhow::Result<()> {
             }
         },
 
+        Commands::Soul { action } => match action {
+            SoulCommand::Edit { slug } => {
+                cli::soul::edit_soul(&state, &slug, cli.json).await?;
+            }
+            SoulCommand::History { slug } => {
+                cli::soul::soul_history(&state, &slug, cli.json).await?;
+            }
+            SoulCommand::Diff { slug, from, to } => {
+                cli::soul::soul_diff(&state, &slug, from, to, cli.json).await?;
+            }
+            SoulCommand::Rollback {
+                slug,
+                version,
+                force,
+            } => {
+                cli::soul::soul_rollback(&state, &slug, version, force, cli.json).await?;
+            }
+            SoulCommand::Verify { slug } => {
+                cli::soul::soul_verify(&state, &slug, cli.json).await?;
+            }
+        },
+
         Commands::Check { slug } => {
-            // Basic health check for a bot
+            // Health check for a bot including soul integrity verification
             let bot = state.bot_service.get_bot_by_slug(&slug).await?;
             let soul_path = state.data_dir.join("bots").join(&bot.slug).join("SOUL.md");
             let has_soul = tokio::fs::try_exists(&soul_path).await.unwrap_or(false);
             let identity_path = state.data_dir.join("bots").join(&bot.slug).join("IDENTITY.md");
             let has_identity = tokio::fs::try_exists(&identity_path).await.unwrap_or(false);
+
+            // Run soul integrity check if soul exists
+            let soul_integrity = if has_soul {
+                match state.soul_service.verify_soul_integrity(&bot.id, &soul_path).await {
+                    Ok(result) => Some(result),
+                    Err(_) => None,
+                }
+            } else {
+                None
+            };
+
+            let integrity_ok = soul_integrity.as_ref().is_some_and(|r| r.valid);
 
             if cli.json {
                 let check = serde_json::json!({
@@ -99,22 +133,22 @@ async fn main() -> anyhow::Result<()> {
                     "status": bot.status.to_string(),
                     "soul_exists": has_soul,
                     "identity_exists": has_identity,
-                    "healthy": has_soul && has_identity,
+                    "soul_integrity": soul_integrity.as_ref().map(|r| r.valid),
+                    "healthy": has_soul && has_identity && integrity_ok,
                 });
                 println!("{}", serde_json::to_string_pretty(&check)?);
             } else {
                 println!();
                 println!(
-                    "  {} Health check for '{}'",
-                    console::style("🔍").bold(),
+                    "  Health check for '{}'",
                     console::style(&bot.name).cyan()
                 );
                 println!();
                 let check_mark = |ok: bool| {
                     if ok {
-                        format!("{}", console::style("✓").green())
+                        format!("{}", console::style("ok").green())
                     } else {
-                        format!("{}", console::style("✗").red())
+                        format!("{}", console::style("FAIL").red())
                     }
                 };
                 println!("  {} SOUL.md exists", check_mark(has_soul));
@@ -124,6 +158,22 @@ async fn main() -> anyhow::Result<()> {
                     check_mark(bot.status == boternity_types::bot::BotStatus::Active),
                     bot.status
                 );
+                if let Some(integrity) = &soul_integrity {
+                    println!(
+                        "  {} Soul integrity",
+                        check_mark(integrity.valid)
+                    );
+                    if !integrity.valid {
+                        println!(
+                            "     Expected: {}",
+                            &integrity.expected_hash[..8.min(integrity.expected_hash.len())]
+                        );
+                        println!(
+                            "     Actual:   {}",
+                            &integrity.actual_hash[..8.min(integrity.actual_hash.len())]
+                        );
+                    }
+                }
                 println!();
             }
         }

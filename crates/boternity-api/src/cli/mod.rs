@@ -5,6 +5,7 @@
 
 pub mod bot;
 pub mod secret;
+pub mod soul;
 pub mod status;
 
 use clap::{Parser, Subcommand};
@@ -69,6 +70,12 @@ pub enum Commands {
     Set {
         #[command(subcommand)]
         resource: SetResource,
+    },
+
+    /// Soul management (edit, history, diff, rollback, verify).
+    Soul {
+        #[command(subcommand)]
+        action: SoulCommand,
     },
 
     /// System health check for a bot.
@@ -178,5 +185,53 @@ pub enum SetResource {
         /// Secret value (optional; prompts if omitted for security).
         #[arg(long)]
         value: Option<String>,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum SoulCommand {
+    /// Open SOUL.md in $EDITOR for editing (creates a new version).
+    Edit {
+        /// Bot slug.
+        slug: String,
+    },
+
+    /// Show version history of a bot's soul.
+    History {
+        /// Bot slug.
+        slug: String,
+    },
+
+    /// Show line-by-line diff between soul versions.
+    Diff {
+        /// Bot slug.
+        slug: String,
+
+        /// Starting version (default: previous version).
+        #[arg(long)]
+        from: Option<i32>,
+
+        /// Ending version (default: current version).
+        #[arg(long)]
+        to: Option<i32>,
+    },
+
+    /// Rollback soul to a previous version (creates a new version).
+    Rollback {
+        /// Bot slug.
+        slug: String,
+
+        /// Target version number to rollback to.
+        version: i32,
+
+        /// Skip confirmation prompt.
+        #[arg(long)]
+        force: bool,
+    },
+
+    /// Verify soul integrity (SHA-256 hash check).
+    Verify {
+        /// Bot slug.
+        slug: String,
     },
 }

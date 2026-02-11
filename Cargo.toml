@@ -64,6 +64,9 @@ dirs = "6"
 thiserror = "1"
 anyhow = "1"
 
+# Temporary files
+tempfile = "3"
+
 # Workspace crates
 boternity-types = { path = "crates/boternity-types" }
 boternity-core = { path = "crates/boternity-core" }

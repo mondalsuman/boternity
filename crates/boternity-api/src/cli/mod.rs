@@ -4,6 +4,7 @@
 //! pattern (e.g., `bnity create bot`, `bnity list bots`).
 
 pub mod bot;
+pub mod chat;
 pub mod secret;
 pub mod session;
 pub mod soul;

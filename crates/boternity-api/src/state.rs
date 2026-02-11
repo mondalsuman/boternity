@@ -13,7 +13,6 @@ use boternity_core::service::soul::SoulService;
 use boternity_infra::crypto::hash::Sha256ContentHasher;
 use boternity_infra::crypto::vault::VaultCrypto;
 use boternity_infra::filesystem::{resolve_data_dir, LocalFileSystem};
-use boternity_infra::keychain::KeychainProvider;
 use boternity_infra::secret::chain::build_secret_chain;
 use boternity_infra::secret::VaultSecretProvider;
 use boternity_infra::sqlite::bot::SqliteBotRepository;
@@ -88,8 +87,11 @@ impl AppState {
         };
 
         let vault_provider = VaultSecretProvider::new(secret_repo, vault_crypto);
-        let keychain = KeychainProvider::new();
-        let secret_chain = build_secret_chain(vault_provider, Some(keychain), true);
+        // KeychainProvider is not included in the secret chain. Each keychain
+        // entry triggers a separate macOS authorization prompt, causing multiple
+        // password dialogs per command. The keychain is used only for the vault
+        // master key (VaultCrypto::from_keychain above), not for individual secrets.
+        let secret_chain = build_secret_chain(vault_provider, None, true);
         let secret_service = SecretService::new(secret_chain);
 
         // Create a separate soul service for the API (bot_service owns one internally)

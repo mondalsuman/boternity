@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 3 of 10 (Multi-Provider + Memory)
-Plan: 8 of 13 in current phase (03-01, 03-02, 03-03, 03-04, 03-05, 03-06, 03-07, 03-10 complete)
+Plan: 9 of 13 in current phase (03-01, 03-02, 03-03, 03-04, 03-05, 03-06, 03-07, 03-09, 03-10 complete)
 Status: In progress
-Last activity: 2026-02-12 -- Completed 03-10-PLAN.md (file storage with semantic indexing)
+Last activity: 2026-02-12 -- Completed 03-09-PLAN.md (shared memory store with trust partitioning)
 
-Progress: [████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 21/53 (~40%)
+Progress: [██████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 22/53 (~42%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 21
-- Average duration: 8m 17s
-- Total execution time: 173m 56s
+- Total plans completed: 22
+- Average duration: 8m 04s
+- Total execution time: 177m 27s
 
 **By Phase:**
 
@@ -29,11 +29,11 @@ Progress: [████████████████████░░░
 |-------|-------|-------|----------|
 | 1. Foundation + Bot Identity | 6/6 | 49m 14s | 8m 12s |
 | 2. Single-Agent Chat + LLM | 7/8 | 31m 46s | 4m 32s |
-| 3. Multi-Provider + Memory | 8/13 | 92m 56s | 11m 37s |
+| 3. Multi-Provider + Memory | 9/13 | 96m 27s | 10m 43s |
 
 **Recent Trend:**
-- Last 5 plans: 03-05 (12m 45s), 03-04 (16m 27s), 03-06 (10m 48s), 03-07 (10m 45s), 03-10 (13m 58s)
-- Trend: Phase 3 plans longer due to external dep compilation and larger scope
+- Last 5 plans: 03-04 (16m 27s), 03-06 (10m 48s), 03-07 (10m 45s), 03-10 (13m 58s), 03-09 (3m 31s)
+- Trend: Faster when patterns established (03-09 reused 03-07 patterns)
 
 *Updated after each plan completion*
 
@@ -142,6 +142,12 @@ Recent decisions affecting current work:
 - [03-10]: Bot files stored under {base_dir}/bots/{bot_id.simple()}/files/ with .versions/ subdirectory
 - [03-10]: MockEmbedder pattern for testing vector operations without embedding model download
 - [03-10]: Rust 2024 edition requires explicit type annotations on closure params with .clone() in iterator chains
+- [03-09]: SHA-256 write_hash covers id+fact+category+importance+author_bot_id+trust_level+created_at (not embedding)
+- [03-09]: Share/revoke uses delete+insert pattern (same as 03-07 update_embedding) to preserve vector column
+- [03-09]: Shared memory search uses raw similarity as relevance (no time-decay or access tracking)
+- [03-09]: Per-bot cap checked on every add() via count_by_author query
+- [03-09]: Trust filter SQL: OR-combined clauses for public, author-self, trusted-list access
+- [03-09]: extract_embedding_from_batch reads FixedSizeListArray for delete+insert ops
 
 ### Pending Todos
 
@@ -155,6 +161,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-12T22:38:15Z
-Stopped at: Completed 03-10-PLAN.md (file storage with semantic indexing)
+Last session: 2026-02-12T22:45:47Z
+Stopped at: Completed 03-09-PLAN.md (shared memory store with trust partitioning)
 Resume file: None

@@ -23,6 +23,7 @@ use boternity_core::memory::store::MemoryRepository;
 use boternity_infra::filesystem::identity::parse_identity_frontmatter;
 use boternity_infra::filesystem::LocalFileSystem;
 use boternity_infra::llm::anthropic::AnthropicProvider;
+use boternity_infra::llm::bedrock::BedrockProvider;
 use boternity_types::llm::StreamEvent;
 use boternity_types::secret::SecretScope;
 
@@ -34,6 +35,10 @@ use super::input::{ChatInput, InputEvent};
 use super::renderer::ChatRenderer;
 
 /// Create a BoxLlmProvider from the state's secret service.
+///
+/// Auto-detects provider based on key format:
+/// - Keys starting with `bedrock-api-key-` → AWS Bedrock provider
+/// - All other keys → Anthropic direct API provider
 async fn create_provider(state: &AppState, model: &str) -> anyhow::Result<BoxLlmProvider> {
     let api_key_value = state
         .secret_service
@@ -44,9 +49,17 @@ async fn create_provider(state: &AppState, model: &str) -> anyhow::Result<BoxLlm
                 "ANTHROPIC_API_KEY not found. Set it with: bnity set secret ANTHROPIC_API_KEY"
             )
         })?;
-    let api_key = SecretString::from(api_key_value);
-    let anthropic = AnthropicProvider::new(api_key, model.to_string());
-    Ok(BoxLlmProvider::new(anthropic))
+
+    if api_key_value.starts_with("bedrock-api-key-") {
+        let region = std::env::var("AWS_REGION").unwrap_or_else(|_| "us-east-1".to_string());
+        let api_key = SecretString::from(api_key_value);
+        let bedrock = BedrockProvider::new(api_key, model.to_string(), region);
+        Ok(BoxLlmProvider::new(bedrock))
+    } else {
+        let api_key = SecretString::from(api_key_value);
+        let anthropic = AnthropicProvider::new(api_key, model.to_string());
+        Ok(BoxLlmProvider::new(anthropic))
+    }
 }
 
 /// Run the interactive chat loop for a bot.
@@ -192,7 +205,10 @@ pub async fn run_chat_loop(
                 }
 
                 // Send to LLM
-                agent_context.add_user_message(text.clone());
+                // Note: do NOT add to agent_context here -- build_request() in
+                // AgentEngine appends the user message to the request automatically.
+                // We add it to history after the response completes, alongside
+                // the assistant message.
                 let _ = state.chat_service.save_user_message(session_id, text.clone()).await;
                 if first_user_message.is_none() { first_user_message = Some(text.clone()); }
 
@@ -243,14 +259,15 @@ pub async fn run_chat_loop(
                 }
 
                 if !first_token_received && !had_error { spinner.finish_and_clear(); }
-                if had_error { agent_context.conversation_history.pop(); continue; }
+                if had_error { continue; }
 
                 let response_ms = start_time.elapsed().as_millis() as u64;
                 println!();
                 renderer.print_stats_footer(output_tokens, response_ms, &model);
                 println!();
 
-                // Persist assistant message
+                // Persist user + assistant messages to conversation history
+                agent_context.add_user_message(text.clone());
                 agent_context.add_assistant_message(full_response.clone());
                 let _ = state.chat_service.save_assistant_message(session_id, full_response.clone(), model.clone(), input_tokens, output_tokens, stop_reason, response_ms).await;
 

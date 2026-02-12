@@ -66,6 +66,11 @@ impl AnthropicProvider {
         }
     }
 
+    /// The default model for this provider.
+    pub fn model(&self) -> &str {
+        &self.model
+    }
+
     /// Override the base URL (useful for testing or proxies).
     #[allow(dead_code)]
     pub fn with_base_url(mut self, base_url: String) -> Self {

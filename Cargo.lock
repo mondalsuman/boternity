@@ -524,6 +524,7 @@ dependencies = [
  "anyhow",
  "argon2",
  "async-stream",
+ "base64",
  "boternity-core",
  "boternity-types",
  "chrono",

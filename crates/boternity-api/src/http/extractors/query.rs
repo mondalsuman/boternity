@@ -20,6 +20,7 @@ pub struct BotListQuery {
     /// Offset for pagination.
     pub offset: Option<i64>,
     /// Sparse fieldsets (comma-separated field names).
+    #[allow(dead_code)]
     pub fields: Option<String>,
 }
 

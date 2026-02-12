@@ -91,6 +91,9 @@ secrecy = { version = "0.10", features = ["serde"] }
 # Pin projection for custom stream types
 pin-project-lite = "0.2"
 
+# Base64 encoding/decoding (Bedrock streaming)
+base64 = "0.22"
+
 # OpenTelemetry
 opentelemetry = "0.31"
 opentelemetry_sdk = "0.31"

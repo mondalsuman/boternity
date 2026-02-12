@@ -82,6 +82,7 @@ impl<T: Serialize> ApiResponse<T> {
 
 impl ApiResponse<()> {
     /// Create an error response (no data).
+    #[allow(dead_code)]
     pub fn error(
         status_code: &str,
         message: &str,

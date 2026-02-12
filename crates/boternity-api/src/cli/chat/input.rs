@@ -32,6 +32,7 @@ impl ChatInput {
     }
 
     /// Update the prompt displayed to the user.
+    #[allow(dead_code)]
     pub fn update_prompt(&mut self, prompt: &str) {
         let _ = self.rl.update_prompt(prompt);
     }

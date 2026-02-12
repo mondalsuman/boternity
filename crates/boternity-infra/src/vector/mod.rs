@@ -5,4 +5,5 @@
 
 pub mod embedder;
 pub mod lance;
+pub mod memory;
 pub mod schema;

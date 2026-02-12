@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 4 of 10 (Web UI Core + Fleet Dashboard)
-Plan: 1 of 8 in current phase
+Plan: 2 of 8 in current phase
 Status: In progress
-Last activity: 2026-02-13 -- Completed 04-01-PLAN.md
+Last activity: 2026-02-13 -- Completed 04-02-PLAN.md
 
-Progress: [███████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░] 27/53 (~51%)
+Progress: [████████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░] 28/53 (~53%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 27
+- Total plans completed: 28
 - Average duration: 7m 57s
-- Total execution time: 217m 31s
+- Total execution time: 225m 31s
 
 **By Phase:**
 
@@ -30,11 +30,11 @@ Progress: [███████████████████████
 | 1. Foundation + Bot Identity | 6/6 | 49m 14s | 8m 12s |
 | 2. Single-Agent Chat + LLM | 7/8 | 31m 46s | 4m 32s |
 | 3. Multi-Provider + Memory | 13/13 | 127m 31s | 9m 49s |
-| 4. Web UI Core + Fleet Dashboard | 1/8 | 9m 00s | 9m 00s |
+| 4. Web UI Core + Fleet Dashboard | 2/8 | 17m 00s | 8m 30s |
 
 **Recent Trend:**
-- Last 5 plans: 03-08 (6m 31s), 03-12 (7m 37s), 03-13 (7m 35s), 03-11 (9m 21s), 04-01 (9m 00s)
-- Trend: Steady ~9m for backend API endpoint plans
+- Last 5 plans: 03-12 (7m 37s), 03-13 (7m 35s), 03-11 (9m 21s), 04-01 (9m 00s), 04-02 (8m 00s)
+- Trend: Steady ~8-9m per plan
 
 *Updated after each plan completion*
 
@@ -173,6 +173,12 @@ Recent decisions affecting current work:
 - [04-01]: ChatRepository trait extended with clear_messages, count_sessions, count_messages (rather than separate stats repository)
 - [04-01]: SPA fallback via BOTERNITY_WEB_DIR env var with graceful degradation when dir absent
 - [04-01]: Conversation history loaded into AgentContext for session continuation in streaming endpoint
+- [04-02]: Sonner component rewritten to use Zustand theme store instead of next-themes (avoiding unnecessary dependency)
+- [04-02]: Dark theme as :root default with .light class override (not .dark class, dark-first design)
+- [04-02]: Bot detail uses TanStack Router layout route (route.tsx) for shared tab navigation across child routes
+- [04-02]: SidebarProvider wraps entire app for consistent sidebar state across all routes
+- [04-02]: TooltipProvider at root level for sidebar tooltip support on collapsed rail
+- [04-02]: TanStack Router/Query devtools lazy-loaded only in development mode
 
 ### Pending Todos
 
@@ -187,5 +193,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-13
-Stopped at: Completed 04-01-PLAN.md
+Stopped at: Completed 04-02-PLAN.md
 Resume file: None

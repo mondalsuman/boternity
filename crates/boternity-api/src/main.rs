@@ -194,6 +194,26 @@ async fn main() -> anyhow::Result<()> {
             cli::provider::handle_provider_command(action, &state, cli.json).await?;
         }
 
+        Commands::Storage { action } => {
+            cli::storage::handle_storage_command(action, &state, cli.json).await?;
+        }
+
+        Commands::Kv { action } => {
+            cli::kv::handle_kv_command(action, &state, cli.json).await?;
+        }
+
+        Commands::SharedMemory { action } => {
+            cli::shared_memory::handle_shared_memory_command(
+                action,
+                &state,
+                &state.shared_memory,
+                &state.embedder,
+                &state.audit_log,
+                cli.json,
+            )
+            .await?;
+        }
+
         Commands::Serve { port, host } => {
             // Ensure an API key exists, print it if new
             let api_key = http::extractors::auth::ensure_api_key(&state).await?;
@@ -253,8 +273,8 @@ async fn main() -> anyhow::Result<()> {
             cli::memory::forget(&state, &slug, force, cli.json).await?;
         }
 
-        Commands::Chat { slug, resume } => {
-            cli::chat::loop_runner::run_chat_loop(&state, &slug, resume).await?;
+        Commands::Chat { slug, resume, verbose } => {
+            cli::chat::loop_runner::run_chat_loop(&state, &slug, resume, verbose).await?;
         }
 
         Commands::Completions { .. } => unreachable!("handled above"),

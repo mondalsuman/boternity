@@ -5,12 +5,15 @@
 
 pub mod bot;
 pub mod chat;
+pub mod kv;
 pub mod memory;
 pub mod provider;
 pub mod secret;
 pub mod session;
+pub mod shared_memory;
 pub mod soul;
 pub mod status;
+pub mod storage;
 
 use clap::{Parser, Subcommand};
 use clap_complete::Shell;
@@ -88,6 +91,25 @@ pub enum Commands {
         action: provider::ProviderCommand,
     },
 
+    /// Manage bot file storage (upload, download, list, info, delete).
+    Storage {
+        #[command(subcommand)]
+        action: storage::StorageCommand,
+    },
+
+    /// Manage per-bot key-value store (set, get, delete, list).
+    Kv {
+        #[command(subcommand)]
+        action: kv::KvCommand,
+    },
+
+    /// Manage cross-bot shared memories (search, list, share, revoke, details).
+    #[command(name = "shared-memory")]
+    SharedMemory {
+        #[command(subcommand)]
+        action: shared_memory::SharedMemoryCommand,
+    },
+
     /// System health check for a bot.
     Check {
         /// Bot slug to check.
@@ -159,6 +181,10 @@ pub enum Commands {
         /// Resume a previous session by ID.
         #[arg(long)]
         resume: Option<String>,
+
+        /// Show verbose output (memory recall details, provider info).
+        #[arg(long, short = 'V')]
+        verbose: bool,
     },
 
     // --- Short aliases ---

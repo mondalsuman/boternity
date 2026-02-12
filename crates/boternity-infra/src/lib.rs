@@ -10,4 +10,5 @@ pub mod keychain;
 pub mod llm;
 pub mod secret;
 pub mod sqlite;
+pub mod storage;
 pub mod vector;

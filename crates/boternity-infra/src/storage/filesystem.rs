@@ -7,7 +7,7 @@
 //! File metadata is tracked in SQLite via `SqliteFileMetadataStore` (03-05);
 //! this module handles the actual bytes on disk plus the `FileStore` trait glue.
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use boternity_core::storage::file_store::FileStore;
 use boternity_types::error::RepositoryError;
@@ -72,65 +72,6 @@ impl LocalFileStore {
             .join(format!("{}.v{}", filename, version))
     }
 
-    /// Detect MIME type from file extension.
-    fn detect_mime(filename: &str) -> String {
-        let ext = Path::new(filename)
-            .extension()
-            .and_then(|e| e.to_str())
-            .unwrap_or("")
-            .to_lowercase();
-
-        match ext.as_str() {
-            // Text
-            "txt" => "text/plain",
-            "md" | "markdown" => "text/markdown",
-            "csv" => "text/csv",
-            "html" | "htm" => "text/html",
-            "css" => "text/css",
-            "xml" => "text/xml",
-            "yaml" | "yml" => "text/yaml",
-            "toml" => "text/toml",
-
-            // Code
-            "rs" => "text/x-rust",
-            "py" => "text/x-python",
-            "js" => "text/javascript",
-            "ts" => "text/typescript",
-            "json" => "application/json",
-            "sh" | "bash" => "text/x-shellscript",
-            "sql" => "text/x-sql",
-            "go" => "text/x-go",
-            "java" => "text/x-java",
-            "c" | "h" => "text/x-c",
-            "cpp" | "hpp" | "cc" | "cxx" => "text/x-c++",
-
-            // Documents
-            "pdf" => "application/pdf",
-            "doc" | "docx" => "application/msword",
-
-            // Images
-            "png" => "image/png",
-            "jpg" | "jpeg" => "image/jpeg",
-            "gif" => "image/gif",
-            "svg" => "image/svg+xml",
-            "webp" => "image/webp",
-
-            // Archives
-            "zip" => "application/zip",
-            "tar" => "application/x-tar",
-            "gz" => "application/gzip",
-
-            // Default
-            _ => "application/octet-stream",
-        }
-        .to_string()
-    }
-
-    /// Check whether a MIME type represents indexable text content.
-    pub fn is_text_mime(mime: &str) -> bool {
-        mime.starts_with("text/") || mime == "application/json"
-    }
-
 }
 
 impl FileStore for LocalFileStore {
@@ -156,7 +97,7 @@ impl FileStore for LocalFileStore {
             ));
         }
 
-        let mime_type = Self::detect_mime(filename);
+        let mime_type = super::detect_mime(filename);
         let now = Utc::now();
 
         // Check if file already exists (update vs create)
@@ -526,31 +467,5 @@ mod tests {
         assert!(matches!(result, Err(RepositoryError::Conflict(_))));
     }
 
-    #[test]
-    fn test_detect_mime() {
-        assert_eq!(LocalFileStore::detect_mime("file.txt"), "text/plain");
-        assert_eq!(LocalFileStore::detect_mime("doc.md"), "text/markdown");
-        assert_eq!(LocalFileStore::detect_mime("data.json"), "application/json");
-        assert_eq!(LocalFileStore::detect_mime("image.png"), "image/png");
-        assert_eq!(LocalFileStore::detect_mime("code.rs"), "text/x-rust");
-        assert_eq!(
-            LocalFileStore::detect_mime("unknown.xyz"),
-            "application/octet-stream"
-        );
-        assert_eq!(
-            LocalFileStore::detect_mime("no_extension"),
-            "application/octet-stream"
-        );
-    }
-
-    #[test]
-    fn test_is_text_mime() {
-        assert!(LocalFileStore::is_text_mime("text/plain"));
-        assert!(LocalFileStore::is_text_mime("text/markdown"));
-        assert!(LocalFileStore::is_text_mime("text/x-rust"));
-        assert!(LocalFileStore::is_text_mime("application/json"));
-        assert!(!LocalFileStore::is_text_mime("image/png"));
-        assert!(!LocalFileStore::is_text_mime("application/pdf"));
-        assert!(!LocalFileStore::is_text_mime("application/octet-stream"));
-    }
+    // MIME detection and is_text_mime tests are in storage/mod.rs
 }

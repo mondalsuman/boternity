@@ -6,6 +6,9 @@
 //! - `TokenBudget`: Context window allocation management
 
 pub mod box_provider;
+pub mod fallback;
+pub mod health;
 pub mod provider;
+pub mod registry;
 pub mod token_budget;
 pub mod types;

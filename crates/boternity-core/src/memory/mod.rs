@@ -5,5 +5,8 @@
 //! and the `SessionMemoryExtractor` that uses an LLM to identify key
 //! facts worth persisting across sessions.
 
+pub mod embedder;
 pub mod extractor;
+pub mod shared;
 pub mod store;
+pub mod vector;

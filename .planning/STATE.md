@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 3 of 10 (Multi-Provider + Memory)
-Plan: 3 of 13 in current phase (03-01, 03-02, 03-03 complete)
+Plan: 4 of 13 in current phase (03-01, 03-02, 03-03, 03-05 complete)
 Status: In progress
-Last activity: 2026-02-12 -- Completed 03-02-PLAN.md (OpenAI-compatible LLM provider)
+Last activity: 2026-02-12 -- Completed 03-05-PLAN.md (SQLite Phase 3 migrations and repositories)
 
-Progress: [████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 16/53 (~30%)
+Progress: [█████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 17/53 (~32%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 16
-- Average duration: 6m 49s
-- Total execution time: 109m 13s
+- Total plans completed: 17
+- Average duration: 7m 10s
+- Total execution time: 121m 58s
 
 **By Phase:**
 
@@ -29,11 +29,11 @@ Progress: [████████████████░░░░░░░
 |-------|-------|-------|----------|
 | 1. Foundation + Bot Identity | 6/6 | 49m 14s | 8m 12s |
 | 2. Single-Agent Chat + LLM | 7/8 | 31m 46s | 4m 32s |
-| 3. Multi-Provider + Memory | 3/13 | 28m 13s | 9m 24s |
+| 3. Multi-Provider + Memory | 4/13 | 40m 58s | 10m 14s |
 
 **Recent Trend:**
-- Last 5 plans: 02-07 (pending), 02-08 (6m 0s), 03-01 (5m 7s), 03-02 (13m 36s), 03-03 (9m 30s)
-- Trend: Phase 3 plans longer due to external dep compilation and API discovery
+- Last 5 plans: 02-08 (6m 0s), 03-01 (5m 7s), 03-02 (13m 36s), 03-03 (9m 30s), 03-05 (12m 45s)
+- Trend: Phase 3 plans longer due to external dep compilation and larger scope
 
 *Updated after each plan completion*
 
@@ -114,6 +114,11 @@ Recent decisions affecting current work:
 - [03-03]: record_stream_success/failure for caller to report stream outcome (can't track from 'static stream)
 - [03-03]: Priority tiebreaking: latency first, then alphabetical name
 - [03-03]: Cost warning uses average of input+output cost per million for ratio comparison
+- [03-05]: bot_kv_store uses composite PK (bot_id, key) -- natural key enforces uniqueness
+- [03-05]: memory_audit_log.memory_id is TEXT not FK -- memory may be deleted while audit persists
+- [03-05]: ProviderHealthRow separate from runtime ProviderHealth -- Instant not serializable
+- [03-05]: provider_health keyed by name TEXT not UUIDv7 -- names are unique identifiers
+- [03-05]: bot_files UNIQUE(bot_id, filename) enables upsert on re-upload
 
 ### Pending Todos
 
@@ -127,6 +132,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-12T22:16:36Z
-Stopped at: Completed 03-02-PLAN.md (OpenAI-compatible LLM provider)
+Last session: 2026-02-12T22:16:57Z
+Stopped at: Completed 03-05-PLAN.md (SQLite Phase 3 migrations and repositories)
 Resume file: None

@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 4 of 10 (Web UI Core + Fleet Dashboard)
-Plan: 3 of 8 in current phase
+Plan: 4 of 8 in current phase
 Status: In progress
-Last activity: 2026-02-13 -- Completed 04-03-PLAN.md
+Last activity: 2026-02-13 -- Completed 04-06-PLAN.md
 
-Progress: [█████████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░] 29/53 (~55%)
+Progress: [██████████████████████████████░░░░░░░░░░░░░░░░░░░░░░░] 30/53 (~57%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 29
-- Average duration: 7m 51s
-- Total execution time: 228m 55s
+- Total plans completed: 30
+- Average duration: 7m 46s
+- Total execution time: 232m 55s
 
 **By Phase:**
 
@@ -30,11 +30,11 @@ Progress: [███████████████████████
 | 1. Foundation + Bot Identity | 6/6 | 49m 14s | 8m 12s |
 | 2. Single-Agent Chat + LLM | 7/8 | 31m 46s | 4m 32s |
 | 3. Multi-Provider + Memory | 13/13 | 127m 31s | 9m 49s |
-| 4. Web UI Core + Fleet Dashboard | 3/8 | 20m 24s | 6m 48s |
+| 4. Web UI Core + Fleet Dashboard | 4/8 | 24m 24s | 6m 06s |
 
 **Recent Trend:**
-- Last 5 plans: 03-13 (7m 35s), 03-11 (9m 21s), 04-01 (9m 00s), 04-02 (8m 00s), 04-03 (3m 24s)
-- Trend: Steady ~7-9m per plan, 04-03 faster (2 focused UI tasks)
+- Last 5 plans: 03-11 (9m 21s), 04-01 (9m 00s), 04-02 (8m 00s), 04-03 (3m 24s), 04-06 (4m 00s)
+- Trend: Phase 4 UI plans averaging ~6m (focused component tasks)
 
 *Updated after each plan completion*
 
@@ -184,6 +184,10 @@ Recent decisions affecting current work:
 - [04-03]: placeholderData: (prev) => prev in useBots for smooth filter transitions
 - [04-03]: Simple 16-emoji grid picker instead of full emoji picker library
 - [04-03]: AlertDialog added as shadcn component for destructive action confirmations
+- [04-06]: Active tab detection via useMatchRoute instead of defaultValue on Tabs (tracks URL changes)
+- [04-06]: Identity form rebuilds raw IDENTITY.md frontmatter on every change (preserves body content)
+- [04-06]: Local editor buffers populated once from fetch data, then managed locally (prevents overwrite on refetch)
+- [04-06]: shadcn/ui primitives (Label, Slider, Select, Switch) added for identity form controls
 
 ### Pending Todos
 
@@ -198,5 +202,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-13
-Stopped at: Completed 04-03-PLAN.md
+Stopped at: Completed 04-06-PLAN.md
 Resume file: None

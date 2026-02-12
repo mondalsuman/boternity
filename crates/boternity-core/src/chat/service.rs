@@ -3,16 +3,34 @@
 //! ChatService coordinates between the ChatRepository, MemoryRepository,
 //! and AgentEngine to manage the full conversation lifecycle: creating
 //! sessions, saving messages, updating titles, and ending sessions.
+//!
+//! Vector memory operations (search, embed, store, re-embed) are provided
+//! as methods that accept `BoxEmbedder` and `BoxVectorMemoryStore` parameters,
+//! since the vector backend is optional and not always available.
 
 use boternity_types::chat::{ChatMessage, ChatSession, MessageRole, SessionStatus};
 use boternity_types::error::RepositoryError;
-use boternity_types::memory::MemoryEntry;
+use boternity_types::memory::{MemoryEntry, RankedMemory, VectorMemoryEntry};
 use chrono::Utc;
-use tracing::{info, warn};
+use tracing::{debug, info, warn};
 use uuid::Uuid;
 
 use crate::chat::repository::ChatRepository;
+use crate::memory::box_embedder::BoxEmbedder;
+use crate::memory::box_vector::BoxVectorMemoryStore;
 use crate::memory::store::MemoryRepository;
+
+/// Default number of memories to retrieve per vector search.
+const DEFAULT_MEMORY_SEARCH_LIMIT: usize = 10;
+
+/// Default minimum similarity threshold for vector search results.
+/// Cosine distance below this is considered too dissimilar.
+const DEFAULT_MIN_SIMILARITY: f32 = 0.3;
+
+/// Default cosine distance threshold for semantic deduplication.
+/// Memories with distance below this are considered duplicates.
+/// Corresponds to ~92.5% similarity.
+const DEFAULT_DEDUP_THRESHOLD: f32 = 0.15;
 
 /// Orchestrates chat session lifecycle and message persistence.
 ///
@@ -220,6 +238,259 @@ impl<C: ChatRepository, M: MemoryRepository> ChatService<C, M> {
         }
         Ok(())
     }
+
+    // --- Vector memory operations ---
+
+    /// Search long-term vector memory for facts relevant to a user message.
+    ///
+    /// Embeds the user message, searches the vector store for semantically
+    /// similar memories, and returns ranked results. Called before each LLM
+    /// request to populate `AgentContext.recalled_memories`.
+    ///
+    /// Returns an empty Vec if embedding or search fails (graceful degradation).
+    #[tracing::instrument(
+        name = "search_memories",
+        skip(self, embedder, vector_store, message),
+        fields(bot_id = %bot_id, message_len = message.len())
+    )]
+    pub async fn search_memories_for_message(
+        &self,
+        bot_id: &Uuid,
+        message: &str,
+        embedder: &BoxEmbedder,
+        vector_store: &BoxVectorMemoryStore,
+    ) -> Vec<RankedMemory> {
+        // Embed the user message
+        let embedding = match embedder.embed(&[message.to_string()]).await {
+            Ok(mut embeddings) if !embeddings.is_empty() => embeddings.remove(0),
+            Ok(_) => {
+                warn!(bot_id = %bot_id, "Embedder returned empty result for message");
+                return Vec::new();
+            }
+            Err(e) => {
+                warn!(
+                    bot_id = %bot_id,
+                    error = %e,
+                    "Failed to embed user message for memory search; proceeding without memories"
+                );
+                return Vec::new();
+            }
+        };
+
+        // Search vector store
+        match vector_store
+            .search(bot_id, &embedding, DEFAULT_MEMORY_SEARCH_LIMIT, DEFAULT_MIN_SIMILARITY)
+            .await
+        {
+            Ok(results) => {
+                debug!(
+                    bot_id = %bot_id,
+                    count = results.len(),
+                    "Vector memory search returned results"
+                );
+                results
+            }
+            Err(e) => {
+                warn!(
+                    bot_id = %bot_id,
+                    error = %e,
+                    "Vector memory search failed; proceeding without memories"
+                );
+                Vec::new()
+            }
+        }
+    }
+
+    /// Embed and store extracted memories in the vector database.
+    ///
+    /// For each `MemoryEntry`, creates a `VectorMemoryEntry`, embeds the fact
+    /// text, checks for semantic duplicates, and stores in the vector DB.
+    /// Skips duplicates silently with a debug log.
+    ///
+    /// Returns the number of memories successfully stored (excluding duplicates).
+    #[tracing::instrument(
+        name = "embed_and_store_memories",
+        skip(self, entries, embedder, vector_store),
+        fields(bot_id = %bot_id, entry_count = entries.len())
+    )]
+    pub async fn embed_and_store_memories(
+        &self,
+        bot_id: &Uuid,
+        entries: &[MemoryEntry],
+        embedder: &BoxEmbedder,
+        vector_store: &BoxVectorMemoryStore,
+    ) -> Result<usize, RepositoryError> {
+        if entries.is_empty() {
+            return Ok(0);
+        }
+
+        // Batch embed all facts
+        let texts: Vec<String> = entries.iter().map(|e| e.fact.clone()).collect();
+        let embeddings = embedder.embed(&texts).await?;
+
+        if embeddings.len() != entries.len() {
+            warn!(
+                expected = entries.len(),
+                got = embeddings.len(),
+                "Embedding count mismatch; aborting store"
+            );
+            return Err(RepositoryError::Query(format!(
+                "Embedding count mismatch: expected {}, got {}",
+                entries.len(),
+                embeddings.len()
+            )));
+        }
+
+        let model_name = embedder.model_name().to_string();
+        let mut stored_count = 0;
+
+        for (entry, embedding) in entries.iter().zip(embeddings.iter()) {
+            // Check for semantic duplicates
+            match vector_store
+                .check_duplicate(bot_id, embedding, DEFAULT_DEDUP_THRESHOLD)
+                .await
+            {
+                Ok(Some(existing)) => {
+                    debug!(
+                        bot_id = %bot_id,
+                        new_fact = %entry.fact,
+                        existing_fact = %existing.fact,
+                        "Skipping duplicate memory"
+                    );
+                    continue;
+                }
+                Ok(None) => {
+                    // No duplicate, proceed to store
+                }
+                Err(e) => {
+                    warn!(
+                        bot_id = %bot_id,
+                        error = %e,
+                        fact = %entry.fact,
+                        "Dedup check failed; storing anyway"
+                    );
+                }
+            }
+
+            // Create VectorMemoryEntry from MemoryEntry
+            let vector_entry = VectorMemoryEntry {
+                id: entry.id,
+                bot_id: entry.bot_id,
+                fact: entry.fact.clone(),
+                category: entry.category.clone(),
+                importance: entry.importance,
+                session_id: Some(entry.session_id),
+                source_memory_id: Some(entry.id),
+                embedding_model: model_name.clone(),
+                created_at: entry.created_at,
+                last_accessed_at: None,
+                access_count: 0,
+            };
+
+            match vector_store.add(&vector_entry, embedding).await {
+                Ok(()) => {
+                    stored_count += 1;
+                    debug!(
+                        bot_id = %bot_id,
+                        memory_id = %entry.id,
+                        fact = %entry.fact,
+                        "Stored memory in vector DB"
+                    );
+                }
+                Err(e) => {
+                    warn!(
+                        bot_id = %bot_id,
+                        memory_id = %entry.id,
+                        error = %e,
+                        "Failed to store memory in vector DB; continuing with next"
+                    );
+                }
+            }
+        }
+
+        info!(
+            bot_id = %bot_id,
+            stored = stored_count,
+            total = entries.len(),
+            "Embedded and stored memories in vector DB"
+        );
+
+        Ok(stored_count)
+    }
+
+    /// Check for embedding model mismatch and re-embed stale memories.
+    ///
+    /// Compares the current embedder model name against stored entries.
+    /// If any entries use a different model, re-embeds them with the current
+    /// model and updates the vector store.
+    ///
+    /// Called at startup / session initialization to detect model changes.
+    ///
+    /// Returns the number of memories re-embedded.
+    #[tracing::instrument(
+        name = "check_and_reembed",
+        skip(self, embedder, vector_store),
+        fields(bot_id = %bot_id)
+    )]
+    pub async fn check_and_reembed(
+        &self,
+        bot_id: &Uuid,
+        embedder: &BoxEmbedder,
+        vector_store: &BoxVectorMemoryStore,
+    ) -> Result<usize, RepositoryError> {
+        let current_model = embedder.model_name();
+
+        let stale_entries = vector_store
+            .get_all_for_reembedding(bot_id, current_model)
+            .await?;
+
+        if stale_entries.is_empty() {
+            debug!(bot_id = %bot_id, model = current_model, "No stale embeddings found");
+            return Ok(0);
+        }
+
+        info!(
+            bot_id = %bot_id,
+            count = stale_entries.len(),
+            old_models = ?stale_entries.iter().map(|e| e.embedding_model.as_str()).collect::<std::collections::HashSet<_>>(),
+            new_model = current_model,
+            "Re-embedding memories with new model"
+        );
+
+        // Batch embed all stale facts
+        let texts: Vec<String> = stale_entries.iter().map(|e| e.fact.clone()).collect();
+        let embeddings = embedder.embed(&texts).await?;
+
+        let mut reembedded_count = 0;
+
+        for (entry, embedding) in stale_entries.iter().zip(embeddings.iter()) {
+            match vector_store
+                .update_embedding(&entry.id, embedding, current_model)
+                .await
+            {
+                Ok(()) => {
+                    reembedded_count += 1;
+                }
+                Err(e) => {
+                    warn!(
+                        bot_id = %bot_id,
+                        memory_id = %entry.id,
+                        error = %e,
+                        "Failed to re-embed memory; skipping"
+                    );
+                }
+            }
+        }
+
+        info!(
+            bot_id = %bot_id,
+            reembedded = reembedded_count,
+            total = stale_entries.len(),
+            "Re-embedding complete"
+        );
+
+        Ok(reembedded_count)
+    }
 }
 
 #[cfg(test)]
@@ -229,5 +500,12 @@ mod tests {
     // Verify ChatService is generic over the right traits
     fn _assert_chat_service_generic<C: ChatRepository, M: MemoryRepository>() {
         fn _takes_service<C: ChatRepository, M: MemoryRepository>(_s: &ChatService<C, M>) {}
+    }
+
+    #[test]
+    fn test_default_constants() {
+        assert_eq!(DEFAULT_MEMORY_SEARCH_LIMIT, 10);
+        assert!(DEFAULT_MIN_SIMILARITY > 0.0 && DEFAULT_MIN_SIMILARITY < 1.0);
+        assert!(DEFAULT_DEDUP_THRESHOLD > 0.0 && DEFAULT_DEDUP_THRESHOLD < 1.0);
     }
 }

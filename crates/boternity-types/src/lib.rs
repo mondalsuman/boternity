@@ -14,3 +14,4 @@ pub mod llm;
 pub mod memory;
 pub mod secret;
 pub mod soul;
+pub mod storage;

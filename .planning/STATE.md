@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-10)
 
 **Core value:** A user can create a bot with a distinct identity, give it skills through an interactive builder, and have meaningful parallel conversations with it -- all running locally with full observability.
-**Current focus:** Phase 2 (Single-Agent Chat + LLM) - In progress
+**Current focus:** Phase 3 (Multi-Provider + Memory) - In progress
 
 ## Current Position
 
-Phase: 2 of 10 (Single-Agent Chat + LLM)
-Plan: 8 of 8 in current phase (02-01, 02-02, 02-03, 02-04, 02-05, 02-06, 02-08 complete; 02-07 code committed, summary pending)
+Phase: 3 of 10 (Multi-Provider + Memory)
+Plan: 1 of 13 in current phase (03-01 complete)
 Status: In progress
-Last activity: 2026-02-12 -- Completed 02-08-PLAN.md (Session and memory management CLI)
+Last activity: 2026-02-12 -- Completed 03-01-PLAN.md (Domain types and core traits)
 
-Progress: [█████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 13/53 (~25%)
+Progress: [██████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 14/53 (~26%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 13
-- Average duration: 5m 54s
-- Total execution time: 81m 0s
+- Total plans completed: 14
+- Average duration: 5m 50s
+- Total execution time: 86m 7s
 
 **By Phase:**
 
@@ -29,10 +29,11 @@ Progress: [█████████████░░░░░░░░░░
 |-------|-------|-------|----------|
 | 1. Foundation + Bot Identity | 6/6 | 49m 14s | 8m 12s |
 | 2. Single-Agent Chat + LLM | 7/8 | 31m 46s | 4m 32s |
+| 3. Multi-Provider + Memory | 1/13 | 5m 7s | 5m 7s |
 
 **Recent Trend:**
-- Last 5 plans: 02-04 (4m 0s), 02-05 (4m 0s), 02-06 (5m 0s), 02-07 (pending), 02-08 (6m 0s)
-- Trend: Phase 2 plans consistently ~4-6 min each
+- Last 5 plans: 02-05 (4m 0s), 02-06 (5m 0s), 02-07 (pending), 02-08 (6m 0s), 03-01 (5m 7s)
+- Trend: Consistent ~5 min per plan
 
 *Updated after each plan completion*
 
@@ -97,6 +98,12 @@ Recent decisions affecting current work:
 - [02-08]: Manual memories use Uuid::nil() session_id (not linked to any session)
 - [02-08]: ConcreteChatService type alias pins ChatService<SqliteChatRepository, SqliteMemoryRepository> on AppState
 - [02-08]: Session/memory IDs parsed from String CLI args via Uuid::parse for user-friendly errors
+- [03-01]: ProviderType explicit serde rename for OpenAiCompatible to get 'openai_compatible'
+- [03-01]: FallbackChainConfig defaults: 5000ms rate_limit_queue_timeout, 3.0x cost_warning_multiplier
+- [03-01]: TrustLevel::Private as default (private by default for shared memories)
+- [03-01]: CircuitState uses Instant for timing (monotonic clock correctness)
+- [03-01]: ProviderHealth defaults: failure_threshold=3, success_threshold=1, open_duration=30s
+- [03-01]: is_failover_error: Provider/Stream/RateLimited/Overloaded trigger failover; AuthenticationFailed/InvalidRequest/ContextLengthExceeded do not
 
 ### Pending Todos
 
@@ -110,6 +117,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-11T23:16:02Z
-Stopped at: Completed 02-08-PLAN.md (Session and memory management CLI)
+Last session: 2026-02-12T21:59:50Z
+Stopped at: Completed 03-01-PLAN.md (Domain types and core traits)
 Resume file: None

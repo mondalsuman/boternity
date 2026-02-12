@@ -5,7 +5,8 @@
 //! responses, slash commands, memory extraction, and session cleanup.
 //!
 //! Uses a [`FallbackChain`] for provider selection with automatic failover.
-//! Failover events are printed to stderr during chat.
+//! Failover events are printed to stderr during chat. When `--verbose` is
+//! enabled, recalled memories and provider selection details are shown on stderr.
 
 use std::io::Write;
 use std::time::Instant;
@@ -19,11 +20,14 @@ use boternity_core::agent::title::generate_title;
 use boternity_core::chat::session::SessionManager;
 use boternity_core::llm::health::ProviderHealth;
 use boternity_core::llm::token_budget::TokenBudget;
+use boternity_core::memory::box_embedder::BoxEmbedder;
+use boternity_core::memory::box_vector::BoxVectorMemoryStore;
 use boternity_core::memory::extractor::SessionMemoryExtractor;
 use boternity_core::memory::store::MemoryRepository;
 use boternity_infra::filesystem::identity::parse_identity_frontmatter;
 use boternity_infra::filesystem::LocalFileSystem;
 use boternity_types::llm::{CompletionRequest, LlmError, StreamEvent};
+use boternity_types::memory::RankedMemory;
 
 use crate::state::AppState;
 
@@ -68,14 +72,57 @@ fn print_failover_warning(warning: &str) {
     );
 }
 
+/// Print recalled memories to stderr in verbose mode.
+fn print_verbose_memories(memories: &[RankedMemory]) {
+    if memories.is_empty() {
+        eprintln!(
+            "  {} 0 memories recalled",
+            style("[memory]").dim()
+        );
+        return;
+    }
+
+    eprintln!(
+        "  {} {} memor{} recalled:",
+        style("[memory]").dim(),
+        memories.len(),
+        if memories.len() == 1 { "y" } else { "ies" }
+    );
+    for mem in memories {
+        let provenance_suffix = mem.provenance.as_ref().map(|p| format!(" ({p})")).unwrap_or_default();
+        eprintln!(
+            "    - {}: {} (score: {:.2}){}",
+            style(format!("{:?}", mem.entry.category)).cyan(),
+            mem.entry.fact,
+            mem.relevance_score,
+            style(provenance_suffix).dim()
+        );
+    }
+}
+
+/// Print provider chain info to stderr in verbose mode.
+fn print_verbose_provider_info(provider_name: &str, provider_count: usize) {
+    eprintln!(
+        "  {} using {} ({} provider{} in chain)",
+        style("[provider]").dim(),
+        style(provider_name).cyan(),
+        provider_count,
+        if provider_count == 1 { "" } else { "s" }
+    );
+}
+
 /// Run the interactive chat loop for a bot.
 ///
 /// Builds a [`FallbackChain`] from the configured providers and uses it
 /// for all LLM interactions. Failover events are printed to stderr.
+///
+/// When `verbose` is true, shows memory recall details and provider info
+/// on stderr before each LLM request.
 pub async fn run_chat_loop(
     state: &AppState,
     bot_slug: &str,
     _resume_session_id: Option<String>,
+    verbose: bool,
 ) -> anyhow::Result<()> {
     let bot = state.bot_service.get_bot_by_slug(bot_slug).await?;
 
@@ -97,6 +144,7 @@ pub async fn run_chat_loop(
 
     // Build fallback chain with all configured providers
     let mut fallback_chain = state.build_fallback_chain(&model).await?;
+    let provider_count = fallback_chain.providers.len();
 
     // Get capabilities from the primary provider for token budget
     let primary_caps = fallback_chain
@@ -135,6 +183,13 @@ pub async fn run_chat_loop(
     // Print welcome banner
     print_welcome_banner(&bot.name, bot_emoji.as_deref(), &bot.description, &model, &session_id_str);
 
+    if verbose {
+        eprintln!(
+            "  {} Verbose mode enabled. Memory recall and provider details shown on stderr.",
+            style("[verbose]").dim()
+        );
+    }
+
     // Generate and display greeting using fallback chain
     let renderer = ChatRenderer::new(None);
     let greeting_spinner = indicatif::ProgressBar::new_spinner();
@@ -168,6 +223,22 @@ pub async fn run_chat_loop(
 
     let mut first_user_message: Option<String> = None;
     let mut first_assistant_response: Option<String> = None;
+
+    // Prepare vector memory search components.
+    // Create a fresh LanceDB connection for the chat loop's vector memory search.
+    // This is cheap (just opens the existing database) and avoids ownership issues
+    // with the Arc<LanceVectorMemoryStore> in AppState.
+    let vector_store_for_chat = match boternity_infra::vector::lance::LanceVectorStore::new(
+        state.data_dir.join("vector_store"),
+    ).await {
+        Ok(vs) => Some(BoxVectorMemoryStore::new(
+            boternity_infra::vector::memory::LanceVectorMemoryStore::new(vs),
+        )),
+        Err(e) => {
+            warn!(error = %e, "Failed to open vector store for memory recall; proceeding without vector search");
+            None
+        }
+    };
 
     // Chat loop
     let prompt = format!("  {} ", style("You >").green().bold());
@@ -240,6 +311,27 @@ pub async fn run_chat_loop(
                 let _ = state.chat_service.save_user_message(session_id, text.clone()).await;
                 if first_user_message.is_none() { first_user_message = Some(text.clone()); }
 
+                // Vector memory recall: search for relevant memories before each request
+                let recalled = if let Some(ref vs) = vector_store_for_chat {
+                    state.chat_service.search_memories_for_message(
+                        &bot.id.0,
+                        &text,
+                        &state.embedder,
+                        vs,
+                    ).await
+                } else {
+                    Vec::new()
+                };
+
+                if !recalled.is_empty() {
+                    agent_context.set_recalled_memories(recalled.clone());
+                }
+
+                // Verbose: show recalled memories on stderr
+                if verbose {
+                    print_verbose_memories(&recalled);
+                }
+
                 // Thinking spinner
                 let spinner = indicatif::ProgressBar::new_spinner();
                 spinner.set_style(indicatif::ProgressStyle::default_spinner().template("{spinner:.cyan} {msg}").unwrap());
@@ -254,8 +346,8 @@ pub async fn run_chat_loop(
                         spinner.finish_and_clear();
                         // Handle "all providers down" clearly
                         if matches!(&e, LlmError::Provider { message } if message.contains("bnity provider status")) {
-                            eprintln!("\n  {} All providers are unavailable.", style("!").red().bold());
-                            eprintln!("  {} Run {} for details.", style("Tip:").dim(), style("bnity provider status").cyan());
+                            eprintln!("\n  {} All providers in the fallback chain are currently unavailable.", style("!").red().bold());
+                            eprintln!("  {} Run {} to check provider health.", style("Tip:").dim(), style("bnity provider status").cyan());
                         } else {
                             eprintln!("\n  {} LLM error: {e}", style("!").red().bold());
                         }
@@ -265,6 +357,11 @@ pub async fn run_chat_loop(
                 };
 
                 let stream_provider_name = stream_selection.provider_name.clone();
+
+                // Verbose: show provider selection on stderr
+                if verbose {
+                    print_verbose_provider_info(&stream_provider_name, provider_count);
+                }
 
                 // Print failover warning to stderr if we're on a non-primary provider
                 if let Some(ref warning) = stream_selection.failover_warning {

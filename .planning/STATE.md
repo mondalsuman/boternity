@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 3 of 10 (Multi-Provider + Memory)
-Plan: 7 of 13 in current phase (03-01, 03-02, 03-03, 03-04, 03-05, 03-06, 03-07 complete)
+Plan: 8 of 13 in current phase (03-01, 03-02, 03-03, 03-04, 03-05, 03-06, 03-07, 03-10 complete)
 Status: In progress
-Last activity: 2026-02-12 -- Completed 03-07-PLAN.md (LanceDB vector memory store)
+Last activity: 2026-02-12 -- Completed 03-10-PLAN.md (file storage with semantic indexing)
 
-Progress: [████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 20/53 (~38%)
+Progress: [████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 21/53 (~40%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 20
-- Average duration: 8m 0s
-- Total execution time: 159m 58s
+- Total plans completed: 21
+- Average duration: 8m 17s
+- Total execution time: 173m 56s
 
 **By Phase:**
 
@@ -29,10 +29,10 @@ Progress: [████████████████████░░░
 |-------|-------|-------|----------|
 | 1. Foundation + Bot Identity | 6/6 | 49m 14s | 8m 12s |
 | 2. Single-Agent Chat + LLM | 7/8 | 31m 46s | 4m 32s |
-| 3. Multi-Provider + Memory | 7/13 | 78m 58s | 11m 17s |
+| 3. Multi-Provider + Memory | 8/13 | 92m 56s | 11m 37s |
 
 **Recent Trend:**
-- Last 5 plans: 03-03 (9m 30s), 03-05 (12m 45s), 03-04 (16m 27s), 03-06 (10m 48s), 03-07 (10m 45s)
+- Last 5 plans: 03-05 (12m 45s), 03-04 (16m 27s), 03-06 (10m 48s), 03-07 (10m 45s), 03-10 (13m 58s)
 - Trend: Phase 3 plans longer due to external dep compilation and larger scope
 
 *Updated after each plan completion*
@@ -136,6 +136,12 @@ Recent decisions affecting current work:
 - [03-07]: update_embedding scans all bot_memory_* tables since trait lacks bot_id parameter
 - [03-07]: DEFAULT_DEDUP_THRESHOLD = 0.15 cosine distance (~92.5% similarity)
 - [03-07]: lancedb::query::{ExecutableQuery, QueryBase} must be imported for .execute()/.limit()/.only_if()
+- [03-10]: detect_mime and is_text_mime as module-level functions in storage/mod.rs (not struct methods)
+- [03-10]: RecordBatchIterator wraps Vec<Ok(batch)> for LanceDB table.add() (Vec<RecordBatch> lacks RecordBatchReader)
+- [03-10]: FixedSizeListArray::try_new(field, size, values, None) for arrow-array 57.3 (try_new_from_values is lance_arrow extension)
+- [03-10]: Bot files stored under {base_dir}/bots/{bot_id.simple()}/files/ with .versions/ subdirectory
+- [03-10]: MockEmbedder pattern for testing vector operations without embedding model download
+- [03-10]: Rust 2024 edition requires explicit type annotations on closure params with .clone() in iterator chains
 
 ### Pending Todos
 
@@ -149,6 +155,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-12T22:36:32Z
-Stopped at: Completed 03-07-PLAN.md (LanceDB vector memory store)
+Last session: 2026-02-12T22:38:15Z
+Stopped at: Completed 03-10-PLAN.md (file storage with semantic indexing)
 Resume file: None

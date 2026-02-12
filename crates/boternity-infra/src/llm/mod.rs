@@ -5,3 +5,4 @@
 
 pub mod anthropic;
 pub mod bedrock;
+pub mod openai_compat;

@@ -12,9 +12,9 @@ Boternity is built in 10 phases following the dependency chain: foundation types
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation + Bot Identity** - Monorepo scaffold, crate structure, SQLite storage, bot CRUD with immutable SOUL.md, secrets vault, basic CLI and REST API
-- [ ] **Phase 2: Single-Agent Chat + LLM** - LLM provider abstraction, Anthropic Claude integration, streaming chat via CLI, session memory, chat persistence, structured logging
-- [ ] **Phase 3: Multi-Provider + Memory** - Additional LLM providers with fallback chains, long-term vector memory, shared memory with trust partitioning, per-bot storage
+- [x] **Phase 1: Foundation + Bot Identity** - Monorepo scaffold, crate structure, SQLite storage, bot CRUD with immutable SOUL.md, secrets vault, basic CLI and REST API
+- [x] **Phase 2: Single-Agent Chat + LLM** - LLM provider abstraction, Anthropic Claude integration, streaming chat via CLI, session memory, chat persistence, structured logging
+- [x] **Phase 3: Multi-Provider + Memory** - Additional LLM providers with fallback chains, long-term vector memory, shared memory with trust partitioning, per-bot storage
 - [ ] **Phase 4: Web UI Core + Fleet Dashboard** - React app scaffold, chat interface with streaming, fleet dashboard, soul editor with version history, PWA foundation
 - [ ] **Phase 5: Agent Hierarchy + Event System** - Sub-agent spawning (sequential + parallel), depth cap enforcement, message passing, event bus, WebSocket live updates, budget enforcement
 - [ ] **Phase 6: Skill System + WASM Sandbox** - Skill definition and execution, local skills, WASM sandbox for untrusted skills, registry discovery, permission model, trust tiers
@@ -79,19 +79,19 @@ Plans:
 **Plans**: 13 plans
 
 Plans:
-- [ ] 03-01-PLAN.md -- Extended domain types (provider config, vector memory, shared memory, storage, KV) and core trait abstractions
-- [ ] 03-02-PLAN.md -- OpenAI-compatible provider (async-openai) supporting OpenAI, Gemini, Mistral, GLM 4.7
-- [ ] 03-03-PLAN.md -- Circuit breaker state machine, provider health tracking, and fallback chain logic
-- [ ] 03-04-PLAN.md -- LanceDB vector database + fastembed local embedding infrastructure
-- [ ] 03-05-PLAN.md -- SQLite migrations (KV store, audit log, provider health, file metadata) and repository implementations
-- [ ] 03-06-PLAN.md -- Claude subscription provider (experimental), provider factory, fallback chain wiring into chat
-- [ ] 03-07-PLAN.md -- LanceDB-backed vector memory store with time decay scoring and semantic dedup
-- [ ] 03-08-PLAN.md -- Memory recall integration into agent engine and system prompt injection
-- [ ] 03-09-PLAN.md -- Shared memory with trust-level partitioning, provenance tracking, and tamper detection
-- [ ] 03-10-PLAN.md -- Per-bot file storage with version history and semantic text indexing
-- [ ] 03-11-PLAN.md -- Provider CLI (status/add/remove/list) and failover visibility in chat
-- [ ] 03-12-PLAN.md -- Memory CLI enhancements (similarity scores, export) and shared memory CLI
-- [ ] 03-13-PLAN.md -- Storage CLI (upload/download/list/delete), KV CLI, and AppState Phase 3 wiring
+- [x] 03-01-PLAN.md -- Extended domain types (provider config, vector memory, shared memory, storage, KV) and core trait abstractions
+- [x] 03-02-PLAN.md -- OpenAI-compatible provider (async-openai) supporting OpenAI, Gemini, Mistral, GLM 4.7
+- [x] 03-03-PLAN.md -- Circuit breaker state machine, provider health tracking, and fallback chain logic
+- [x] 03-04-PLAN.md -- LanceDB vector database + fastembed local embedding infrastructure
+- [x] 03-05-PLAN.md -- SQLite migrations (KV store, audit log, provider health, file metadata) and repository implementations
+- [x] 03-06-PLAN.md -- Claude subscription provider (experimental), provider factory, fallback chain wiring into chat
+- [x] 03-07-PLAN.md -- LanceDB-backed vector memory store with time decay scoring and semantic dedup
+- [x] 03-08-PLAN.md -- Memory recall integration into agent engine and system prompt injection
+- [x] 03-09-PLAN.md -- Shared memory with trust-level partitioning, provenance tracking, and tamper detection
+- [x] 03-10-PLAN.md -- Per-bot file storage with version history and semantic text indexing
+- [x] 03-11-PLAN.md -- Provider CLI (status/add/remove/list) and failover visibility in chat
+- [x] 03-12-PLAN.md -- Memory CLI enhancements (similarity scores, export) and shared memory CLI
+- [x] 03-13-PLAN.md -- Storage CLI (upload/download/list/delete), KV CLI, and AppState Phase 3 wiring
 
 ### Phase 4: Web UI Core + Fleet Dashboard
 **Goal**: Users can manage their bot fleet and chat with bots through a web interface -- the dashboard shows all bots at a glance, the chat interface streams responses in real-time, and the soul editor provides version-controlled identity management.
@@ -102,14 +102,17 @@ Plans:
   2. User can chat with any bot in the web UI and see streaming token-by-token responses, with support for multiple simultaneous chat sessions including multiple sessions with the same bot
   3. User can edit a bot's SOUL.md in the web editor, see version history with diffs, and roll back to any previous version
   4. The web app is installable as a PWA and works on mobile devices with responsive layout
-**Plans**: TBD
+**Plans**: 8 plans
 
 Plans:
-- [ ] 04-01: React app scaffold with routing, state, and ShadCN UI
-- [ ] 04-02: Fleet dashboard and bot management views
-- [ ] 04-03: Chat interface with streaming and parallel sessions
-- [ ] 04-04: Soul editor with version history and diff view
-- [ ] 04-05: PWA setup and responsive design
+- [ ] 04-01-PLAN.md -- Backend API endpoints: SSE streaming chat, session CRUD, identity/user file endpoints, dashboard stats, SPA serving
+- [ ] 04-02-PLAN.md -- React app scaffold with Vite, TanStack Router/Query, shadcn/ui, app shell (sidebar, command palette, theme, toaster)
+- [ ] 04-03-PLAN.md -- Fleet dashboard: stats bar, bot card grid, search/sort, empty state, create bot dialog
+- [ ] 04-04-PLAN.md -- Chat interface core: SSE streaming hook, session sidebar, message display, chat input, parallel sessions
+- [ ] 04-05-PLAN.md -- Chat polish: markdown rendering with syntax highlighting, code copy, streaming markdown
+- [ ] 04-06-PLAN.md -- Soul editor: Monaco editor, file tabs (SOUL/IDENTITY/USER), auto-save, identity form, split preview
+- [ ] 04-07-PLAN.md -- Soul version history: timeline panel, side-by-side diff viewer, rollback with confirmation
+- [ ] 04-08-PLAN.md -- PWA configuration and responsive layout polish across all pages
 
 ### Phase 5: Agent Hierarchy + Event System
 **Goal**: Bots can decompose complex tasks by spawning sub-agents up to 3 levels deep, communicating via message passing, with an event bus driving real-time UI updates and budget enforcement preventing runaway costs.
@@ -234,10 +237,10 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation + Bot Identity | 0/6 | Planned | - |
-| 2. Single-Agent Chat + LLM | 0/8 | Planned | - |
-| 3. Multi-Provider + Memory | 0/13 | Not started | - |
-| 4. Web UI Core + Fleet Dashboard | 0/5 | Not started | - |
+| 1. Foundation + Bot Identity | 6/6 | Complete | 2026-02-11 |
+| 2. Single-Agent Chat + LLM | 8/8 | Complete | 2026-02-12 |
+| 3. Multi-Provider + Memory | 13/13 | Complete | 2026-02-12 |
+| 4. Web UI Core + Fleet Dashboard | 0/8 | Not started | - |
 | 5. Agent Hierarchy + Event System | 0/5 | Not started | - |
 | 6. Skill System + WASM Sandbox | 0/6 | Not started | - |
 | 7. Builder System | 0/5 | Not started | - |

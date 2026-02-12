@@ -215,6 +215,108 @@ pub struct ProviderCapabilities {
     pub max_output_tokens: u32,
 }
 
+/// Type of LLM provider backend.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ProviderType {
+    Anthropic,
+    Bedrock,
+    #[serde(rename = "openai_compatible")]
+    OpenAiCompatible,
+    ClaudeSubscription,
+}
+
+impl fmt::Display for ProviderType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ProviderType::Anthropic => write!(f, "anthropic"),
+            ProviderType::Bedrock => write!(f, "bedrock"),
+            ProviderType::OpenAiCompatible => write!(f, "openai_compatible"),
+            ProviderType::ClaudeSubscription => write!(f, "claude_subscription"),
+        }
+    }
+}
+
+impl FromStr for ProviderType {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "anthropic" => Ok(ProviderType::Anthropic),
+            "bedrock" => Ok(ProviderType::Bedrock),
+            "openai_compatible" => Ok(ProviderType::OpenAiCompatible),
+            "claude_subscription" => Ok(ProviderType::ClaudeSubscription),
+            other => Err(format!("invalid provider type: '{other}'")),
+        }
+    }
+}
+
+/// Configuration for a single LLM provider in a fallback chain.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProviderConfig {
+    /// Human-readable name (e.g., "openai", "gemini", "bedrock").
+    pub name: String,
+    /// Backend type for this provider.
+    pub provider_type: ProviderType,
+    /// Reference to a secret name in the vault for the API key.
+    pub api_key_secret_name: Option<String>,
+    /// Override the default base URL for the provider.
+    pub base_url: Option<String>,
+    /// Model identifier to use.
+    pub model: String,
+    /// Priority for fallback ordering; lower = higher priority.
+    pub priority: u32,
+    /// Whether this provider is enabled.
+    pub enabled: bool,
+    /// What this provider supports.
+    pub capabilities: ProviderCapabilities,
+}
+
+/// Configuration for the multi-provider fallback chain.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FallbackChainConfig {
+    /// Ordered list of provider configurations.
+    pub providers: Vec<ProviderConfig>,
+    /// Maximum time (ms) to wait in rate-limit queue before failing over.
+    #[serde(default = "default_rate_limit_queue_timeout_ms")]
+    pub rate_limit_queue_timeout_ms: u64,
+    /// Warn if fallback provider costs more than this multiplier of the primary.
+    #[serde(default = "default_cost_warning_multiplier")]
+    pub cost_warning_multiplier: f64,
+}
+
+fn default_rate_limit_queue_timeout_ms() -> u64 {
+    5000
+}
+
+fn default_cost_warning_multiplier() -> f64 {
+    3.0
+}
+
+/// Cost information for a specific provider/model combination.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProviderCostInfo {
+    pub provider_name: String,
+    pub model: String,
+    pub input_cost_per_million: f64,
+    pub output_cost_per_million: f64,
+}
+
+/// Status information for a provider in the fallback chain (for CLI display).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProviderStatusInfo {
+    pub name: String,
+    /// One of "closed", "open", "half_open".
+    pub circuit_state: String,
+    pub last_error: Option<String>,
+    /// Human-readable time since last success (e.g., "2m ago").
+    pub last_success_ago: Option<String>,
+    pub total_calls: u64,
+    pub total_failures: u64,
+    /// ISO 8601 timestamp of when the provider started being available.
+    pub uptime_since: Option<String>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -278,5 +380,36 @@ mod tests {
         };
         assert!(err.to_string().contains("100000"));
         assert!(err.to_string().contains("120000"));
+    }
+
+    #[test]
+    fn test_provider_type_roundtrip() {
+        for pt in [
+            ProviderType::Anthropic,
+            ProviderType::Bedrock,
+            ProviderType::OpenAiCompatible,
+            ProviderType::ClaudeSubscription,
+        ] {
+            let s = pt.to_string();
+            let parsed: ProviderType = s.parse().unwrap();
+            assert_eq!(pt, parsed);
+        }
+    }
+
+    #[test]
+    fn test_provider_type_serde() {
+        let pt = ProviderType::OpenAiCompatible;
+        let json = serde_json::to_string(&pt).unwrap();
+        assert_eq!(json, "\"openai_compatible\"");
+        let parsed: ProviderType = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed, ProviderType::OpenAiCompatible);
+    }
+
+    #[test]
+    fn test_fallback_chain_config_defaults() {
+        let json = r#"{"providers":[]}"#;
+        let config: FallbackChainConfig = serde_json::from_str(json).unwrap();
+        assert_eq!(config.rate_limit_queue_timeout_ms, 5000);
+        assert!((config.cost_warning_multiplier - 3.0).abs() < f64::EPSILON);
     }
 }

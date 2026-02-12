@@ -10,3 +10,4 @@ pub mod llm;
 pub mod memory;
 pub mod repository;
 pub mod service;
+pub mod storage;

@@ -7,7 +7,7 @@
 use std::pin::Pin;
 
 use futures_util::Stream;
-use tracing::{Instrument, info_span};
+use tracing::{Instrument, debug, info, info_span};
 
 use boternity_types::llm::{
     CompletionRequest, CompletionResponse, LlmError, StreamEvent,
@@ -38,11 +38,14 @@ impl AgentEngine {
     ///
     /// The caller is responsible for updating `AgentContext.conversation_history`
     /// with the user message before calling and the assistant response after.
+    /// The caller should also call `context.set_recalled_memories()` before
+    /// this method to inject vector search results into the system prompt.
     pub fn execute(
         &self,
         context: &AgentContext,
         user_message: &str,
     ) -> Pin<Box<dyn Stream<Item = Result<StreamEvent, LlmError>> + Send + 'static>> {
+        Self::log_recalled_memories(context);
         let request = self.build_request(context, user_message);
 
         let span = info_span!(
@@ -69,6 +72,7 @@ impl AgentEngine {
         context: &AgentContext,
         user_message: &str,
     ) -> Result<CompletionResponse, LlmError> {
+        Self::log_recalled_memories(context);
         let request = self.build_request(context, user_message);
 
         let span = info_span!(
@@ -104,6 +108,40 @@ impl AgentEngine {
 
         let response = self.provider.complete(&request).instrument(span).await?;
         Ok(response.content)
+    }
+
+    /// Log recalled long-term memories when verbose mode is enabled.
+    ///
+    /// In verbose mode, each injected memory is logged at INFO level with
+    /// its relevance score and category. In normal mode, only a debug-level
+    /// count is emitted.
+    fn log_recalled_memories(context: &AgentContext) {
+        if context.recalled_memories.is_empty() {
+            return;
+        }
+
+        if context.verbose {
+            info!(
+                count = context.recalled_memories.len(),
+                "Injecting long-term memories into system prompt"
+            );
+            for (i, rm) in context.recalled_memories.iter().enumerate() {
+                info!(
+                    index = i + 1,
+                    fact = %rm.entry.fact,
+                    category = %rm.entry.category,
+                    relevance = format!("{:.3}", rm.relevance_score),
+                    distance = format!("{:.3}", rm.distance),
+                    provenance = ?rm.provenance,
+                    "Recalled memory"
+                );
+            }
+        } else {
+            debug!(
+                count = context.recalled_memories.len(),
+                "Long-term memories injected into system prompt"
+            );
+        }
     }
 
     /// Build a CompletionRequest from the agent context and a user message.

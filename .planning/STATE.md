@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-10)
 
 **Core value:** A user can create a bot with a distinct identity, give it skills through an interactive builder, and have meaningful parallel conversations with it -- all running locally with full observability.
-**Current focus:** Phase 2 (Single-Agent Chat + LLM) - In progress
+**Current focus:** Phase 4 (Web UI Core + Fleet Dashboard) - Not started
 
 ## Current Position
 
-Phase: 2 of 10 (Single-Agent Chat + LLM)
-Plan: 8 of 8 in current phase (02-01, 02-02, 02-03, 02-04, 02-05, 02-06, 02-08 complete; 02-07 code committed, summary pending)
-Status: In progress
-Last activity: 2026-02-12 -- Completed 02-08-PLAN.md (Session and memory management CLI)
+Phase: 4 of 10 (Web UI Core + Fleet Dashboard)
+Plan: 0 of ? in current phase (not yet planned)
+Status: Ready to plan
+Last activity: 2026-02-12 -- Completed Phase 3 (Multi-Provider + Memory)
 
-Progress: [█████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 13/53 (~25%)
+Progress: [██████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░] 26/53 (~49%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 13
-- Average duration: 5m 54s
-- Total execution time: 81m 0s
+- Total plans completed: 26
+- Average duration: 8m 01s
+- Total execution time: 208m 31s
 
 **By Phase:**
 
@@ -29,10 +29,11 @@ Progress: [█████████████░░░░░░░░░░
 |-------|-------|-------|----------|
 | 1. Foundation + Bot Identity | 6/6 | 49m 14s | 8m 12s |
 | 2. Single-Agent Chat + LLM | 7/8 | 31m 46s | 4m 32s |
+| 3. Multi-Provider + Memory | 13/13 | 127m 31s | 9m 49s |
 
 **Recent Trend:**
-- Last 5 plans: 02-04 (4m 0s), 02-05 (4m 0s), 02-06 (5m 0s), 02-07 (pending), 02-08 (6m 0s)
-- Trend: Phase 2 plans consistently ~4-6 min each
+- Last 5 plans: 03-09 (3m 31s), 03-08 (6m 31s), 03-12 (7m 37s), 03-13 (7m 35s), 03-11 (9m 21s)
+- Trend: Steady 7-9m for CLI plans; faster when reusing established patterns
 
 *Updated after each plan completion*
 
@@ -97,6 +98,75 @@ Recent decisions affecting current work:
 - [02-08]: Manual memories use Uuid::nil() session_id (not linked to any session)
 - [02-08]: ConcreteChatService type alias pins ChatService<SqliteChatRepository, SqliteMemoryRepository> on AppState
 - [02-08]: Session/memory IDs parsed from String CLI args via Uuid::parse for user-friendly errors
+- [03-01]: ProviderType explicit serde rename for OpenAiCompatible to get 'openai_compatible'
+- [03-01]: FallbackChainConfig defaults: 5000ms rate_limit_queue_timeout, 3.0x cost_warning_multiplier
+- [03-01]: TrustLevel::Private as default (private by default for shared memories)
+- [03-01]: CircuitState uses Instant for timing (monotonic clock correctness)
+- [03-01]: ProviderHealth defaults: failure_threshold=3, success_threshold=1, open_duration=30s
+- [03-01]: is_failover_error: Provider/Stream/RateLimited/Overloaded trigger failover; AuthenticationFailed/InvalidRequest/ContextLengthExceeded do not
+- [03-02]: async-openai requires chat-completion feature to enable _api gate (Client, Chat, streaming types)
+- [03-02]: OpenAI types under async_openai::types::chat not async_openai::types
+- [03-02]: async_stream::try_stream! in Rust 2024 needs explicit type annotations (no ref patterns)
+- [03-02]: max_tokens maps to max_completion_tokens in OpenAI API
+- [03-02]: OpenAiCompatibleProvider does not derive Debug (defense-in-depth, same as AnthropicProvider)
+- [03-03]: FallbackChain::complete() returns FallbackResult struct (response + provider_name + failover_warning)
+- [03-03]: select_stream() instead of stream() -- separates provider selection from stream consumption for borrow checker compliance
+- [03-03]: record_stream_success/failure for caller to report stream outcome (can't track from 'static stream)
+- [03-03]: Priority tiebreaking: latency first, then alphabetical name
+- [03-03]: Cost warning uses average of input+output cost per million for ratio comparison
+- [03-05]: bot_kv_store uses composite PK (bot_id, key) -- natural key enforces uniqueness
+- [03-05]: memory_audit_log.memory_id is TEXT not FK -- memory may be deleted while audit persists
+- [03-05]: ProviderHealthRow separate from runtime ProviderHealth -- Instant not serializable
+- [03-05]: provider_health keyed by name TEXT not UUIDv7 -- names are unique identifiers
+- [03-05]: bot_files UNIQUE(bot_id, filename) enables upsert on re-upload
+- [03-04]: Arrow version 57.3 pinned to match lancedb 0.26 transitive dep (Pitfall 10)
+- [03-04]: Arc<Mutex<TextEmbedding>> not Arc<TextEmbedding> because fastembed embed() requires &mut self
+- [03-04]: RepositoryError::Query used for embedding/vector errors (no Internal variant)
+- [03-04]: TextInitOptions builder pattern required (non_exhaustive struct)
+- [03-04]: drop_table is idempotent (returns Ok on TableNotFound)
+- [03-06]: ClaudeSubscriptionProvider as thin wrapper over OpenAiCompatibleProvider (no separate protocol needed)
+- [03-06]: Provider factory create_provider() in boternity-infra, not CLI layer (infrastructure concern)
+- [03-06]: FallbackChain built lazily via build_fallback_chain() not at AppState::init() (requires API key)
+- [03-06]: create_single_provider() retained for utility calls (title gen, memory extraction)
+- [03-06]: Chat loop uses FallbackChain directly instead of AgentEngine for streaming
+- [03-06]: build_completion_request() free function replicates AgentEngine request building for chain use
+- [03-06]: Stats footer shows 'model via provider_name' only during failover
+- [03-07]: delete+insert for update_embedding: LanceDB UpdateBuilder uses SQL expressions only, cannot set vector column from Vec<f32>
+- [03-07]: Search over-fetches limit*2 then filters by min_similarity and truncates
+- [03-07]: update_embedding scans all bot_memory_* tables since trait lacks bot_id parameter
+- [03-07]: DEFAULT_DEDUP_THRESHOLD = 0.15 cosine distance (~92.5% similarity)
+- [03-07]: lancedb::query::{ExecutableQuery, QueryBase} must be imported for .execute()/.limit()/.only_if()
+- [03-10]: detect_mime and is_text_mime as module-level functions in storage/mod.rs (not struct methods)
+- [03-10]: RecordBatchIterator wraps Vec<Ok(batch)> for LanceDB table.add() (Vec<RecordBatch> lacks RecordBatchReader)
+- [03-10]: FixedSizeListArray::try_new(field, size, values, None) for arrow-array 57.3 (try_new_from_values is lance_arrow extension)
+- [03-10]: Bot files stored under {base_dir}/bots/{bot_id.simple()}/files/ with .versions/ subdirectory
+- [03-10]: MockEmbedder pattern for testing vector operations without embedding model download
+- [03-10]: Rust 2024 edition requires explicit type annotations on closure params with .clone() in iterator chains
+- [03-09]: SHA-256 write_hash covers id+fact+category+importance+author_bot_id+trust_level+created_at (not embedding)
+- [03-09]: Share/revoke uses delete+insert pattern (same as 03-07 update_embedding) to preserve vector column
+- [03-09]: Shared memory search uses raw similarity as relevance (no time-decay or access tracking)
+- [03-09]: Per-bot cap checked on every add() via count_by_author query
+- [03-09]: Trust filter SQL: OR-combined clauses for public, author-self, trusted-list access
+- [03-09]: extract_embedding_from_batch reads FixedSizeListArray for delete+insert ops
+- [03-08]: Caller-does-search: ChatService searches vector memory, passes Vec<RankedMemory> to AgentContext
+- [03-08]: BoxEmbedder and BoxVectorMemoryStore passed as method params not struct fields (optional components)
+- [03-08]: System prompt rebuilt on each set_recalled_memories() call to keep <long_term_memory> section current
+- [03-08]: DEFAULT_MEMORY_SEARCH_LIMIT=10, DEFAULT_MIN_SIMILARITY=0.3, DEFAULT_DEDUP_THRESHOLD=0.15
+- [03-08]: Memories formatted as natural-language facts without scores/metadata (provenance only for shared)
+- [03-12]: shared-memory is a separate top-level subcommand (bnity shared-memory), not nested under bnity memory
+- [03-12]: Optional vector/embedder parameters on remember() and delete_memory() for graceful degradation
+- [03-12]: Similarity score color-coding: green>=0.7, yellow>=0.4, red<0.4 in CLI search output
+- [03-12]: Export outputs structured JSON with bot metadata (slug, name, exported_at, count, memories array)
+- [03-12]: Zero-embedding for shared-memory list (no semantic filtering, returns all visible entries)
+- [03-13]: KV set parses value as JSON with fallback to string (natural UX for both simple and structured values)
+- [03-13]: Storage delete deindexes from vector store before file removal (prevents orphaned chunks)
+- [03-13]: Two FastEmbedEmbedder instances in AppState: one concrete for FileIndexer<E>, one boxed for BoxEmbedder
+- [03-13]: Three separate LanceVectorStore connections for vector_store/vector_memory/shared_memory (each takes ownership)
+- [03-11]: Provider configs persisted in ~/.boternity/providers.json (simple JSON array, not SQLite)
+- [03-11]: Circuit breaker state is session-scoped (resets each chat), not persisted in provider status
+- [03-11]: Verbose mode uses short flag -V (not -v which is taken by global verbosity counter)
+- [03-11]: Vector memory search integrated directly in chat loop with Option<BoxVectorMemoryStore> for graceful fallback
+- [03-11]: Provider add tests connection by default, --skip-test to bypass
 
 ### Pending Todos
 
@@ -106,10 +176,10 @@ None yet.
 
 - [Research]: Dual-GraphQL architecture (Yoga+Pothos BFF vs async-graphql alone) needs validation in Phase 4
 - [Research]: `llm` crate (graniet) v1.2.4 is newer -- may need fallback to thin reqwest wrapper if API unstable
-- [Research]: LanceDB vs sqlite-vec decision deferred to Phase 3 planning
+- [Resolved]: LanceDB selected for vector storage (03-04 implemented LanceVectorStore)
 
 ## Session Continuity
 
-Last session: 2026-02-11T23:16:02Z
-Stopped at: Completed 02-08-PLAN.md (Session and memory management CLI)
+Last session: 2026-02-13
+Stopped at: Completed Phase 3 (Multi-Provider + Memory) — all 13 plans executed, verified 5/5
 Resume file: None

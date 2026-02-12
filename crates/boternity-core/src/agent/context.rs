@@ -2,11 +2,12 @@
 //!
 //! AgentContext holds all the state needed for a conversation: personality
 //! content, memories, conversation history, token budget, and the assembled
-//! system prompt.
+//! system prompt. Long-term vector memories are injected into the system
+//! prompt via a `<long_term_memory>` section when available.
 
 use boternity_types::agent::AgentConfig;
 use boternity_types::llm::{Message, MessageRole};
-use boternity_types::memory::MemoryEntry;
+use boternity_types::memory::{MemoryEntry, RankedMemory};
 
 use crate::llm::token_budget::TokenBudget;
 
@@ -16,6 +17,8 @@ use super::prompt::SystemPromptBuilder;
 ///
 /// Created at session start with the bot's personality files and memories,
 /// then tracks conversation history and token usage throughout the session.
+/// Long-term memories from vector search are stored in `recalled_memories`
+/// and injected into the system prompt on each rebuild.
 #[derive(Debug, Clone)]
 pub struct AgentContext {
     /// Agent identity and LLM configuration.
@@ -26,14 +29,21 @@ pub struct AgentContext {
     pub identity_content: String,
     /// Content from USER.md -- standing user instructions.
     pub user_content: String,
-    /// Extracted memories from previous sessions.
+    /// Extracted memories from previous sessions (session-scoped).
     pub memories: Vec<MemoryEntry>,
+    /// Semantically recalled long-term memories from vector search.
+    ///
+    /// Populated before each LLM call by the caller (ChatService).
+    /// Injected into the system prompt as a `<long_term_memory>` section.
+    pub recalled_memories: Vec<RankedMemory>,
     /// Running conversation history (user + assistant messages).
     pub conversation_history: Vec<Message>,
     /// Token budget for context window management.
     pub token_budget: TokenBudget,
     /// Pre-built system prompt assembled from personality + memories.
     pub system_prompt: String,
+    /// Whether verbose mode is enabled (shows memory injection details).
+    pub verbose: bool,
 }
 
 impl AgentContext {
@@ -49,7 +59,7 @@ impl AgentContext {
         token_budget: TokenBudget,
     ) -> Self {
         let system_prompt =
-            SystemPromptBuilder::build(&config, &soul, &identity, &user, &memories);
+            SystemPromptBuilder::build(&config, &soul, &identity, &user, &memories, &[]);
 
         Self {
             agent_config: config,
@@ -57,10 +67,42 @@ impl AgentContext {
             identity_content: identity,
             user_content: user,
             memories,
+            recalled_memories: Vec::new(),
             conversation_history: Vec::new(),
             token_budget,
             system_prompt,
+            verbose: false,
         }
+    }
+
+    /// Set verbose mode (shows which memories were injected).
+    pub fn with_verbose(mut self, verbose: bool) -> Self {
+        self.verbose = verbose;
+        self
+    }
+
+    /// Update the recalled long-term memories and rebuild the system prompt.
+    ///
+    /// Called before each LLM request with fresh vector search results.
+    /// The system prompt is rebuilt to include the new `<long_term_memory>` section.
+    pub fn set_recalled_memories(&mut self, memories: Vec<RankedMemory>) {
+        self.recalled_memories = memories;
+        self.rebuild_system_prompt();
+    }
+
+    /// Rebuild the system prompt from current state.
+    ///
+    /// Called after recalled_memories changes to keep the system prompt
+    /// in sync with the latest vector search results.
+    fn rebuild_system_prompt(&mut self) {
+        self.system_prompt = SystemPromptBuilder::build(
+            &self.agent_config,
+            &self.soul_content,
+            &self.identity_content,
+            &self.user_content,
+            &self.memories,
+            &self.recalled_memories,
+        );
     }
 
     /// Add a user message to the conversation history.

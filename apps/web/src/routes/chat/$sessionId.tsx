@@ -1,5 +1,29 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { Skeleton } from "@/components/ui/skeleton";
+/**
+ * Chat session route -- /chat/$sessionId
+ *
+ * Full chat view: header, message list, input.
+ * Wires up SSE streaming for real-time bot responses.
+ *
+ * Lifecycle: user types -> sendMessage() -> SSE stream starts ->
+ * tokens appear live -> stream completes -> invalidate messages query
+ * to refresh from server-saved messages.
+ */
+
+import { useCallback } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
+import { ChatLayout } from "@/components/chat/chat-layout";
+import { ChatHeader } from "@/components/chat/chat-header";
+import { MessageList } from "@/components/chat/message-list";
+import { ChatInput } from "@/components/chat/chat-input";
+import {
+  useSession,
+  useMessages,
+  useDeleteSession,
+  useClearSession,
+} from "@/hooks/use-chat-queries";
+import { useBot } from "@/hooks/use-bot-queries";
+import { useSSEChat } from "@/hooks/use-sse-chat";
 
 export const Route = createFileRoute("/chat/$sessionId")({
   component: ChatSessionPage,
@@ -7,32 +31,82 @@ export const Route = createFileRoute("/chat/$sessionId")({
 
 function ChatSessionPage() {
   const { sessionId } = Route.useParams();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  // Data queries
+  const { data: session } = useSession(sessionId);
+  const botId = session?.bot_id ?? null;
+  const { data: bot } = useBot(botId ?? "");
+  const { data: messages, isLoading: messagesLoading } = useMessages(sessionId);
+
+  // Mutations
+  const deleteSession = useDeleteSession();
+  const clearSession = useClearSession();
+
+  // SSE streaming
+  const {
+    sendMessage,
+    stopGeneration,
+    streamedContent,
+    isStreaming,
+  } = useSSEChat();
+
+  const handleSend = useCallback(
+    async (message: string) => {
+      if (!botId) return;
+
+      await sendMessage(botId, message, sessionId);
+
+      // After streaming completes, refresh messages from server
+      // The server has saved both user and assistant messages
+      queryClient.invalidateQueries({ queryKey: ["messages", sessionId] });
+      queryClient.invalidateQueries({ queryKey: ["sessions"] });
+      queryClient.invalidateQueries({ queryKey: ["session", sessionId] });
+    },
+    [botId, sessionId, sendMessage, queryClient],
+  );
+
+  const handleDelete = useCallback(() => {
+    deleteSession.mutate(sessionId, {
+      onSuccess: () => {
+        navigate({ to: "/chat" });
+      },
+    });
+  }, [deleteSession, sessionId, navigate]);
+
+  const handleClear = useCallback(() => {
+    clearSession.mutate(sessionId);
+  }, [clearSession, sessionId]);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-3rem)]">
-      {/* Chat header */}
-      <div className="flex items-center gap-3 border-b px-4 py-3">
-        <Skeleton className="h-8 w-8 rounded-full" />
-        <div>
-          <Skeleton className="h-5 w-32" />
-          <Skeleton className="h-3 w-20 mt-1" />
-        </div>
-      </div>
+    <ChatLayout activeSessionId={sessionId}>
+      <div className="flex flex-col h-full">
+        {/* Header */}
+        <ChatHeader
+          bot={bot}
+          model={session?.model}
+          sessionTitle={session?.title ?? null}
+          onDelete={handleDelete}
+          onClear={handleClear}
+        />
 
-      {/* Messages area */}
-      <div className="flex-1 overflow-auto p-4 space-y-4">
-        <p className="text-center text-muted-foreground text-sm">
-          Session: {sessionId.slice(0, 8)}...
-        </p>
-        <Skeleton className="h-16 w-3/4" />
-        <Skeleton className="h-16 w-2/3 ml-auto" />
-        <Skeleton className="h-16 w-3/4" />
-      </div>
+        {/* Messages */}
+        <MessageList
+          messages={messages}
+          isLoading={messagesLoading}
+          isStreaming={isStreaming}
+          streamedContent={streamedContent}
+          botEmoji={bot?.emoji ?? undefined}
+        />
 
-      {/* Input area */}
-      <div className="border-t p-4">
-        <Skeleton className="h-12 w-full rounded-lg" />
+        {/* Input */}
+        <ChatInput
+          onSend={handleSend}
+          onStop={stopGeneration}
+          isStreaming={isStreaming}
+        />
       </div>
-    </div>
+    </ChatLayout>
   );
 }

@@ -1,20 +1,22 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Skeleton } from "@/components/ui/skeleton";
+import { SoulEditor } from "@/components/soul/soul-editor";
 
 export const Route = createFileRoute("/bots/$botId/soul")({
   component: BotSoulPage,
 });
 
 function BotSoulPage() {
+  const { botId } = Route.useParams();
+
   return (
     <div className="space-y-4">
-      <p className="text-muted-foreground">
-        Edit the soul, identity, and user files for this bot.
-      </p>
-      <div className="grid md:grid-cols-2 gap-4">
-        <Skeleton className="h-[400px] rounded-lg" />
-        <Skeleton className="h-[400px] rounded-lg" />
+      <div>
+        <h2 className="text-lg font-semibold tracking-tight">Soul Editor</h2>
+        <p className="text-sm text-muted-foreground">
+          Edit the soul, identity, and user context files that shape this bot's personality.
+        </p>
       </div>
+      <SoulEditor botId={botId} />
     </div>
   );
 }

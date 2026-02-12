@@ -2,10 +2,16 @@
 //!
 //! All routes are under `/api/v1/`.
 //! Middleware: CORS, tracing, response time.
+//!
+//! In production, the built React SPA is served from `apps/web/dist/`
+//! (configurable via `BOTERNITY_WEB_DIR`). API routes take priority;
+//! unknown paths fall through to the SPA's `index.html` for client-side
+//! routing. If the directory does not exist, only the API is served.
 
 use axum::routing::{delete, get, post, put};
 use axum::Router;
 use tower_http::cors::{Any, CorsLayer};
+use tower_http::services::{ServeDir, ServeFile};
 use tower_http::trace::TraceLayer;
 
 use crate::http::handlers;
@@ -90,12 +96,26 @@ pub fn build_router(state: AppState) -> Router {
         .route("/secrets/{key}", put(handlers::secret::set_secret))
         .route("/secrets/{key}", delete(handlers::secret::delete_secret));
 
-    Router::new()
+    let mut router = Router::new()
         .nest("/api/v1", api_routes)
         .route("/health", get(health_check))
         .layer(cors)
         .layer(TraceLayer::new_for_http())
-        .with_state(state)
+        .with_state(state);
+
+    // Serve the built React SPA from disk if the directory exists.
+    // API routes and /health take priority; unknown paths fall through
+    // to index.html for client-side routing.
+    let web_dir =
+        std::env::var("BOTERNITY_WEB_DIR").unwrap_or_else(|_| "apps/web/dist".to_string());
+    if std::path::Path::new(&web_dir).exists() {
+        let index_path = format!("{}/index.html", web_dir);
+        let serve_dir = ServeDir::new(&web_dir).fallback(ServeFile::new(index_path));
+        router = router.fallback_service(serve_dir);
+        tracing::info!(path = %web_dir, "SPA static file serving enabled");
+    }
+
+    router
 }
 
 /// GET /health - Simple health check endpoint (no auth required).

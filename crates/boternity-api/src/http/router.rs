@@ -47,6 +47,33 @@ pub fn build_router(state: AppState) -> Router {
             "/bots/{id}/soul/verify",
             get(handlers::soul::verify_soul),
         )
+        // Chat streaming
+        .route(
+            "/bots/{id}/chat/stream",
+            post(handlers::chat::stream_chat),
+        )
+        // Sessions (bot-scoped)
+        .route(
+            "/bots/{id}/sessions",
+            get(handlers::session::list_sessions),
+        )
+        // Sessions (top-level)
+        .route(
+            "/sessions/{id}",
+            get(handlers::session::get_session),
+        )
+        .route(
+            "/sessions/{id}",
+            delete(handlers::session::delete_session),
+        )
+        .route(
+            "/sessions/{id}/messages",
+            get(handlers::session::get_messages),
+        )
+        .route(
+            "/sessions/{id}/clear",
+            post(handlers::session::clear_session),
+        )
         // Secrets
         .route("/secrets", get(handlers::secret::list_secrets))
         .route("/secrets/{key}", put(handlers::secret::set_secret))

@@ -1011,6 +1011,7 @@ version = "0.1.0"
 dependencies = [
  "aes-gcm",
  "anyhow",
+ "async-stream",
  "axum",
  "boternity-core",
  "boternity-infra",
@@ -1035,6 +1036,7 @@ dependencies = [
  "tempfile",
  "termimad",
  "tokio",
+ "tokio-stream",
  "tower-http",
  "tracing",
  "tracing-subscriber",

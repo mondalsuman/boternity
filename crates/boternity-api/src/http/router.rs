@@ -74,6 +74,17 @@ pub fn build_router(state: AppState) -> Router {
             "/sessions/{id}/clear",
             post(handlers::session::clear_session),
         )
+        // Identity / User file management
+        .route(
+            "/bots/{id}/identity",
+            get(handlers::identity::get_identity).put(handlers::identity::update_identity),
+        )
+        .route(
+            "/bots/{id}/user",
+            get(handlers::identity::get_user_context).put(handlers::identity::update_user_context),
+        )
+        // Dashboard stats
+        .route("/stats", get(handlers::stats::get_stats))
         // Secrets
         .route("/secrets", get(handlers::secret::list_secrets))
         .route("/secrets/{key}", put(handlers::secret::set_secret))

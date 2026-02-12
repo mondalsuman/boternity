@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 3 of 10 (Multi-Provider + Memory)
-Plan: 3 of 13 in current phase (03-01, 03-03 complete)
+Plan: 3 of 13 in current phase (03-01, 03-02, 03-03 complete)
 Status: In progress
-Last activity: 2026-02-12 -- Completed 03-03-PLAN.md (Circuit breaker and fallback chain)
+Last activity: 2026-02-12 -- Completed 03-02-PLAN.md (OpenAI-compatible LLM provider)
 
-Progress: [███████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 15/53 (~28%)
+Progress: [████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 16/53 (~30%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 15
-- Average duration: 6m 22s
-- Total execution time: 95m 37s
+- Total plans completed: 16
+- Average duration: 6m 49s
+- Total execution time: 109m 13s
 
 **By Phase:**
 
@@ -29,11 +29,11 @@ Progress: [███████████████░░░░░░░░
 |-------|-------|-------|----------|
 | 1. Foundation + Bot Identity | 6/6 | 49m 14s | 8m 12s |
 | 2. Single-Agent Chat + LLM | 7/8 | 31m 46s | 4m 32s |
-| 3. Multi-Provider + Memory | 2/13 | 14m 37s | 7m 19s |
+| 3. Multi-Provider + Memory | 3/13 | 28m 13s | 9m 24s |
 
 **Recent Trend:**
-- Last 5 plans: 02-06 (5m 0s), 02-07 (pending), 02-08 (6m 0s), 03-01 (5m 7s), 03-03 (9m 30s)
-- Trend: Slightly longer for Phase 3 (more complex logic)
+- Last 5 plans: 02-07 (pending), 02-08 (6m 0s), 03-01 (5m 7s), 03-02 (13m 36s), 03-03 (9m 30s)
+- Trend: Phase 3 plans longer due to external dep compilation and API discovery
 
 *Updated after each plan completion*
 
@@ -104,6 +104,11 @@ Recent decisions affecting current work:
 - [03-01]: CircuitState uses Instant for timing (monotonic clock correctness)
 - [03-01]: ProviderHealth defaults: failure_threshold=3, success_threshold=1, open_duration=30s
 - [03-01]: is_failover_error: Provider/Stream/RateLimited/Overloaded trigger failover; AuthenticationFailed/InvalidRequest/ContextLengthExceeded do not
+- [03-02]: async-openai requires chat-completion feature to enable _api gate (Client, Chat, streaming types)
+- [03-02]: OpenAI types under async_openai::types::chat not async_openai::types
+- [03-02]: async_stream::try_stream! in Rust 2024 needs explicit type annotations (no ref patterns)
+- [03-02]: max_tokens maps to max_completion_tokens in OpenAI API
+- [03-02]: OpenAiCompatibleProvider does not derive Debug (defense-in-depth, same as AnthropicProvider)
 - [03-03]: FallbackChain::complete() returns FallbackResult struct (response + provider_name + failover_warning)
 - [03-03]: select_stream() instead of stream() -- separates provider selection from stream consumption for borrow checker compliance
 - [03-03]: record_stream_success/failure for caller to report stream outcome (can't track from 'static stream)
@@ -122,6 +127,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-12T22:12:48Z
-Stopped at: Completed 03-03-PLAN.md (Circuit breaker and fallback chain)
+Last session: 2026-02-12T22:16:36Z
+Stopped at: Completed 03-02-PLAN.md (OpenAI-compatible LLM provider)
 Resume file: None

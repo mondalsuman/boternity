@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 4 of 10 (Web UI Core + Fleet Dashboard)
-Plan: 2 of 8 in current phase
+Plan: 3 of 8 in current phase
 Status: In progress
-Last activity: 2026-02-13 -- Completed 04-02-PLAN.md
+Last activity: 2026-02-13 -- Completed 04-03-PLAN.md
 
-Progress: [████████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░] 28/53 (~53%)
+Progress: [█████████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░] 29/53 (~55%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 28
-- Average duration: 7m 57s
-- Total execution time: 225m 31s
+- Total plans completed: 29
+- Average duration: 7m 51s
+- Total execution time: 228m 55s
 
 **By Phase:**
 
@@ -30,11 +30,11 @@ Progress: [███████████████████████
 | 1. Foundation + Bot Identity | 6/6 | 49m 14s | 8m 12s |
 | 2. Single-Agent Chat + LLM | 7/8 | 31m 46s | 4m 32s |
 | 3. Multi-Provider + Memory | 13/13 | 127m 31s | 9m 49s |
-| 4. Web UI Core + Fleet Dashboard | 2/8 | 17m 00s | 8m 30s |
+| 4. Web UI Core + Fleet Dashboard | 3/8 | 20m 24s | 6m 48s |
 
 **Recent Trend:**
-- Last 5 plans: 03-12 (7m 37s), 03-13 (7m 35s), 03-11 (9m 21s), 04-01 (9m 00s), 04-02 (8m 00s)
-- Trend: Steady ~8-9m per plan
+- Last 5 plans: 03-13 (7m 35s), 03-11 (9m 21s), 04-01 (9m 00s), 04-02 (8m 00s), 04-03 (3m 24s)
+- Trend: Steady ~7-9m per plan, 04-03 faster (2 focused UI tasks)
 
 *Updated after each plan completion*
 
@@ -179,6 +179,11 @@ Recent decisions affecting current work:
 - [04-02]: SidebarProvider wraps entire app for consistent sidebar state across all routes
 - [04-02]: TooltipProvider at root level for sidebar tooltip support on collapsed rail
 - [04-02]: TanStack Router/Query devtools lazy-loaded only in development mode
+- [04-03]: Client-side search/sort for bot grid (single-user app, small bot counts, immediate responsiveness)
+- [04-03]: DropdownMenu RadioGroup for sort picker instead of Select component (simpler, consistent)
+- [04-03]: placeholderData: (prev) => prev in useBots for smooth filter transitions
+- [04-03]: Simple 16-emoji grid picker instead of full emoji picker library
+- [04-03]: AlertDialog added as shadcn component for destructive action confirmations
 
 ### Pending Todos
 
@@ -193,5 +198,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-13
-Stopped at: Completed 04-02-PLAN.md
+Stopped at: Completed 04-03-PLAN.md
 Resume file: None

@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 3 of 10 (Multi-Provider + Memory)
-Plan: 9 of 13 in current phase (03-01, 03-02, 03-03, 03-04, 03-05, 03-06, 03-07, 03-09, 03-10 complete)
+Plan: 10 of 13 in current phase (03-01, 03-02, 03-03, 03-04, 03-05, 03-06, 03-07, 03-08, 03-09, 03-10 complete)
 Status: In progress
-Last activity: 2026-02-12 -- Completed 03-09-PLAN.md (shared memory store with trust partitioning)
+Last activity: 2026-02-12 -- Completed 03-08-PLAN.md (vector memory recall integration)
 
-Progress: [██████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 22/53 (~42%)
+Progress: [███████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 23/53 (~43%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 22
-- Average duration: 8m 04s
-- Total execution time: 177m 27s
+- Total plans completed: 23
+- Average duration: 8m 00s
+- Total execution time: 183m 58s
 
 **By Phase:**
 
@@ -29,11 +29,11 @@ Progress: [██████████████████████░
 |-------|-------|-------|----------|
 | 1. Foundation + Bot Identity | 6/6 | 49m 14s | 8m 12s |
 | 2. Single-Agent Chat + LLM | 7/8 | 31m 46s | 4m 32s |
-| 3. Multi-Provider + Memory | 9/13 | 96m 27s | 10m 43s |
+| 3. Multi-Provider + Memory | 10/13 | 102m 58s | 10m 18s |
 
 **Recent Trend:**
-- Last 5 plans: 03-04 (16m 27s), 03-06 (10m 48s), 03-07 (10m 45s), 03-10 (13m 58s), 03-09 (3m 31s)
-- Trend: Faster when patterns established (03-09 reused 03-07 patterns)
+- Last 5 plans: 03-06 (10m 48s), 03-07 (10m 45s), 03-10 (13m 58s), 03-09 (3m 31s), 03-08 (6m 31s)
+- Trend: Faster when patterns established (03-08 reused Box pattern from 03-07)
 
 *Updated after each plan completion*
 
@@ -148,6 +148,11 @@ Recent decisions affecting current work:
 - [03-09]: Per-bot cap checked on every add() via count_by_author query
 - [03-09]: Trust filter SQL: OR-combined clauses for public, author-self, trusted-list access
 - [03-09]: extract_embedding_from_batch reads FixedSizeListArray for delete+insert ops
+- [03-08]: Caller-does-search: ChatService searches vector memory, passes Vec<RankedMemory> to AgentContext
+- [03-08]: BoxEmbedder and BoxVectorMemoryStore passed as method params not struct fields (optional components)
+- [03-08]: System prompt rebuilt on each set_recalled_memories() call to keep <long_term_memory> section current
+- [03-08]: DEFAULT_MEMORY_SEARCH_LIMIT=10, DEFAULT_MIN_SIMILARITY=0.3, DEFAULT_DEDUP_THRESHOLD=0.15
+- [03-08]: Memories formatted as natural-language facts without scores/metadata (provenance only for shared)
 
 ### Pending Todos
 
@@ -161,6 +166,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-12T22:45:47Z
-Stopped at: Completed 03-09-PLAN.md (shared memory store with trust partitioning)
+Last session: 2026-02-12T22:48:33Z
+Stopped at: Completed 03-08-PLAN.md (vector memory recall integration)
 Resume file: None

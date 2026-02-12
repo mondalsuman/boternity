@@ -3,29 +3,27 @@
 //! Coordinates the complete conversation lifecycle: bot resolution,
 //! session creation, welcome banner, greeting, input loop with streaming
 //! responses, slash commands, memory extraction, and session cleanup.
+//!
+//! Uses a [`FallbackChain`] for provider selection with automatic failover.
+//! Failover events are printed to stderr during chat.
 
 use std::io::Write;
 use std::time::Instant;
 
 use console::style;
 use futures_util::StreamExt;
-use secrecy::SecretString;
 use tracing::{info, warn};
 
 use boternity_core::agent::context::AgentContext;
-use boternity_core::agent::engine::AgentEngine;
 use boternity_core::agent::title::generate_title;
 use boternity_core::chat::session::SessionManager;
-use boternity_core::llm::box_provider::BoxLlmProvider;
+use boternity_core::llm::health::ProviderHealth;
 use boternity_core::llm::token_budget::TokenBudget;
 use boternity_core::memory::extractor::SessionMemoryExtractor;
 use boternity_core::memory::store::MemoryRepository;
 use boternity_infra::filesystem::identity::parse_identity_frontmatter;
 use boternity_infra::filesystem::LocalFileSystem;
-use boternity_infra::llm::anthropic::AnthropicProvider;
-use boternity_infra::llm::bedrock::BedrockProvider;
-use boternity_types::llm::StreamEvent;
-use boternity_types::secret::SecretScope;
+use boternity_types::llm::{CompletionRequest, LlmError, StreamEvent};
 
 use crate::state::AppState;
 
@@ -34,35 +32,46 @@ use super::commands::{self, ChatCommand};
 use super::input::{ChatInput, InputEvent};
 use super::renderer::ChatRenderer;
 
-/// Create a BoxLlmProvider from the state's secret service.
+/// Build a [`CompletionRequest`] from agent context and a user message.
 ///
-/// Auto-detects provider based on key format:
-/// - Keys starting with `bedrock-api-key-` → AWS Bedrock provider
-/// - All other keys → Anthropic direct API provider
-async fn create_provider(state: &AppState, model: &str) -> anyhow::Result<BoxLlmProvider> {
-    let api_key_value = state
-        .secret_service
-        .get_secret("ANTHROPIC_API_KEY", &SecretScope::Global)
-        .await?
-        .ok_or_else(|| {
-            anyhow::anyhow!(
-                "ANTHROPIC_API_KEY not found. Set it with: bnity set secret ANTHROPIC_API_KEY"
-            )
-        })?;
+/// Replicates the request building logic from `AgentEngine::build_request()`,
+/// which constructs the system prompt + conversation history + user message.
+fn build_completion_request(
+    context: &AgentContext,
+    user_message: &str,
+) -> CompletionRequest {
+    let mut messages = context.build_messages();
 
-    if api_key_value.starts_with("bedrock-api-key-") {
-        let region = std::env::var("AWS_REGION").unwrap_or_else(|_| "us-east-1".to_string());
-        let api_key = SecretString::from(api_key_value);
-        let bedrock = BedrockProvider::new(api_key, model.to_string(), region);
-        Ok(BoxLlmProvider::new(bedrock))
-    } else {
-        let api_key = SecretString::from(api_key_value);
-        let anthropic = AnthropicProvider::new(api_key, model.to_string());
-        Ok(BoxLlmProvider::new(anthropic))
+    // Add the current user message to the request
+    messages.push(boternity_types::llm::Message {
+        role: boternity_types::llm::MessageRole::User,
+        content: user_message.to_string(),
+    });
+
+    CompletionRequest {
+        model: context.agent_config.model.clone(),
+        messages,
+        system: Some(context.system_prompt.clone()),
+        max_tokens: context.agent_config.max_tokens,
+        temperature: Some(context.agent_config.temperature),
+        stream: true,
+        stop_sequences: None,
     }
 }
 
+/// Print a failover warning to stderr with visual formatting.
+fn print_failover_warning(warning: &str) {
+    eprintln!(
+        "  {} {}",
+        style("!").yellow().bold(),
+        style(warning).yellow()
+    );
+}
+
 /// Run the interactive chat loop for a bot.
+///
+/// Builds a [`FallbackChain`] from the configured providers and uses it
+/// for all LLM interactions. Failover events are printed to stderr.
 pub async fn run_chat_loop(
     state: &AppState,
     bot_slug: &str,
@@ -86,8 +95,22 @@ pub async fn run_chat_loop(
     let max_tokens = identity_fm.as_ref().map(|fm| fm.max_tokens as u32).unwrap_or(4096);
     let bot_emoji = None::<String>;
 
-    // Create LLM provider
-    let provider = create_provider(state, &model).await?;
+    // Build fallback chain with all configured providers
+    let mut fallback_chain = state.build_fallback_chain(&model).await?;
+
+    // Get capabilities from the primary provider for token budget
+    let primary_caps = fallback_chain
+        .providers
+        .first()
+        .map(|(_, p)| p.capabilities().clone())
+        .unwrap_or_else(|| boternity_types::llm::ProviderCapabilities {
+            streaming: true,
+            tool_calling: true,
+            vision: false,
+            extended_thinking: false,
+            max_context_tokens: 200_000,
+            max_output_tokens: 8_192,
+        });
 
     // Load memories and build agent context
     let memories = state.chat_service.load_memories(&bot.id.0).await?;
@@ -100,9 +123,8 @@ pub async fn run_chat_loop(
         temperature,
         max_tokens,
     };
-    let token_budget = TokenBudget::from_capabilities(provider.capabilities());
+    let token_budget = TokenBudget::from_capabilities(&primary_caps);
     let mut agent_context = AgentContext::new(agent_config, soul_content, identity_content.clone(), user_content, memories, token_budget);
-    let agent_engine = AgentEngine::new(provider);
 
     // Create session
     let session = state.chat_service.create_session(bot.id.0, model.clone()).await?;
@@ -113,15 +135,21 @@ pub async fn run_chat_loop(
     // Print welcome banner
     print_welcome_banner(&bot.name, bot_emoji.as_deref(), &bot.description, &model, &session_id_str);
 
-    // Generate and display greeting
+    // Generate and display greeting using fallback chain
     let renderer = ChatRenderer::new(None);
     let greeting_spinner = indicatif::ProgressBar::new_spinner();
     greeting_spinner.set_style(indicatif::ProgressStyle::default_spinner().template("{spinner:.cyan} {msg}").unwrap());
     greeting_spinner.set_message("thinking...");
     greeting_spinner.enable_steady_tick(std::time::Duration::from_millis(80));
 
-    let greeting = match agent_engine.generate_greeting(&agent_context).await {
-        Ok(g) => g,
+    let greeting_request = build_completion_request(&agent_context, "Generate a short, warm greeting message that introduces yourself and invites the user to chat. Stay fully in character. Keep it under 2 sentences.");
+    let greeting = match fallback_chain.complete(&greeting_request).await {
+        Ok(result) => {
+            if let Some(ref warning) = result.failover_warning {
+                print_failover_warning(warning);
+            }
+            result.response.content
+        }
         Err(e) => {
             greeting_spinner.finish_and_clear();
             eprintln!("\n  {} Could not generate greeting: {e}", style("!").yellow().bold());
@@ -204,9 +232,9 @@ pub async fn run_chat_loop(
                     }
                 }
 
-                // Send to LLM
-                // Note: do NOT add to agent_context here -- build_request() in
-                // AgentEngine appends the user message to the request automatically.
+                // Send to LLM via FallbackChain
+                // Note: do NOT add to agent_context here -- build_completion_request()
+                // appends the user message to the request automatically.
                 // We add it to history after the response completes, alongside
                 // the assistant message.
                 let _ = state.chat_service.save_user_message(session_id, text.clone()).await;
@@ -218,14 +246,40 @@ pub async fn run_chat_loop(
                 spinner.set_message("thinking...");
                 spinner.enable_steady_tick(std::time::Duration::from_millis(80));
 
+                // Build request and select provider via fallback chain
+                let request = build_completion_request(&agent_context, &text);
+                let stream_selection = match fallback_chain.select_stream(request) {
+                    Ok(selection) => selection,
+                    Err(e) => {
+                        spinner.finish_and_clear();
+                        // Handle "all providers down" clearly
+                        if matches!(&e, LlmError::Provider { message } if message.contains("bnity provider status")) {
+                            eprintln!("\n  {} All providers are unavailable.", style("!").red().bold());
+                            eprintln!("  {} Run {} for details.", style("Tip:").dim(), style("bnity provider status").cyan());
+                        } else {
+                            eprintln!("\n  {} LLM error: {e}", style("!").red().bold());
+                        }
+                        eprintln!("  {}", style("Type a message to retry, /exit to quit.").dim());
+                        continue;
+                    }
+                };
+
+                let stream_provider_name = stream_selection.provider_name.clone();
+
+                // Print failover warning to stderr if we're on a non-primary provider
+                if let Some(ref warning) = stream_selection.failover_warning {
+                    print_failover_warning(warning);
+                }
+
                 let start_time = Instant::now();
-                let mut stream = agent_engine.execute(&agent_context, &text);
+                let mut stream = stream_selection.stream;
                 let mut full_response = String::new();
                 let mut input_tokens: u32 = 0;
                 let mut output_tokens: u32 = 0;
                 let mut stop_reason = "end_turn".to_string();
                 let mut first_token_received = false;
                 let mut had_error = false;
+                let mut stream_error: Option<LlmError> = None;
 
                 while let Some(event_result) = stream.next().await {
                     match event_result {
@@ -253,9 +307,22 @@ pub async fn run_chat_loop(
                             eprintln!("\n  {} LLM error: {e}", style("!").red().bold());
                             eprintln!("  {}", style("Type a message to retry, /exit to quit.").dim());
                             had_error = true;
+                            // Save error for health tracking
+                            if ProviderHealth::is_failover_error(&e) {
+                                stream_error = Some(e);
+                            }
                             break;
                         }
                     }
+                }
+
+                // Report stream outcome to fallback chain for health tracking
+                if had_error {
+                    if let Some(ref err) = stream_error {
+                        fallback_chain.record_stream_failure(&stream_provider_name, err);
+                    }
+                } else {
+                    fallback_chain.record_stream_success(&stream_provider_name);
                 }
 
                 if !first_token_received && !had_error { spinner.finish_and_clear(); }
@@ -263,7 +330,13 @@ pub async fn run_chat_loop(
 
                 let response_ms = start_time.elapsed().as_millis() as u64;
                 println!();
-                renderer.print_stats_footer(output_tokens, response_ms, &model);
+
+                // Include provider name in stats footer when using a non-primary provider
+                if stream_selection.failover_warning.is_some() {
+                    renderer.print_stats_footer(output_tokens, response_ms, &format!("{} via {}", model, stream_provider_name));
+                } else {
+                    renderer.print_stats_footer(output_tokens, response_ms, &model);
+                }
                 println!();
 
                 // Persist user + assistant messages to conversation history
@@ -279,7 +352,7 @@ pub async fn run_chat_loop(
                 if first_assistant_response.is_none() {
                     first_assistant_response = Some(full_response.clone());
                     if let (Some(user_msg), Some(bot_msg)) = (&first_user_message, &first_assistant_response) {
-                        if let Ok(title_provider) = create_provider(state, &model).await {
+                        if let Ok(title_provider) = state.create_single_provider(&model).await {
                             match generate_title(&title_provider, user_msg, bot_msg, &model).await {
                                 Ok(title) => {
                                     info!(title = %title, "Session title generated");
@@ -294,7 +367,7 @@ pub async fn run_chat_loop(
                 // Periodic memory extraction
                 if session_manager.should_extract_memory() {
                     info!(turn = session_manager.turn_count(), "Running periodic memory extraction");
-                    if let Ok(extract_provider) = create_provider(state, &model).await {
+                    if let Ok(extract_provider) = state.create_single_provider(&model).await {
                         let messages = agent_context.build_messages();
                         match SessionMemoryExtractor::extract(&extract_provider, &messages, bot.id.0, session_id).await {
                             Ok(entries) => {
@@ -317,7 +390,7 @@ pub async fn run_chat_loop(
     info!("Running final memory extraction");
     let messages = agent_context.build_messages();
     if !messages.is_empty() {
-        if let Ok(extract_provider) = create_provider(state, &model).await {
+        if let Ok(extract_provider) = state.create_single_provider(&model).await {
             match SessionMemoryExtractor::extract(&extract_provider, &messages, bot.id.0, session_id).await {
                 Ok(entries) => {
                     let count = entries.len();

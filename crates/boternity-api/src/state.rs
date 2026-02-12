@@ -4,16 +4,20 @@
 //! Services are generic over repository/filesystem/hasher traits, but AppState
 //! pins them to the concrete infra implementations.
 
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 
 use boternity_core::chat::service::ChatService;
+use boternity_core::llm::fallback::FallbackChain;
+use boternity_core::llm::provider::LlmProvider;
 use boternity_core::service::bot::BotService;
 use boternity_core::service::secret::SecretService;
 use boternity_core::service::soul::SoulService;
 use boternity_infra::crypto::hash::Sha256ContentHasher;
 use boternity_infra::crypto::vault::VaultCrypto;
 use boternity_infra::filesystem::{resolve_data_dir, LocalFileSystem};
+use boternity_infra::llm::openai_compat::config::default_cost_table;
 use boternity_infra::secret::chain::build_secret_chain;
 use boternity_infra::secret::VaultSecretProvider;
 use boternity_infra::sqlite::bot::SqliteBotRepository;
@@ -22,6 +26,13 @@ use boternity_infra::sqlite::memory::SqliteMemoryRepository;
 use boternity_infra::sqlite::pool::DatabasePool;
 use boternity_infra::sqlite::secret::SqliteSecretRepository;
 use boternity_infra::sqlite::soul::SqliteSoulRepository;
+use boternity_types::llm::{FallbackChainConfig, ProviderConfig, ProviderType};
+use boternity_types::secret::SecretScope;
+
+use boternity_core::llm::box_provider::BoxLlmProvider;
+use boternity_infra::llm::anthropic::AnthropicProvider;
+use boternity_infra::llm::bedrock::BedrockProvider;
+use secrecy::SecretString;
 
 /// Concrete type aliases for the service generics pinned to infra implementations.
 pub type ConcreteBotService = BotService<
@@ -112,5 +123,126 @@ impl AppState {
             data_dir,
             db_pool,
         })
+    }
+
+    /// Build a [`FallbackChain`] for a bot using the configured providers.
+    ///
+    /// Currently builds a single-provider chain using the ANTHROPIC_API_KEY from
+    /// the secret store. When additional providers are configured (via `bnity provider add`),
+    /// they will be included in the chain with their priorities.
+    ///
+    /// The chain uses the default cost table for failover cost warnings.
+    ///
+    /// # Arguments
+    ///
+    /// * `model` - The model to use for the primary Anthropic provider
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if no ANTHROPIC_API_KEY is found in the secret store.
+    pub async fn build_fallback_chain(&self, model: &str) -> anyhow::Result<FallbackChain> {
+        let api_key_value = self
+            .secret_service
+            .get_secret("ANTHROPIC_API_KEY", &SecretScope::Global)
+            .await?
+            .ok_or_else(|| {
+                anyhow::anyhow!(
+                    "ANTHROPIC_API_KEY not found. Set it with: bnity set secret ANTHROPIC_API_KEY"
+                )
+            })?;
+
+        // Build provider based on key format (same auto-detection as before)
+        let (provider, provider_config) = if api_key_value.starts_with("bedrock-api-key-") {
+            let region =
+                std::env::var("AWS_REGION").unwrap_or_else(|_| "us-east-1".to_string());
+            let api_key = SecretString::from(api_key_value);
+            let bedrock = BedrockProvider::new(api_key, model.to_string(), region);
+            let caps = bedrock.capabilities().clone();
+            (
+                BoxLlmProvider::new(bedrock),
+                ProviderConfig {
+                    name: "bedrock".to_string(),
+                    provider_type: ProviderType::Bedrock,
+                    api_key_secret_name: Some("ANTHROPIC_API_KEY".to_string()),
+                    base_url: None,
+                    model: model.to_string(),
+                    priority: 0,
+                    enabled: true,
+                    capabilities: caps,
+                },
+            )
+        } else {
+            let api_key = SecretString::from(api_key_value);
+            let anthropic = AnthropicProvider::new(api_key, model.to_string());
+            let caps = anthropic.capabilities().clone();
+            (
+                BoxLlmProvider::new(anthropic),
+                ProviderConfig {
+                    name: "anthropic".to_string(),
+                    provider_type: ProviderType::Anthropic,
+                    api_key_secret_name: Some("ANTHROPIC_API_KEY".to_string()),
+                    base_url: None,
+                    model: model.to_string(),
+                    priority: 0,
+                    enabled: true,
+                    capabilities: caps,
+                },
+            )
+        };
+
+        let chain_config = FallbackChainConfig {
+            providers: vec![provider_config],
+            rate_limit_queue_timeout_ms: 5000,
+            cost_warning_multiplier: 3.0,
+        };
+
+        let cost_table = default_cost_table();
+
+        // Build the chain keyed by provider name for cost lookups
+        let mut keyed_cost_table = HashMap::new();
+        for (key, cost) in &cost_table {
+            // Map "provider:model" keyed entries to just "provider" for fallback chain lookup
+            let provider_name = key.split(':').next().unwrap_or(key);
+            if !keyed_cost_table.contains_key(provider_name) {
+                keyed_cost_table.insert(provider_name.to_string(), cost.clone());
+            }
+        }
+
+        let chain = FallbackChain::new(chain_config, vec![provider], keyed_cost_table);
+
+        Ok(chain)
+    }
+
+    /// Create a single [`BoxLlmProvider`] from the secret store.
+    ///
+    /// This is a backward-compatible helper for non-chat uses (title generation,
+    /// memory extraction, etc.) that need a standalone provider without the
+    /// full fallback chain machinery.
+    ///
+    /// Auto-detects provider based on key format:
+    /// - Keys starting with `bedrock-api-key-` -> AWS Bedrock provider
+    /// - All other keys -> Anthropic direct API provider
+    pub async fn create_single_provider(&self, model: &str) -> anyhow::Result<BoxLlmProvider> {
+        let api_key_value = self
+            .secret_service
+            .get_secret("ANTHROPIC_API_KEY", &SecretScope::Global)
+            .await?
+            .ok_or_else(|| {
+                anyhow::anyhow!(
+                    "ANTHROPIC_API_KEY not found. Set it with: bnity set secret ANTHROPIC_API_KEY"
+                )
+            })?;
+
+        if api_key_value.starts_with("bedrock-api-key-") {
+            let region =
+                std::env::var("AWS_REGION").unwrap_or_else(|_| "us-east-1".to_string());
+            let api_key = SecretString::from(api_key_value);
+            let bedrock = BedrockProvider::new(api_key, model.to_string(), region);
+            Ok(BoxLlmProvider::new(bedrock))
+        } else {
+            let api_key = SecretString::from(api_key_value);
+            let anthropic = AnthropicProvider::new(api_key, model.to_string());
+            Ok(BoxLlmProvider::new(anthropic))
+        }
     }
 }

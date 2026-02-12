@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 3 of 10 (Multi-Provider + Memory)
-Plan: 10 of 13 in current phase (03-01, 03-02, 03-03, 03-04, 03-05, 03-06, 03-07, 03-08, 03-09, 03-10 complete)
+Plan: 12 of 13 in current phase (03-01 through 03-10, 03-12 complete; 03-11, 03-13 pending)
 Status: In progress
-Last activity: 2026-02-12 -- Completed 03-08-PLAN.md (vector memory recall integration)
+Last activity: 2026-02-12 -- Completed 03-12-PLAN.md (memory CLI enhancement + shared memory CLI)
 
-Progress: [███████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 23/53 (~43%)
+Progress: [████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 24/53 (~45%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 23
-- Average duration: 8m 00s
-- Total execution time: 183m 58s
+- Total plans completed: 24
+- Average duration: 7m 58s
+- Total execution time: 191m 35s
 
 **By Phase:**
 
@@ -29,11 +29,11 @@ Progress: [███████████████████████
 |-------|-------|-------|----------|
 | 1. Foundation + Bot Identity | 6/6 | 49m 14s | 8m 12s |
 | 2. Single-Agent Chat + LLM | 7/8 | 31m 46s | 4m 32s |
-| 3. Multi-Provider + Memory | 10/13 | 102m 58s | 10m 18s |
+| 3. Multi-Provider + Memory | 12/13 | 110m 35s | 9m 13s |
 
 **Recent Trend:**
-- Last 5 plans: 03-06 (10m 48s), 03-07 (10m 45s), 03-10 (13m 58s), 03-09 (3m 31s), 03-08 (6m 31s)
-- Trend: Faster when patterns established (03-08 reused Box pattern from 03-07)
+- Last 5 plans: 03-07 (10m 45s), 03-10 (13m 58s), 03-09 (3m 31s), 03-08 (6m 31s), 03-12 (7m 37s)
+- Trend: Steady 7-8m for CLI plans; faster when reusing established patterns
 
 *Updated after each plan completion*
 
@@ -153,6 +153,11 @@ Recent decisions affecting current work:
 - [03-08]: System prompt rebuilt on each set_recalled_memories() call to keep <long_term_memory> section current
 - [03-08]: DEFAULT_MEMORY_SEARCH_LIMIT=10, DEFAULT_MIN_SIMILARITY=0.3, DEFAULT_DEDUP_THRESHOLD=0.15
 - [03-08]: Memories formatted as natural-language facts without scores/metadata (provenance only for shared)
+- [03-12]: shared-memory is a separate top-level subcommand (bnity shared-memory), not nested under bnity memory
+- [03-12]: Optional vector/embedder parameters on remember() and delete_memory() for graceful degradation
+- [03-12]: Similarity score color-coding: green>=0.7, yellow>=0.4, red<0.4 in CLI search output
+- [03-12]: Export outputs structured JSON with bot metadata (slug, name, exported_at, count, memories array)
+- [03-12]: Zero-embedding for shared-memory list (no semantic filtering, returns all visible entries)
 
 ### Pending Todos
 
@@ -166,6 +171,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-12T22:48:33Z
-Stopped at: Completed 03-08-PLAN.md (vector memory recall integration)
+Last session: 2026-02-12T22:59:52Z
+Stopped at: Completed 03-12-PLAN.md (memory CLI enhancement + shared memory CLI)
 Resume file: None

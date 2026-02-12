@@ -1,4 +1,4 @@
-import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useMatchRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api-client";
 import type { Bot } from "@/types/bot";
@@ -16,8 +16,18 @@ const STATUS_COLORS: Record<string, string> = {
   archived: "bg-red-500",
 };
 
+/** Derive active tab name from the current route match. */
+function useActiveTab(botId: string): string {
+  const matchRoute = useMatchRoute();
+  if (matchRoute({ to: "/bots/$botId/chat", params: { botId } })) return "chat";
+  if (matchRoute({ to: "/bots/$botId/soul", params: { botId } })) return "soul";
+  if (matchRoute({ to: "/bots/$botId/settings", params: { botId } })) return "settings";
+  return "overview";
+}
+
 function BotDetailLayout() {
   const { botId } = Route.useParams();
+  const activeTab = useActiveTab(botId);
 
   const { data: bot, isLoading } = useQuery({
     queryKey: ["bot", botId],
@@ -59,9 +69,9 @@ function BotDetailLayout() {
         </div>
       </div>
 
-      {/* Tab navigation */}
+      {/* Tab navigation - value tracks current route */}
       <Tabs
-        defaultValue="overview"
+        value={activeTab}
         className="w-full"
       >
         <TabsList>

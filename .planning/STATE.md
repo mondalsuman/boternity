@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 3 of 10 (Multi-Provider + Memory)
-Plan: 12 of 13 in current phase (03-01 through 03-10, 03-12 complete; 03-11, 03-13 pending)
-Status: In progress
-Last activity: 2026-02-12 -- Completed 03-12-PLAN.md (memory CLI enhancement + shared memory CLI)
+Plan: 13 of 13 in current phase (03-01 through 03-10, 03-12, 03-13 complete; 03-11 in progress)
+Status: Phase nearly complete (03-11 pending)
+Last activity: 2026-02-12 -- Completed 03-13-PLAN.md (storage + KV CLI + AppState wiring)
 
-Progress: [████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 24/53 (~45%)
+Progress: [█████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 25/53 (~47%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 24
+- Total plans completed: 25
 - Average duration: 7m 58s
-- Total execution time: 191m 35s
+- Total execution time: 199m 10s
 
 **By Phase:**
 
@@ -29,10 +29,10 @@ Progress: [███████████████████████
 |-------|-------|-------|----------|
 | 1. Foundation + Bot Identity | 6/6 | 49m 14s | 8m 12s |
 | 2. Single-Agent Chat + LLM | 7/8 | 31m 46s | 4m 32s |
-| 3. Multi-Provider + Memory | 12/13 | 110m 35s | 9m 13s |
+| 3. Multi-Provider + Memory | 12/13 | 118m 10s | 9m 51s |
 
 **Recent Trend:**
-- Last 5 plans: 03-07 (10m 45s), 03-10 (13m 58s), 03-09 (3m 31s), 03-08 (6m 31s), 03-12 (7m 37s)
+- Last 5 plans: 03-10 (13m 58s), 03-09 (3m 31s), 03-08 (6m 31s), 03-12 (7m 37s), 03-13 (7m 35s)
 - Trend: Steady 7-8m for CLI plans; faster when reusing established patterns
 
 *Updated after each plan completion*
@@ -158,6 +158,10 @@ Recent decisions affecting current work:
 - [03-12]: Similarity score color-coding: green>=0.7, yellow>=0.4, red<0.4 in CLI search output
 - [03-12]: Export outputs structured JSON with bot metadata (slug, name, exported_at, count, memories array)
 - [03-12]: Zero-embedding for shared-memory list (no semantic filtering, returns all visible entries)
+- [03-13]: KV set parses value as JSON with fallback to string (natural UX for both simple and structured values)
+- [03-13]: Storage delete deindexes from vector store before file removal (prevents orphaned chunks)
+- [03-13]: Two FastEmbedEmbedder instances in AppState: one concrete for FileIndexer<E>, one boxed for BoxEmbedder
+- [03-13]: Three separate LanceVectorStore connections for vector_store/vector_memory/shared_memory (each takes ownership)
 
 ### Pending Todos
 
@@ -171,6 +175,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-12T22:59:52Z
-Stopped at: Completed 03-12-PLAN.md (memory CLI enhancement + shared memory CLI)
+Last session: 2026-02-12T23:00:34Z
+Stopped at: Completed 03-13-PLAN.md (storage + KV CLI + AppState wiring)
 Resume file: None

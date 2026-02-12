@@ -76,14 +76,22 @@ Plans:
   3. Bot can semantically recall relevant information from past conversations -- user asks "what did we discuss about X?" and the bot retrieves related memories via vector search
   4. Shared memory works across bots with trust-level partitioning -- Bot A can write to shared memory and Bot B can read it, but provenance is tracked and write validation prevents poisoning
   5. User can upload files and structured data to a bot's persistent storage and the bot can reference them in conversation
-**Plans**: TBD
+**Plans**: 13 plans
 
 Plans:
-- [ ] 03-01: Additional LLM provider implementations
-- [ ] 03-02: Fallback chains and automatic failover
-- [ ] 03-03: Long-term vector memory (LanceDB)
-- [ ] 03-04: Shared memory with trust partitioning
-- [ ] 03-05: Per-bot persistent storage
+- [ ] 03-01-PLAN.md -- Extended domain types (provider config, vector memory, shared memory, storage, KV) and core trait abstractions
+- [ ] 03-02-PLAN.md -- OpenAI-compatible provider (async-openai) supporting OpenAI, Gemini, Mistral, GLM 4.7
+- [ ] 03-03-PLAN.md -- Circuit breaker state machine, provider health tracking, and fallback chain logic
+- [ ] 03-04-PLAN.md -- LanceDB vector database + fastembed local embedding infrastructure
+- [ ] 03-05-PLAN.md -- SQLite migrations (KV store, audit log, provider health, file metadata) and repository implementations
+- [ ] 03-06-PLAN.md -- Claude subscription provider (experimental), provider factory, fallback chain wiring into chat
+- [ ] 03-07-PLAN.md -- LanceDB-backed vector memory store with time decay scoring and semantic dedup
+- [ ] 03-08-PLAN.md -- Memory recall integration into agent engine and system prompt injection
+- [ ] 03-09-PLAN.md -- Shared memory with trust-level partitioning, provenance tracking, and tamper detection
+- [ ] 03-10-PLAN.md -- Per-bot file storage with version history and semantic text indexing
+- [ ] 03-11-PLAN.md -- Provider CLI (status/add/remove/list) and failover visibility in chat
+- [ ] 03-12-PLAN.md -- Memory CLI enhancements (similarity scores, export) and shared memory CLI
+- [ ] 03-13-PLAN.md -- Storage CLI (upload/download/list/delete), KV CLI, and AppState Phase 3 wiring
 
 ### Phase 4: Web UI Core + Fleet Dashboard
 **Goal**: Users can manage their bot fleet and chat with bots through a web interface -- the dashboard shows all bots at a glance, the chat interface streams responses in real-time, and the soul editor provides version-controlled identity management.
@@ -228,7 +236,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 |-------|----------------|--------|-----------|
 | 1. Foundation + Bot Identity | 0/6 | Planned | - |
 | 2. Single-Agent Chat + LLM | 0/8 | Planned | - |
-| 3. Multi-Provider + Memory | 0/5 | Not started | - |
+| 3. Multi-Provider + Memory | 0/13 | Not started | - |
 | 4. Web UI Core + Fleet Dashboard | 0/5 | Not started | - |
 | 5. Agent Hierarchy + Event System | 0/5 | Not started | - |
 | 6. Skill System + WASM Sandbox | 0/6 | Not started | - |

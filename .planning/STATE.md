@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 3 of 10 (Multi-Provider + Memory)
-Plan: 5 of 13 in current phase (03-01, 03-02, 03-03, 03-04, 03-05 complete)
+Plan: 6 of 13 in current phase (03-01, 03-02, 03-03, 03-04, 03-05, 03-06 complete)
 Status: In progress
-Last activity: 2026-02-12 -- Completed 03-04-PLAN.md (LanceDB + fastembed infrastructure)
+Last activity: 2026-02-12 -- Completed 03-06-PLAN.md (Provider wiring + fallback chain integration)
 
-Progress: [██████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 18/53 (~34%)
+Progress: [███████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 19/53 (~36%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 18
-- Average duration: 7m 41s
-- Total execution time: 138m 25s
+- Total plans completed: 19
+- Average duration: 7m 51s
+- Total execution time: 149m 13s
 
 **By Phase:**
 
@@ -29,10 +29,10 @@ Progress: [██████████████████░░░░░
 |-------|-------|-------|----------|
 | 1. Foundation + Bot Identity | 6/6 | 49m 14s | 8m 12s |
 | 2. Single-Agent Chat + LLM | 7/8 | 31m 46s | 4m 32s |
-| 3. Multi-Provider + Memory | 5/13 | 57m 25s | 11m 29s |
+| 3. Multi-Provider + Memory | 6/13 | 68m 13s | 11m 22s |
 
 **Recent Trend:**
-- Last 5 plans: 03-01 (5m 7s), 03-02 (13m 36s), 03-03 (9m 30s), 03-05 (12m 45s), 03-04 (16m 27s)
+- Last 5 plans: 03-02 (13m 36s), 03-03 (9m 30s), 03-05 (12m 45s), 03-04 (16m 27s), 03-06 (10m 48s)
 - Trend: Phase 3 plans longer due to external dep compilation and larger scope
 
 *Updated after each plan completion*
@@ -124,6 +124,13 @@ Recent decisions affecting current work:
 - [03-04]: RepositoryError::Query used for embedding/vector errors (no Internal variant)
 - [03-04]: TextInitOptions builder pattern required (non_exhaustive struct)
 - [03-04]: drop_table is idempotent (returns Ok on TableNotFound)
+- [03-06]: ClaudeSubscriptionProvider as thin wrapper over OpenAiCompatibleProvider (no separate protocol needed)
+- [03-06]: Provider factory create_provider() in boternity-infra, not CLI layer (infrastructure concern)
+- [03-06]: FallbackChain built lazily via build_fallback_chain() not at AppState::init() (requires API key)
+- [03-06]: create_single_provider() retained for utility calls (title gen, memory extraction)
+- [03-06]: Chat loop uses FallbackChain directly instead of AgentEngine for streaming
+- [03-06]: build_completion_request() free function replicates AgentEngine request building for chain use
+- [03-06]: Stats footer shows 'model via provider_name' only during failover
 
 ### Pending Todos
 
@@ -137,6 +144,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-12T22:20:05Z
-Stopped at: Completed 03-04-PLAN.md (LanceDB + fastembed infrastructure)
+Last session: 2026-02-12T22:34:33Z
+Stopped at: Completed 03-06-PLAN.md (Provider wiring + fallback chain integration)
 Resume file: None

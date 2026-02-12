@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 3 of 10 (Multi-Provider + Memory)
-Plan: 4 of 13 in current phase (03-01, 03-02, 03-03, 03-05 complete)
+Plan: 5 of 13 in current phase (03-01, 03-02, 03-03, 03-04, 03-05 complete)
 Status: In progress
-Last activity: 2026-02-12 -- Completed 03-05-PLAN.md (SQLite Phase 3 migrations and repositories)
+Last activity: 2026-02-12 -- Completed 03-04-PLAN.md (LanceDB + fastembed infrastructure)
 
-Progress: [█████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 17/53 (~32%)
+Progress: [██████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 18/53 (~34%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 17
-- Average duration: 7m 10s
-- Total execution time: 121m 58s
+- Total plans completed: 18
+- Average duration: 7m 41s
+- Total execution time: 138m 25s
 
 **By Phase:**
 
@@ -29,10 +29,10 @@ Progress: [█████████████████░░░░░░
 |-------|-------|-------|----------|
 | 1. Foundation + Bot Identity | 6/6 | 49m 14s | 8m 12s |
 | 2. Single-Agent Chat + LLM | 7/8 | 31m 46s | 4m 32s |
-| 3. Multi-Provider + Memory | 4/13 | 40m 58s | 10m 14s |
+| 3. Multi-Provider + Memory | 5/13 | 57m 25s | 11m 29s |
 
 **Recent Trend:**
-- Last 5 plans: 02-08 (6m 0s), 03-01 (5m 7s), 03-02 (13m 36s), 03-03 (9m 30s), 03-05 (12m 45s)
+- Last 5 plans: 03-01 (5m 7s), 03-02 (13m 36s), 03-03 (9m 30s), 03-05 (12m 45s), 03-04 (16m 27s)
 - Trend: Phase 3 plans longer due to external dep compilation and larger scope
 
 *Updated after each plan completion*
@@ -119,6 +119,11 @@ Recent decisions affecting current work:
 - [03-05]: ProviderHealthRow separate from runtime ProviderHealth -- Instant not serializable
 - [03-05]: provider_health keyed by name TEXT not UUIDv7 -- names are unique identifiers
 - [03-05]: bot_files UNIQUE(bot_id, filename) enables upsert on re-upload
+- [03-04]: Arrow version 57.3 pinned to match lancedb 0.26 transitive dep (Pitfall 10)
+- [03-04]: Arc<Mutex<TextEmbedding>> not Arc<TextEmbedding> because fastembed embed() requires &mut self
+- [03-04]: RepositoryError::Query used for embedding/vector errors (no Internal variant)
+- [03-04]: TextInitOptions builder pattern required (non_exhaustive struct)
+- [03-04]: drop_table is idempotent (returns Ok on TableNotFound)
 
 ### Pending Todos
 
@@ -128,10 +133,10 @@ None yet.
 
 - [Research]: Dual-GraphQL architecture (Yoga+Pothos BFF vs async-graphql alone) needs validation in Phase 4
 - [Research]: `llm` crate (graniet) v1.2.4 is newer -- may need fallback to thin reqwest wrapper if API unstable
-- [Research]: LanceDB vs sqlite-vec decision deferred to Phase 3 planning
+- [Resolved]: LanceDB selected for vector storage (03-04 implemented LanceVectorStore)
 
 ## Session Continuity
 
-Last session: 2026-02-12T22:16:57Z
-Stopped at: Completed 03-05-PLAN.md (SQLite Phase 3 migrations and repositories)
+Last session: 2026-02-12T22:20:05Z
+Stopped at: Completed 03-04-PLAN.md (LanceDB + fastembed infrastructure)
 Resume file: None

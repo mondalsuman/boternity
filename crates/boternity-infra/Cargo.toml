@@ -37,6 +37,8 @@ async-openai = { workspace = true }
 lancedb = { workspace = true }
 fastembed = { workspace = true }
 text-splitter = { workspace = true }
+arrow-schema = { workspace = true }
+arrow-array = { workspace = true }
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["full"] }

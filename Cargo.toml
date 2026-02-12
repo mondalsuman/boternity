@@ -95,7 +95,7 @@ pin-project-lite = "0.2"
 base64 = "0.22"
 
 # OpenAI-compatible LLM provider client
-async-openai = "0.32"
+async-openai = { version = "0.32", features = ["chat-completion"] }
 
 # Vector database (embedded) for memory embeddings
 lancedb = "0.26"
@@ -105,6 +105,10 @@ fastembed = "5"
 
 # Semantic text chunking for file storage indexing
 text-splitter = { version = "0.29", features = ["markdown"] }
+
+# Arrow types (MUST match lancedb's transitive dep -- 57.3.0 for lancedb 0.26)
+arrow-schema = "57.3"
+arrow-array = "57.3"
 
 # OpenTelemetry
 opentelemetry = "0.31"

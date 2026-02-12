@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 3 of 10 (Multi-Provider + Memory)
-Plan: 6 of 13 in current phase (03-01, 03-02, 03-03, 03-04, 03-05, 03-06 complete)
+Plan: 7 of 13 in current phase (03-01, 03-02, 03-03, 03-04, 03-05, 03-06, 03-07 complete)
 Status: In progress
-Last activity: 2026-02-12 -- Completed 03-06-PLAN.md (Provider wiring + fallback chain integration)
+Last activity: 2026-02-12 -- Completed 03-07-PLAN.md (LanceDB vector memory store)
 
-Progress: [███████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 19/53 (~36%)
+Progress: [████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 20/53 (~38%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 19
-- Average duration: 7m 51s
-- Total execution time: 149m 13s
+- Total plans completed: 20
+- Average duration: 8m 0s
+- Total execution time: 159m 58s
 
 **By Phase:**
 
@@ -29,10 +29,10 @@ Progress: [███████████████████░░░░
 |-------|-------|-------|----------|
 | 1. Foundation + Bot Identity | 6/6 | 49m 14s | 8m 12s |
 | 2. Single-Agent Chat + LLM | 7/8 | 31m 46s | 4m 32s |
-| 3. Multi-Provider + Memory | 6/13 | 68m 13s | 11m 22s |
+| 3. Multi-Provider + Memory | 7/13 | 78m 58s | 11m 17s |
 
 **Recent Trend:**
-- Last 5 plans: 03-02 (13m 36s), 03-03 (9m 30s), 03-05 (12m 45s), 03-04 (16m 27s), 03-06 (10m 48s)
+- Last 5 plans: 03-03 (9m 30s), 03-05 (12m 45s), 03-04 (16m 27s), 03-06 (10m 48s), 03-07 (10m 45s)
 - Trend: Phase 3 plans longer due to external dep compilation and larger scope
 
 *Updated after each plan completion*
@@ -131,6 +131,11 @@ Recent decisions affecting current work:
 - [03-06]: Chat loop uses FallbackChain directly instead of AgentEngine for streaming
 - [03-06]: build_completion_request() free function replicates AgentEngine request building for chain use
 - [03-06]: Stats footer shows 'model via provider_name' only during failover
+- [03-07]: delete+insert for update_embedding: LanceDB UpdateBuilder uses SQL expressions only, cannot set vector column from Vec<f32>
+- [03-07]: Search over-fetches limit*2 then filters by min_similarity and truncates
+- [03-07]: update_embedding scans all bot_memory_* tables since trait lacks bot_id parameter
+- [03-07]: DEFAULT_DEDUP_THRESHOLD = 0.15 cosine distance (~92.5% similarity)
+- [03-07]: lancedb::query::{ExecutableQuery, QueryBase} must be imported for .execute()/.limit()/.only_if()
 
 ### Pending Todos
 
@@ -144,6 +149,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-12T22:34:33Z
-Stopped at: Completed 03-06-PLAN.md (Provider wiring + fallback chain integration)
+Last session: 2026-02-12T22:36:32Z
+Stopped at: Completed 03-07-PLAN.md (LanceDB vector memory store)
 Resume file: None

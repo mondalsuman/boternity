@@ -6,6 +6,7 @@
 pub mod bot;
 pub mod chat;
 pub mod memory;
+pub mod provider;
 pub mod secret;
 pub mod session;
 pub mod soul;
@@ -79,6 +80,12 @@ pub enum Commands {
     Soul {
         #[command(subcommand)]
         action: SoulCommand,
+    },
+
+    /// Manage LLM providers in the fallback chain.
+    Provider {
+        #[command(subcommand)]
+        action: provider::ProviderCommand,
     },
 
     /// System health check for a bot.

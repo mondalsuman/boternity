@@ -77,7 +77,7 @@ async fn main() -> anyhow::Result<()> {
             }
             DeleteResource::Memory { id, force } => {
                 let memory_id = id.parse::<uuid::Uuid>().map_err(|_| anyhow::anyhow!("Invalid memory ID: {id}"))?;
-                cli::memory::delete_memory(&state, memory_id, force, cli.json).await?;
+                cli::memory::delete_memory(&state, memory_id, force, None, None, cli.json).await?;
             }
         },
 
@@ -190,6 +190,10 @@ async fn main() -> anyhow::Result<()> {
             cli::status::status(&state, cli.json).await?;
         }
 
+        Commands::Provider { action } => {
+            cli::provider::handle_provider_command(action, &state, cli.json).await?;
+        }
+
         Commands::Serve { port, host } => {
             // Ensure an API key exists, print it if new
             let api_key = http::extractors::auth::ensure_api_key(&state).await?;
@@ -242,7 +246,7 @@ async fn main() -> anyhow::Result<()> {
         }
 
         Commands::Remember { slug, fact } => {
-            cli::memory::remember(&state, &slug, &fact, cli.json).await?;
+            cli::memory::remember(&state, &slug, &fact, None, None, None, cli.json).await?;
         }
 
         Commands::Forget { slug, force } => {

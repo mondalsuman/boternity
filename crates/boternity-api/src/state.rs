@@ -3,6 +3,9 @@
 //! AppState holds the concrete service instances used by both CLI and REST API.
 //! Services are generic over repository/filesystem/hasher traits, but AppState
 //! pins them to the concrete infra implementations.
+//!
+//! Phase 3 additions: vector store, embedder, vector memory, shared memory,
+//! file store, file indexer, KV store, audit log, and provider health store.
 
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -11,6 +14,8 @@ use std::sync::Arc;
 use boternity_core::chat::service::ChatService;
 use boternity_core::llm::fallback::FallbackChain;
 use boternity_core::llm::provider::LlmProvider;
+use boternity_core::memory::box_embedder::BoxEmbedder;
+use boternity_core::memory::embedder::Embedder;
 use boternity_core::service::bot::BotService;
 use boternity_core::service::secret::SecretService;
 use boternity_core::service::soul::SoulService;
@@ -20,12 +25,22 @@ use boternity_infra::filesystem::{resolve_data_dir, LocalFileSystem};
 use boternity_infra::llm::openai_compat::config::default_cost_table;
 use boternity_infra::secret::chain::build_secret_chain;
 use boternity_infra::secret::VaultSecretProvider;
+use boternity_infra::sqlite::audit::SqliteAuditLog;
 use boternity_infra::sqlite::bot::SqliteBotRepository;
 use boternity_infra::sqlite::chat::SqliteChatRepository;
+use boternity_infra::sqlite::file_metadata::SqliteFileMetadataStore;
+use boternity_infra::sqlite::kv::SqliteKvStore;
 use boternity_infra::sqlite::memory::SqliteMemoryRepository;
 use boternity_infra::sqlite::pool::DatabasePool;
+use boternity_infra::sqlite::provider_health::SqliteProviderHealthStore;
 use boternity_infra::sqlite::secret::SqliteSecretRepository;
 use boternity_infra::sqlite::soul::SqliteSoulRepository;
+use boternity_infra::storage::filesystem::LocalFileStore;
+use boternity_infra::storage::indexer::FileIndexer;
+use boternity_infra::vector::embedder::FastEmbedEmbedder;
+use boternity_infra::vector::lance::LanceVectorStore;
+use boternity_infra::vector::memory::LanceVectorMemoryStore;
+use boternity_infra::vector::shared::LanceSharedMemoryStore;
 use boternity_types::llm::{FallbackChainConfig, ProviderConfig, ProviderType};
 use boternity_types::secret::SecretScope;
 
@@ -47,9 +62,15 @@ pub type ConcreteSoulService =
 
 pub type ConcreteChatService = ChatService<SqliteChatRepository, SqliteMemoryRepository>;
 
+/// Concrete type alias for the file indexer pinned to FastEmbedEmbedder.
+pub type ConcreteFileIndexer = FileIndexer<FastEmbedEmbedder>;
+
 /// Shared application state holding all services.
 ///
 /// Used by both CLI commands and REST API handlers.
+///
+/// Phase 3 additions: vector_store, embedder, vector_memory, shared_memory,
+/// file_store, file_indexer, kv_store, audit_log, provider_health_store.
 #[derive(Clone)]
 pub struct AppState {
     pub bot_service: Arc<ConcreteBotService>,
@@ -58,6 +79,26 @@ pub struct AppState {
     pub secret_service: Arc<SecretService>,
     pub data_dir: PathBuf,
     pub db_pool: DatabasePool,
+
+    // --- Phase 3 services ---
+    /// LanceDB vector store for bot memories, shared memories, and file chunks.
+    pub vector_store: Arc<LanceVectorStore>,
+    /// Type-erased embedding generator (FastEmbedEmbedder in production).
+    pub embedder: Arc<BoxEmbedder>,
+    /// Per-bot vector memory store backed by LanceDB.
+    pub vector_memory: Arc<LanceVectorMemoryStore>,
+    /// Cross-bot shared memory store backed by LanceDB.
+    pub shared_memory: Arc<LanceSharedMemoryStore>,
+    /// Local filesystem file store with version history.
+    pub file_store: Arc<LocalFileStore>,
+    /// File indexer for chunking, embedding, and semantic search.
+    pub file_indexer: Arc<ConcreteFileIndexer>,
+    /// Per-bot key-value store backed by SQLite.
+    pub kv_store: Arc<SqliteKvStore>,
+    /// Memory audit log for tracking add/delete/share/revoke operations.
+    pub audit_log: Arc<SqliteAuditLog>,
+    /// Provider health persistence for circuit breaker state across restarts.
+    pub provider_health_store: Arc<SqliteProviderHealthStore>,
 }
 
 impl AppState {
@@ -115,6 +156,63 @@ impl AppState {
         let memory_repo = SqliteMemoryRepository::new(db_pool.clone());
         let chat_service = ChatService::new(chat_repo, memory_repo);
 
+        // --- Phase 3 services ---
+
+        // Initialize embedding model (downloads on first run, cached after)
+        let embedder = FastEmbedEmbedder::new()?;
+        tracing::info!(
+            model = embedder.model_name(),
+            dimension = embedder.dimension(),
+            "Embedding model loaded"
+        );
+        let embedder_arc = Arc::new(embedder);
+
+        // Initialize LanceDB vector store at {data_dir}/vector_store
+        let vector_store_path = data_dir.join("vector_store");
+        let vector_store = LanceVectorStore::new(vector_store_path)
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to initialize vector store: {e}"))?;
+        let vector_store = Arc::new(vector_store);
+
+        // Per-bot vector memory store (uses its own LanceVectorStore instance
+        // since LanceVectorMemoryStore takes ownership, not Arc)
+        let vector_memory_store_path = data_dir.join("vector_store");
+        let vector_memory_lance = LanceVectorStore::new(vector_memory_store_path)
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to initialize vector memory store: {e}"))?;
+        let vector_memory = Arc::new(LanceVectorMemoryStore::new(vector_memory_lance));
+
+        // Cross-bot shared memory store
+        let shared_memory_store_path = data_dir.join("vector_store");
+        let shared_memory_lance = LanceVectorStore::new(shared_memory_store_path)
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to initialize shared memory store: {e}"))?;
+        let shared_memory = Arc::new(LanceSharedMemoryStore::new(shared_memory_lance));
+
+        // File metadata store (SQLite)
+        let file_metadata_store = SqliteFileMetadataStore::new(db_pool.clone());
+
+        // Local filesystem file store with version history
+        let file_store = Arc::new(LocalFileStore::new(data_dir.clone(), file_metadata_store));
+
+        // File indexer for chunking and embedding text files
+        let file_indexer = Arc::new(FileIndexer::new(
+            Arc::clone(&vector_store),
+            embedder_arc.clone(),
+        ));
+
+        // Type-erase the embedder for dynamic dispatch
+        let box_embedder = Arc::new(BoxEmbedder::new(FastEmbedEmbedder::new()?));
+
+        // KV store (SQLite)
+        let kv_store = Arc::new(SqliteKvStore::new(db_pool.clone()));
+
+        // Audit log (SQLite)
+        let audit_log = Arc::new(SqliteAuditLog::new(db_pool.clone()));
+
+        // Provider health persistence (SQLite)
+        let provider_health_store = Arc::new(SqliteProviderHealthStore::new(db_pool.clone()));
+
         Ok(Self {
             bot_service: Arc::new(bot_service),
             soul_service: Arc::new(api_soul_service),
@@ -122,14 +220,23 @@ impl AppState {
             secret_service: Arc::new(secret_service),
             data_dir,
             db_pool,
+            vector_store,
+            embedder: box_embedder,
+            vector_memory,
+            shared_memory,
+            file_store,
+            file_indexer,
+            kv_store,
+            audit_log,
+            provider_health_store,
         })
     }
 
     /// Build a [`FallbackChain`] for a bot using the configured providers.
     ///
-    /// Currently builds a single-provider chain using the ANTHROPIC_API_KEY from
-    /// the secret store. When additional providers are configured (via `bnity provider add`),
-    /// they will be included in the chain with their priorities.
+    /// Loads additional providers from `providers.json` and includes them
+    /// in the chain alongside the primary ANTHROPIC_API_KEY provider.
+    /// Providers are ordered by priority (lower = higher priority).
     ///
     /// The chain uses the default cost table for failover cost warnings.
     ///
@@ -151,11 +258,11 @@ impl AppState {
                 )
             })?;
 
-        // Build provider based on key format (same auto-detection as before)
-        let (provider, provider_config) = if api_key_value.starts_with("bedrock-api-key-") {
+        // Build primary provider based on key format (same auto-detection as before)
+        let (primary_provider, primary_config) = if api_key_value.starts_with("bedrock-api-key-") {
             let region =
                 std::env::var("AWS_REGION").unwrap_or_else(|_| "us-east-1".to_string());
-            let api_key = SecretString::from(api_key_value);
+            let api_key = SecretString::from(api_key_value.clone());
             let bedrock = BedrockProvider::new(api_key, model.to_string(), region);
             let caps = bedrock.capabilities().clone();
             (
@@ -172,7 +279,7 @@ impl AppState {
                 },
             )
         } else {
-            let api_key = SecretString::from(api_key_value);
+            let api_key = SecretString::from(api_key_value.clone());
             let anthropic = AnthropicProvider::new(api_key, model.to_string());
             let caps = anthropic.capabilities().clone();
             (
@@ -190,8 +297,50 @@ impl AppState {
             )
         };
 
+        let mut all_configs = vec![primary_config];
+        let mut all_providers = vec![primary_provider];
+
+        // Load additional providers from providers.json
+        let extra_configs =
+            crate::cli::provider::load_provider_configs(&self.data_dir).await.unwrap_or_default();
+
+        for extra_config in &extra_configs {
+            if !extra_config.enabled {
+                continue;
+            }
+            // Skip if same name as primary (avoid duplicate)
+            if extra_config.name == all_configs[0].name {
+                continue;
+            }
+
+            // Resolve API key for this provider
+            let api_key = if let Some(ref secret_name) = extra_config.api_key_secret_name {
+                self.secret_service
+                    .get_secret(secret_name, &SecretScope::Global)
+                    .await
+                    .ok()
+                    .flatten()
+            } else {
+                None
+            };
+
+            match boternity_infra::llm::create_provider(extra_config, api_key.as_deref()) {
+                Ok(provider) => {
+                    all_configs.push(extra_config.clone());
+                    all_providers.push(provider);
+                }
+                Err(e) => {
+                    tracing::warn!(
+                        provider = %extra_config.name,
+                        error = %e,
+                        "Failed to create provider from config, skipping"
+                    );
+                }
+            }
+        }
+
         let chain_config = FallbackChainConfig {
-            providers: vec![provider_config],
+            providers: all_configs,
             rate_limit_queue_timeout_ms: 5000,
             cost_warning_multiplier: 3.0,
         };
@@ -208,7 +357,7 @@ impl AppState {
             }
         }
 
-        let chain = FallbackChain::new(chain_config, vec![provider], keyed_cost_table);
+        let chain = FallbackChain::new(chain_config, all_providers, keyed_cost_table);
 
         Ok(chain)
     }

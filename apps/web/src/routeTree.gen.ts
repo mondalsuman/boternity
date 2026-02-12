@@ -9,38 +9,147 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ChatIndexRouteImport } from './routes/chat/index'
+import { Route as ChatSessionIdRouteImport } from './routes/chat/$sessionId'
+import { Route as BotsBotIdRouteRouteImport } from './routes/bots/$botId/route'
+import { Route as BotsBotIdIndexRouteImport } from './routes/bots/$botId/index'
+import { Route as BotsBotIdSoulRouteImport } from './routes/bots/$botId/soul'
+import { Route as BotsBotIdSettingsRouteImport } from './routes/bots/$botId/settings'
+import { Route as BotsBotIdChatRouteImport } from './routes/bots/$botId/chat'
 
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ChatIndexRoute = ChatIndexRouteImport.update({
+  id: '/chat/',
+  path: '/chat/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChatSessionIdRoute = ChatSessionIdRouteImport.update({
+  id: '/chat/$sessionId',
+  path: '/chat/$sessionId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BotsBotIdRouteRoute = BotsBotIdRouteRouteImport.update({
+  id: '/bots/$botId',
+  path: '/bots/$botId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BotsBotIdIndexRoute = BotsBotIdIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => BotsBotIdRouteRoute,
+} as any)
+const BotsBotIdSoulRoute = BotsBotIdSoulRouteImport.update({
+  id: '/soul',
+  path: '/soul',
+  getParentRoute: () => BotsBotIdRouteRoute,
+} as any)
+const BotsBotIdSettingsRoute = BotsBotIdSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => BotsBotIdRouteRoute,
+} as any)
+const BotsBotIdChatRoute = BotsBotIdChatRouteImport.update({
+  id: '/chat',
+  path: '/chat',
+  getParentRoute: () => BotsBotIdRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/settings': typeof SettingsRoute
+  '/bots/$botId': typeof BotsBotIdRouteRouteWithChildren
+  '/chat/$sessionId': typeof ChatSessionIdRoute
+  '/chat/': typeof ChatIndexRoute
+  '/bots/$botId/chat': typeof BotsBotIdChatRoute
+  '/bots/$botId/settings': typeof BotsBotIdSettingsRoute
+  '/bots/$botId/soul': typeof BotsBotIdSoulRoute
+  '/bots/$botId/': typeof BotsBotIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/settings': typeof SettingsRoute
+  '/chat/$sessionId': typeof ChatSessionIdRoute
+  '/chat': typeof ChatIndexRoute
+  '/bots/$botId/chat': typeof BotsBotIdChatRoute
+  '/bots/$botId/settings': typeof BotsBotIdSettingsRoute
+  '/bots/$botId/soul': typeof BotsBotIdSoulRoute
+  '/bots/$botId': typeof BotsBotIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/settings': typeof SettingsRoute
+  '/bots/$botId': typeof BotsBotIdRouteRouteWithChildren
+  '/chat/$sessionId': typeof ChatSessionIdRoute
+  '/chat/': typeof ChatIndexRoute
+  '/bots/$botId/chat': typeof BotsBotIdChatRoute
+  '/bots/$botId/settings': typeof BotsBotIdSettingsRoute
+  '/bots/$botId/soul': typeof BotsBotIdSoulRoute
+  '/bots/$botId/': typeof BotsBotIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/settings'
+    | '/bots/$botId'
+    | '/chat/$sessionId'
+    | '/chat/'
+    | '/bots/$botId/chat'
+    | '/bots/$botId/settings'
+    | '/bots/$botId/soul'
+    | '/bots/$botId/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/settings'
+    | '/chat/$sessionId'
+    | '/chat'
+    | '/bots/$botId/chat'
+    | '/bots/$botId/settings'
+    | '/bots/$botId/soul'
+    | '/bots/$botId'
+  id:
+    | '__root__'
+    | '/'
+    | '/settings'
+    | '/bots/$botId'
+    | '/chat/$sessionId'
+    | '/chat/'
+    | '/bots/$botId/chat'
+    | '/bots/$botId/settings'
+    | '/bots/$botId/soul'
+    | '/bots/$botId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  SettingsRoute: typeof SettingsRoute
+  BotsBotIdRouteRoute: typeof BotsBotIdRouteRouteWithChildren
+  ChatSessionIdRoute: typeof ChatSessionIdRoute
+  ChatIndexRoute: typeof ChatIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,11 +157,82 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/chat/': {
+      id: '/chat/'
+      path: '/chat'
+      fullPath: '/chat/'
+      preLoaderRoute: typeof ChatIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/chat/$sessionId': {
+      id: '/chat/$sessionId'
+      path: '/chat/$sessionId'
+      fullPath: '/chat/$sessionId'
+      preLoaderRoute: typeof ChatSessionIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bots/$botId': {
+      id: '/bots/$botId'
+      path: '/bots/$botId'
+      fullPath: '/bots/$botId'
+      preLoaderRoute: typeof BotsBotIdRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bots/$botId/': {
+      id: '/bots/$botId/'
+      path: '/'
+      fullPath: '/bots/$botId/'
+      preLoaderRoute: typeof BotsBotIdIndexRouteImport
+      parentRoute: typeof BotsBotIdRouteRoute
+    }
+    '/bots/$botId/soul': {
+      id: '/bots/$botId/soul'
+      path: '/soul'
+      fullPath: '/bots/$botId/soul'
+      preLoaderRoute: typeof BotsBotIdSoulRouteImport
+      parentRoute: typeof BotsBotIdRouteRoute
+    }
+    '/bots/$botId/settings': {
+      id: '/bots/$botId/settings'
+      path: '/settings'
+      fullPath: '/bots/$botId/settings'
+      preLoaderRoute: typeof BotsBotIdSettingsRouteImport
+      parentRoute: typeof BotsBotIdRouteRoute
+    }
+    '/bots/$botId/chat': {
+      id: '/bots/$botId/chat'
+      path: '/chat'
+      fullPath: '/bots/$botId/chat'
+      preLoaderRoute: typeof BotsBotIdChatRouteImport
+      parentRoute: typeof BotsBotIdRouteRoute
+    }
   }
 }
 
+interface BotsBotIdRouteRouteChildren {
+  BotsBotIdChatRoute: typeof BotsBotIdChatRoute
+  BotsBotIdSettingsRoute: typeof BotsBotIdSettingsRoute
+  BotsBotIdSoulRoute: typeof BotsBotIdSoulRoute
+  BotsBotIdIndexRoute: typeof BotsBotIdIndexRoute
+}
+
+const BotsBotIdRouteRouteChildren: BotsBotIdRouteRouteChildren = {
+  BotsBotIdChatRoute: BotsBotIdChatRoute,
+  BotsBotIdSettingsRoute: BotsBotIdSettingsRoute,
+  BotsBotIdSoulRoute: BotsBotIdSoulRoute,
+  BotsBotIdIndexRoute: BotsBotIdIndexRoute,
+}
+
+const BotsBotIdRouteRouteWithChildren = BotsBotIdRouteRoute._addFileChildren(
+  BotsBotIdRouteRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  SettingsRoute: SettingsRoute,
+  BotsBotIdRouteRoute: BotsBotIdRouteRouteWithChildren,
+  ChatSessionIdRoute: ChatSessionIdRoute,
+  ChatIndexRoute: ChatIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

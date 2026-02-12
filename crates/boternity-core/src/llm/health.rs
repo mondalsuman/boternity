@@ -336,4 +336,158 @@ mod tests {
         assert_eq!(info.total_calls, 0);
         assert!(info.uptime_since.is_some());
     }
+
+    #[test]
+    fn test_open_to_half_open_after_timeout() {
+        let mut health = ProviderHealth::new("test", 0);
+        // Use a very short open_duration so elapsed() >= wait_duration immediately
+        health.open_duration = Duration::from_millis(0);
+
+        let error = LlmError::Provider {
+            message: "timeout".to_string(),
+        };
+
+        // Drive to Open state
+        health.record_failure(&error);
+        health.record_failure(&error);
+        health.record_failure(&error);
+        assert!(matches!(health.state, CircuitState::Open { .. }));
+
+        // After wait_duration elapses, is_available transitions to HalfOpen
+        assert!(health.is_available());
+        assert!(matches!(health.state, CircuitState::HalfOpen));
+    }
+
+    #[test]
+    fn test_half_open_to_closed_on_success() {
+        let mut health = ProviderHealth::new("test", 0);
+        health.open_duration = Duration::from_millis(0);
+
+        let error = LlmError::Provider {
+            message: "down".to_string(),
+        };
+
+        // Drive to Open, then HalfOpen
+        health.record_failure(&error);
+        health.record_failure(&error);
+        health.record_failure(&error);
+        assert!(health.is_available()); // transitions Open -> HalfOpen
+        assert!(matches!(health.state, CircuitState::HalfOpen));
+
+        // Success in HalfOpen closes the circuit
+        health.record_success();
+        assert!(matches!(
+            health.state,
+            CircuitState::Closed {
+                consecutive_failures: 0
+            }
+        ));
+        assert!(health.uptime_since.is_some());
+    }
+
+    #[test]
+    fn test_half_open_to_open_on_failure() {
+        let mut health = ProviderHealth::new("test", 0);
+        health.open_duration = Duration::from_millis(0);
+
+        let error = LlmError::Provider {
+            message: "down".to_string(),
+        };
+
+        // Drive to Open, then HalfOpen
+        health.record_failure(&error);
+        health.record_failure(&error);
+        health.record_failure(&error);
+        assert!(health.is_available()); // transitions Open -> HalfOpen
+        assert!(matches!(health.state, CircuitState::HalfOpen));
+
+        // Failure in HalfOpen reopens the circuit
+        health.record_failure(&error);
+        assert!(matches!(health.state, CircuitState::Open { .. }));
+        assert!(health.uptime_since.is_none());
+    }
+
+    #[test]
+    fn test_rate_limit_expiry_restores_availability() {
+        let mut health = ProviderHealth::new("test", 0);
+        // Set rate limit that expires immediately (0ms)
+        health.set_rate_limited(Some(0), 5000);
+
+        // Should be available because 0ms has elapsed
+        assert!(health.is_available());
+        assert!(health.rate_limit_until.is_none()); // cleared after expiry check
+    }
+
+    #[test]
+    fn test_set_rate_limited_caps_at_max_wait() {
+        let mut health = ProviderHealth::new("test", 0);
+        // retry_after suggests 10000ms but max_wait is 2000ms
+        health.set_rate_limited(Some(10_000), 2_000);
+
+        // The rate_limit_until should be set (capped at max_wait)
+        assert!(health.rate_limit_until.is_some());
+        assert!(!health.is_available());
+    }
+
+    #[test]
+    fn test_set_rate_limited_uses_default_when_no_retry_after() {
+        let mut health = ProviderHealth::new("test", 0);
+        // No retry_after hint, falls back to max_wait_ms
+        health.set_rate_limited(None, 5_000);
+        assert!(health.rate_limit_until.is_some());
+    }
+
+    #[test]
+    fn test_record_failure_tracks_metrics() {
+        let mut health = ProviderHealth::new("test", 0);
+        let error = LlmError::Stream("broken pipe".to_string());
+
+        health.record_failure(&error);
+        assert_eq!(health.total_calls, 1);
+        assert_eq!(health.total_failures, 1);
+        assert_eq!(health.last_error.as_deref(), Some("stream error: broken pipe"));
+    }
+
+    #[test]
+    fn test_record_success_tracks_metrics() {
+        let mut health = ProviderHealth::new("test", 0);
+        health.record_success();
+        assert_eq!(health.total_calls, 1);
+        assert_eq!(health.total_failures, 0);
+        assert!(health.last_success.is_some());
+    }
+
+    #[test]
+    fn test_to_status_info_open_state() {
+        let mut health = ProviderHealth::new("test", 0);
+        let error = LlmError::Provider {
+            message: "500".to_string(),
+        };
+        health.record_failure(&error);
+        health.record_failure(&error);
+        health.record_failure(&error);
+
+        let info = health.to_status_info();
+        assert_eq!(info.circuit_state, "open");
+        assert!(info.last_error.is_some());
+        assert_eq!(info.total_failures, 3);
+        assert!(info.uptime_since.is_none());
+    }
+
+    #[test]
+    fn test_to_status_info_half_open_state() {
+        let mut health = ProviderHealth::new("test", 0);
+        health.open_duration = Duration::from_millis(0);
+
+        let error = LlmError::Provider {
+            message: "500".to_string(),
+        };
+        health.record_failure(&error);
+        health.record_failure(&error);
+        health.record_failure(&error);
+        health.is_available(); // transitions to HalfOpen
+
+        let info = health.to_status_info();
+        assert_eq!(info.circuit_state, "half_open");
+    }
 }

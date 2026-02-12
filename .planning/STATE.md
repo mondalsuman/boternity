@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 3 of 10 (Multi-Provider + Memory)
-Plan: 13 of 13 in current phase (03-01 through 03-10, 03-12, 03-13 complete; 03-11 in progress)
-Status: Phase nearly complete (03-11 pending)
-Last activity: 2026-02-12 -- Completed 03-13-PLAN.md (storage + KV CLI + AppState wiring)
+Plan: 13 of 13 in current phase (all complete)
+Status: Phase complete
+Last activity: 2026-02-12 -- Completed 03-11-PLAN.md (provider CLI + failover visibility)
 
-Progress: [█████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 25/53 (~47%)
+Progress: [██████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░] 26/53 (~49%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 25
-- Average duration: 7m 58s
-- Total execution time: 199m 10s
+- Total plans completed: 26
+- Average duration: 8m 01s
+- Total execution time: 208m 31s
 
 **By Phase:**
 
@@ -29,11 +29,11 @@ Progress: [███████████████████████
 |-------|-------|-------|----------|
 | 1. Foundation + Bot Identity | 6/6 | 49m 14s | 8m 12s |
 | 2. Single-Agent Chat + LLM | 7/8 | 31m 46s | 4m 32s |
-| 3. Multi-Provider + Memory | 12/13 | 118m 10s | 9m 51s |
+| 3. Multi-Provider + Memory | 13/13 | 127m 31s | 9m 49s |
 
 **Recent Trend:**
-- Last 5 plans: 03-10 (13m 58s), 03-09 (3m 31s), 03-08 (6m 31s), 03-12 (7m 37s), 03-13 (7m 35s)
-- Trend: Steady 7-8m for CLI plans; faster when reusing established patterns
+- Last 5 plans: 03-09 (3m 31s), 03-08 (6m 31s), 03-12 (7m 37s), 03-13 (7m 35s), 03-11 (9m 21s)
+- Trend: Steady 7-9m for CLI plans; faster when reusing established patterns
 
 *Updated after each plan completion*
 
@@ -162,6 +162,11 @@ Recent decisions affecting current work:
 - [03-13]: Storage delete deindexes from vector store before file removal (prevents orphaned chunks)
 - [03-13]: Two FastEmbedEmbedder instances in AppState: one concrete for FileIndexer<E>, one boxed for BoxEmbedder
 - [03-13]: Three separate LanceVectorStore connections for vector_store/vector_memory/shared_memory (each takes ownership)
+- [03-11]: Provider configs persisted in ~/.boternity/providers.json (simple JSON array, not SQLite)
+- [03-11]: Circuit breaker state is session-scoped (resets each chat), not persisted in provider status
+- [03-11]: Verbose mode uses short flag -V (not -v which is taken by global verbosity counter)
+- [03-11]: Vector memory search integrated directly in chat loop with Option<BoxVectorMemoryStore> for graceful fallback
+- [03-11]: Provider add tests connection by default, --skip-test to bypass
 
 ### Pending Todos
 
@@ -175,6 +180,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-12T23:00:34Z
-Stopped at: Completed 03-13-PLAN.md (storage + KV CLI + AppState wiring)
+Last session: 2026-02-12T23:03:34Z
+Stopped at: Completed 03-11-PLAN.md (provider CLI + failover visibility)
 Resume file: None

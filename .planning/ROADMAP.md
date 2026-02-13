@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Single-Agent Chat + LLM** - LLM provider abstraction, Anthropic Claude integration, streaming chat via CLI, session memory, chat persistence, structured logging
 - [x] **Phase 3: Multi-Provider + Memory** - Additional LLM providers with fallback chains, long-term vector memory, shared memory with trust partitioning, per-bot storage
 - [x] **Phase 4: Web UI Core + Fleet Dashboard** - React app scaffold, chat interface with streaming, fleet dashboard, soul editor with version history, PWA foundation
-- [ ] **Phase 5: Agent Hierarchy + Event System** - Sub-agent spawning (sequential + parallel), depth cap enforcement, message passing, event bus, WebSocket live updates, budget enforcement
+- [x] **Phase 5: Agent Hierarchy + Event System** - Sub-agent spawning (sequential + parallel), depth cap enforcement, message passing, event bus, WebSocket live updates, budget enforcement
 - [ ] **Phase 6: Skill System + WASM Sandbox** - Skill definition and execution, local skills, WASM sandbox for untrusted skills, registry discovery, permission model, trust tiers
 - [ ] **Phase 7: Builder System** - Universal builder agent, CLI wizard, web builder bot, adaptive question flow, skill creation and attachment via builder
 - [ ] **Phase 8: Workflows + Pipelines** - YAML workflow engine, visual builder, SDK, triggers (manual/cron/event), bot-to-bot communication, workflow composition
@@ -127,14 +127,14 @@ Plans:
 **Plans**: 8 plans
 
 Plans:
-- [ ] 05-01-PLAN.md -- Domain types (AgentEvent, SpawnInstruction, SubAgentResult, GlobalConfig) and new workspace dependencies
-- [ ] 05-02-PLAN.md -- Core primitives (RequestBudget, SharedWorkspace, CycleDetector, RequestContext, EventBus)
-- [ ] 05-03-PLAN.md -- Spawn instruction parser, AgentContext.child_for_task(), SystemPromptBuilder agent_capabilities
-- [ ] 05-04-PLAN.md -- AgentOrchestrator (parallel/sequential execution, retry, synthesis, budget/cancel integration)
-- [ ] 05-05-PLAN.md -- Config.toml loader, cost estimation, and pricing table
-- [ ] 05-06-PLAN.md -- WebSocket handler, EventBus on AppState, /ws/events route
-- [ ] 05-07-PLAN.md -- CLI tree renderer, budget display, and orchestrator integration into CLI + HTTP handlers
-- [ ] 05-08-PLAN.md -- Web UI: WebSocket hook, agent store, agent blocks, tree panel, budget indicator, WS status
+- [x] 05-01-PLAN.md -- Domain types (AgentEvent, SpawnInstruction, SubAgentResult, GlobalConfig) and new workspace dependencies
+- [x] 05-02-PLAN.md -- Core primitives (RequestBudget, SharedWorkspace, CycleDetector, RequestContext, EventBus)
+- [x] 05-03-PLAN.md -- Spawn instruction parser, AgentContext.child_for_task(), SystemPromptBuilder agent_capabilities
+- [x] 05-04-PLAN.md -- AgentOrchestrator (parallel/sequential execution, retry, synthesis, budget/cancel integration)
+- [x] 05-05-PLAN.md -- Config.toml loader, cost estimation, and pricing table
+- [x] 05-06-PLAN.md -- WebSocket handler, EventBus on AppState, /ws/events route
+- [x] 05-07-PLAN.md -- CLI tree renderer, budget display, and orchestrator integration into CLI + HTTP handlers
+- [x] 05-08-PLAN.md -- Web UI: WebSocket hook, agent store, agent blocks, tree panel, budget indicator, WS status
 
 ### Phase 6: Skill System + WASM Sandbox
 **Goal**: Agents can be extended with modular skills -- local skills run with permissions, untrusted registry skills run in a WASM sandbox, and users can discover, install, and manage skills from agentskills.io and community registries.
@@ -244,7 +244,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 2. Single-Agent Chat + LLM | 8/8 | Complete | 2026-02-12 |
 | 3. Multi-Provider + Memory | 13/13 | Complete | 2026-02-12 |
 | 4. Web UI Core + Fleet Dashboard | 8/8 | Complete | 2026-02-13 |
-| 5. Agent Hierarchy + Event System | 0/8 | Not started | - |
+| 5. Agent Hierarchy + Event System | 8/8 | Complete | 2026-02-13 |
 | 6. Skill System + WASM Sandbox | 0/6 | Not started | - |
 | 7. Builder System | 0/5 | Not started | - |
 | 8. Workflows + Pipelines | 0/6 | Not started | - |

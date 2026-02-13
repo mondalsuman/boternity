@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-10)
 
 **Core value:** A user can create a bot with a distinct identity, give it skills through an interactive builder, and have meaningful parallel conversations with it -- all running locally with full observability.
-**Current focus:** Phase 5 (Agent Hierarchy + Event System) - Complete
+**Current focus:** Phase 6 (Skill System + WASM Sandbox) - In progress
 
 ## Current Position
 
-Phase: 5 of 10 (Agent Hierarchy + Event System)
-Plan: 8 of 8 in current phase
-Status: Phase complete
-Last activity: 2026-02-13 -- Completed 05-08-PLAN.md (Web UI agent hierarchy)
+Phase: 6 of 10 (Skill System + WASM Sandbox)
+Plan: 1 of 12 in current phase
+Status: In progress
+Last activity: 2026-02-14 -- Completed 06-01-PLAN.md (Skill domain types + workspace deps)
 
-Progress: [██████████████████████████████████████████████░░░░░░░] 42/53 (~79%)
+Progress: [███████████████████████████████████████████████░░░░░░] 43/54 (~80%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 42
-- Average duration: 6m 30s
-- Total execution time: 273m 08s
+- Total plans completed: 43
+- Average duration: 6m 25s
+- Total execution time: 276m 40s
 
 **By Phase:**
 
@@ -32,10 +32,11 @@ Progress: [███████████████████████
 | 3. Multi-Provider + Memory | 13/13 | 127m 31s | 9m 49s |
 | 4. Web UI Core + Fleet Dashboard | 8/8 | 40m 37s | 5m 05s |
 | 5. Agent Hierarchy + Event System | 8/8 | 28m 00s | 3m 30s |
+| 6. Skill System + WASM Sandbox | 1/12 | 3m 32s | 3m 32s |
 
 **Recent Trend:**
-- Last 5 plans: 05-04 (4m 00s), 05-05 (4m 00s), 05-06 (3m 00s), 05-07 (4m 00s), 05-08 (4m 00s)
-- Trend: Phase 5 complete, all plans executed efficiently (~3-4m)
+- Last 5 plans: 05-06 (3m 00s), 05-07 (4m 00s), 05-08 (4m 00s), 06-01 (3m 32s)
+- Trend: Consistent ~3-4m for foundational/types plans
 
 *Updated after each plan completion*
 
@@ -238,6 +239,12 @@ Recent decisions affecting current work:
 - [05-08]: AgentBlock auto-collapses on completion, auto-expands on running (useEffect on status)
 - [05-08]: Recursive TreeNode component with depth-based paddingLeft for tree indentation
 - [05-08]: Blended $9/1M cost estimate for budget indicator (rough hint, not exact billing)
+- [06-01]: TrustTier::Untrusted as Default (secure by default)
+- [06-01]: Capability enum with 8 variants matching CONTEXT.md fine-grained operations
+- [06-01]: SkillMeta uses semver::Version for version field (strong typing)
+- [06-01]: SkillSource tagged enum with type=local or type=registry
+- [06-01]: ResourceLimits defaults: 64MB memory, 1M fuel, 30s duration
+- [06-01]: landlock declared in workspace but NOT wired to any crate (Plan 08 will add with cfg gates)
 
 ### Pending Todos
 
@@ -251,6 +258,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-13
-Stopped at: Completed 05-08-PLAN.md (Web UI agent hierarchy) - Phase 5 complete
+Last session: 2026-02-14
+Stopped at: Completed 06-01-PLAN.md (Skill domain types + workspace deps)
 Resume file: None

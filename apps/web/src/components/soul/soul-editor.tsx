@@ -211,7 +211,7 @@ export function SoulEditor({
   return (
     <div className="space-y-3">
       {/* File tabs */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <Tabs
           value={activeFile}
           onValueChange={(v) => setActiveFile(v as SoulFileTab)}
@@ -255,11 +255,11 @@ export function SoulEditor({
       </div>
 
       {/* Editor + Preview split */}
-      <div className="grid md:grid-cols-2 gap-4 min-h-[500px]">
+      <div className="grid md:grid-cols-2 gap-4 min-h-[300px] md:min-h-[500px]">
         {/* Left: Editor or Form */}
         <div className="rounded-lg border overflow-hidden bg-background">
           {isFileLoading ? (
-            <div className="flex items-center justify-center h-full min-h-[500px] text-muted-foreground">
+            <div className="flex items-center justify-center h-full min-h-[300px] md:min-h-[500px] text-muted-foreground">
               <Loader2 className="size-5 animate-spin mr-2" />
               Loading...
             </div>
@@ -291,7 +291,7 @@ export function SoulEditor({
         </div>
 
         {/* Right: Markdown Preview */}
-        <div className="rounded-lg border overflow-auto bg-background min-h-[500px]">
+        <div className="rounded-lg border overflow-auto bg-background min-h-[200px] md:min-h-[500px]">
           <div className="sticky top-0 bg-background border-b px-4 py-2">
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
               Preview

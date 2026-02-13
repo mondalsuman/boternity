@@ -68,7 +68,7 @@ export function ChatInput({
   );
 
   return (
-    <div className="border-t bg-background p-4">
+    <div className="border-t bg-background p-3 md:p-4 safe-bottom">
       <div className="flex items-end gap-2 max-w-4xl mx-auto">
         <textarea
           ref={textareaRef}

@@ -2,6 +2,14 @@ import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { History } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { SoulEditor } from "@/components/soul/soul-editor";
 import { VersionTimeline } from "@/components/soul/version-timeline";
 import { useSoul } from "@/hooks/use-soul-queries";
@@ -14,6 +22,7 @@ export const Route = createFileRoute("/bots/$botId/soul")({
 function BotSoulPage() {
   const { botId } = Route.useParams();
   const { data: soul } = useSoul(botId);
+  const isMobile = useIsMobile();
 
   // Version timeline panel state
   const [timelineOpen, setTimelineOpen] = useState(false);
@@ -30,6 +39,16 @@ function BotSoulPage() {
   );
 
   const currentVersion = soul?.version ?? 1;
+
+  const timelineProps = {
+    botId,
+    currentVersion,
+    open: timelineOpen,
+    onToggle: () => setTimelineOpen(false),
+    onCompare: (original: SoulVersion, modified: SoulVersion) =>
+      setDiffVersions({ original, modified }),
+    onRestore: (version: SoulVersion) => setRollbackVersion(version),
+  };
 
   return (
     <div className="space-y-4">
@@ -48,11 +67,11 @@ function BotSoulPage() {
           className="gap-1.5"
         >
           <History className="size-4" />
-          History
+          <span className="hidden sm:inline">History</span>
         </Button>
       </div>
 
-      <div className="flex min-h-[500px]">
+      <div className="flex min-h-[300px] md:min-h-[500px]">
         {/* Editor + Preview (flex-1) */}
         <div className="flex-1 min-w-0">
           <SoulEditor
@@ -64,16 +83,22 @@ function BotSoulPage() {
           />
         </div>
 
-        {/* Version timeline (right, collapsible) */}
-        <VersionTimeline
-          botId={botId}
-          currentVersion={currentVersion}
-          open={timelineOpen}
-          onToggle={() => setTimelineOpen(false)}
-          onCompare={(original, modified) => setDiffVersions({ original, modified })}
-          onRestore={(version) => setRollbackVersion(version)}
-        />
+        {/* Desktop: version timeline as right panel */}
+        {!isMobile && <VersionTimeline {...timelineProps} />}
       </div>
+
+      {/* Mobile: version timeline as bottom sheet */}
+      {isMobile && (
+        <Sheet open={timelineOpen} onOpenChange={setTimelineOpen}>
+          <SheetContent side="bottom" className="h-[70vh] p-0">
+            <SheetHeader className="sr-only">
+              <SheetTitle>Version History</SheetTitle>
+              <SheetDescription>Soul version history</SheetDescription>
+            </SheetHeader>
+            <VersionTimeline {...timelineProps} open={true} />
+          </SheetContent>
+        </Sheet>
+      )}
     </div>
   );
 }

@@ -56,7 +56,7 @@ export function ChatHeader({
 
   return (
     <>
-      <div className="flex items-center justify-between border-b px-4 py-3">
+      <div className="flex items-center justify-between border-b pl-12 pr-4 py-3 md:pl-4">
         {/* Bot info */}
         <div className="flex items-center gap-3 min-w-0">
           <span className="text-xl shrink-0">{bot?.emoji || "..."}</span>

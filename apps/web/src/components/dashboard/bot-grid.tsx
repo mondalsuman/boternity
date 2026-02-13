@@ -109,8 +109,8 @@ export function BotGrid({ statusFilter }: BotGridProps) {
     <div className="space-y-4">
       {/* Search and sort controls */}
       {!isEmpty && (
-        <div className="flex items-center gap-3">
-          <div className="relative flex-1 max-w-sm">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+          <div className="relative flex-1 sm:max-w-sm">
             <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search bots..."

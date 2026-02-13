@@ -1,7 +1,11 @@
 import { lazy, Suspense, useEffect } from "react";
 import { createRootRoute, Outlet } from "@tanstack/react-router";
 import { useThemeStore } from "@/stores/theme-store";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import {
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { AppSidebar } from "@/components/layout/app-sidebar";
@@ -66,7 +70,8 @@ function RootLayout() {
       <SidebarProvider>
         <AppSidebar />
         <SidebarInset>
-          <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
+          <header className="flex h-12 shrink-0 items-center gap-2 border-b px-3 md:px-4">
+            <SidebarTrigger className="md:hidden" />
             <Breadcrumbs />
           </header>
           <main className="flex-1 overflow-auto">

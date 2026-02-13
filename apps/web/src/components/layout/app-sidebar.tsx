@@ -65,7 +65,7 @@ export function AppSidebar() {
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
-        <SidebarTrigger className="ml-auto" />
+        <SidebarTrigger className="ml-auto hidden md:inline-flex" />
       </SidebarHeader>
 
       <SidebarSeparator />

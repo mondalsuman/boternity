@@ -20,7 +20,7 @@ function DashboardPage() {
   const isEmpty = !isLoading && (!bots || bots.length === 0);
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -61,7 +61,7 @@ function DashboardPage() {
       {!isEmpty && (
         <Button
           size="icon-lg"
-          className="fixed bottom-6 right-6 z-40 rounded-full shadow-lg md:hidden"
+          className="fixed bottom-6 right-6 z-40 rounded-full shadow-lg md:hidden safe-bottom"
           onClick={() => setCreateOpen(true)}
         >
           <Plus className="size-5" />

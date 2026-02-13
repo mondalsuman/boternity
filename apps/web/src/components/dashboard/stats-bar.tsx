@@ -31,17 +31,17 @@ function StatItem({
     <button
       onClick={() => onFilterChange(isActive ? null : filterKey)}
       className={cn(
-        "flex items-center gap-3 rounded-lg border px-4 py-3 text-left transition-colors",
+        "flex items-center gap-2 md:gap-3 rounded-lg border px-2 py-2 md:px-4 md:py-3 text-left transition-colors",
         "hover:bg-accent/50",
         isActive && "border-primary bg-accent",
       )}
     >
-      <div className="flex size-9 items-center justify-center rounded-md bg-muted">
+      <div className="hidden md:flex size-9 items-center justify-center rounded-md bg-muted">
         {icon}
       </div>
-      <div>
-        <p className="text-2xl font-bold tabular-nums">{value}</p>
-        <p className="text-xs text-muted-foreground">{label}</p>
+      <div className="min-w-0">
+        <p className="text-lg md:text-2xl font-bold tabular-nums">{value}</p>
+        <p className="text-[10px] md:text-xs text-muted-foreground truncate">{label}</p>
       </div>
     </button>
   );
@@ -49,9 +49,9 @@ function StatItem({
 
 function StatsBarSkeleton() {
   return (
-    <div className="grid gap-4 md:grid-cols-3">
+    <div className="grid grid-cols-3 gap-2 md:gap-4">
       {Array.from({ length: 3 }).map((_, i) => (
-        <Skeleton key={i} className="h-[72px] rounded-lg" />
+        <Skeleton key={i} className="h-[60px] md:h-[72px] rounded-lg" />
       ))}
     </div>
   );
@@ -69,7 +69,7 @@ export function StatsBar({ activeFilter, onFilterChange }: StatsBarProps) {
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-3">
+    <div className="grid grid-cols-3 gap-2 md:gap-4">
       <StatItem
         icon={<Bot className="size-4 text-muted-foreground" />}
         label={`Total Bots${stats.active_bots > 0 ? ` (${stats.active_bots} active)` : ""}`}

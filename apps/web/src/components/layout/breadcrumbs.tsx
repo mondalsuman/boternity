@@ -73,20 +73,38 @@ export function Breadcrumbs() {
 
   if (uniqueCrumbs.length <= 1) return null;
 
+  // On mobile, show only first + last crumb to save space
+  const displayCrumbs =
+    uniqueCrumbs.length > 2
+      ? [uniqueCrumbs[0], uniqueCrumbs[uniqueCrumbs.length - 1]]
+      : uniqueCrumbs;
+
   return (
     <Breadcrumb>
-      <BreadcrumbList>
+      <BreadcrumbList className="flex-nowrap overflow-hidden">
+        {/* Full breadcrumbs on desktop */}
         {uniqueCrumbs.map((crumb, index) => {
           const isLast = index === uniqueCrumbs.length - 1;
           return (
-            <span key={crumb.path} className="flex items-center gap-1.5">
+            <span
+              key={crumb.path}
+              className={`items-center gap-1.5 ${
+                uniqueCrumbs.length > 2 && index > 0 && !isLast
+                  ? "hidden md:flex"
+                  : "flex"
+              }`}
+            >
               {index > 0 && <BreadcrumbSeparator />}
               <BreadcrumbItem>
                 {isLast ? (
-                  <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
+                  <BreadcrumbPage className="truncate max-w-[150px] md:max-w-none">
+                    {crumb.label}
+                  </BreadcrumbPage>
                 ) : (
                   <BreadcrumbLink asChild>
-                    <Link to={crumb.path}>{crumb.label}</Link>
+                    <Link to={crumb.path} className="truncate">
+                      {crumb.label}
+                    </Link>
                   </BreadcrumbLink>
                 )}
               </BreadcrumbItem>

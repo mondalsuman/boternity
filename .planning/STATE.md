@@ -207,6 +207,10 @@ Recent decisions affecting current work:
 - [05-01]: toml as dev-dependency on boternity-types (only tests need TOML parsing)
 - [05-01]: source_agent_id: Option<Uuid> on MemoryEntry with None default for backward compatibility
 - [05-01]: AgentEvent serde tagged union: #[serde(tag = "type", rename_all = "snake_case")] for event bus
+- [05-02]: Clone-on-read for SharedWorkspace::get() to prevent DashMap Ref held across await
+- [05-02]: HashMap<u64, usize> for CycleDetector instead of HashSet (tracks repetition count, not just presence)
+- [05-02]: RequestContext.child() uses saturating_add for depth to prevent u8 overflow
+- [05-02]: EventBus publish silently drops events when no subscribers (let _ = sender.send())
 - [05-03]: Only first <spawn_agents> block parsed per response (single spawn per turn)
 - [05-03]: Default spawn mode is Parallel when no mode attribute present
 - [05-03]: Sub-agent prompts exclude user_context/session_memory/long_term_memory (fresh context)

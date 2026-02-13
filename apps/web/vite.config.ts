@@ -13,13 +13,15 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: "autoUpdate",
+      includeAssets: ["icons/*.png"],
       manifest: {
         name: "Boternity",
         short_name: "Boternity",
-        description: "Bot fleet management dashboard",
+        description: "Bot fleet management and chat",
         theme_color: "#0a0a0a",
         background_color: "#0a0a0a",
         display: "standalone",
+        start_url: "/",
         icons: [
           {
             src: "/icons/icon-192.png",
@@ -30,14 +32,29 @@ export default defineConfig({
             src: "/icons/icon-512.png",
             sizes: "512x512",
             type: "image/png",
+            purpose: "any maskable",
           },
         ],
       },
       workbox: {
         navigateFallback: "/index.html",
+        // CRITICAL: Do NOT cache API routes or health endpoint
+        navigateFallbackDenylist: [/^\/api\//, /^\/health/],
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
-        // Do NOT cache API routes in service worker
-        navigateFallbackDenylist: [/^\/api\//],
+        runtimeCaching: [
+          {
+            // Cache static assets aggressively
+            urlPattern: /\.(?:png|jpg|jpeg|svg|gif|woff2?)$/,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "static-assets",
+              expiration: {
+                maxEntries: 100,
+                maxAgeSeconds: 30 * 24 * 60 * 60,
+              },
+            },
+          },
+        ],
       },
     }),
   ],

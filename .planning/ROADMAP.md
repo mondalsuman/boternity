@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Foundation + Bot Identity** - Monorepo scaffold, crate structure, SQLite storage, bot CRUD with immutable SOUL.md, secrets vault, basic CLI and REST API
 - [x] **Phase 2: Single-Agent Chat + LLM** - LLM provider abstraction, Anthropic Claude integration, streaming chat via CLI, session memory, chat persistence, structured logging
 - [x] **Phase 3: Multi-Provider + Memory** - Additional LLM providers with fallback chains, long-term vector memory, shared memory with trust partitioning, per-bot storage
-- [ ] **Phase 4: Web UI Core + Fleet Dashboard** - React app scaffold, chat interface with streaming, fleet dashboard, soul editor with version history, PWA foundation
+- [x] **Phase 4: Web UI Core + Fleet Dashboard** - React app scaffold, chat interface with streaming, fleet dashboard, soul editor with version history, PWA foundation
 - [ ] **Phase 5: Agent Hierarchy + Event System** - Sub-agent spawning (sequential + parallel), depth cap enforcement, message passing, event bus, WebSocket live updates, budget enforcement
 - [ ] **Phase 6: Skill System + WASM Sandbox** - Skill definition and execution, local skills, WASM sandbox for untrusted skills, registry discovery, permission model, trust tiers
 - [ ] **Phase 7: Builder System** - Universal builder agent, CLI wizard, web builder bot, adaptive question flow, skill creation and attachment via builder
@@ -243,7 +243,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 1. Foundation + Bot Identity | 6/6 | Complete | 2026-02-11 |
 | 2. Single-Agent Chat + LLM | 8/8 | Complete | 2026-02-12 |
 | 3. Multi-Provider + Memory | 13/13 | Complete | 2026-02-12 |
-| 4. Web UI Core + Fleet Dashboard | 0/8 | Not started | - |
+| 4. Web UI Core + Fleet Dashboard | 8/8 | Complete | 2026-02-13 |
 | 5. Agent Hierarchy + Event System | 0/8 | Not started | - |
 | 6. Skill System + WASM Sandbox | 0/6 | Not started | - |
 | 7. Builder System | 0/5 | Not started | - |

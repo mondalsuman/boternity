@@ -125,6 +125,9 @@ opentelemetry_sdk = "0.31"
 opentelemetry-stdout = "0.31"
 tracing-opentelemetry = "0.32"
 
+# Semantic versioning
+semver = { version = "1", features = ["serde"] }
+
 # Workspace crates
 boternity-types = { path = "crates/boternity-types" }
 boternity-core = { path = "crates/boternity-core" }

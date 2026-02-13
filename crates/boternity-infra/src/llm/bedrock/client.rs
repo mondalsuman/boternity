@@ -92,7 +92,9 @@ impl BedrockProvider {
     /// Try to extract the AWS region from a base64-encoded presigned URL token.
     ///
     /// The token decodes to a URL like:
-    /// `bedrock.amazonaws.com/?...&X-Amz-Credential=AKIA.../20260212/us-east-1/bedrock/aws4_request&...`
+    /// `bedrock.amazonaws.com/?...&X-Amz-Credential=AKIA...%2F20260212%2Feu-west-1%2Fbedrock%2Faws4_request&...`
+    ///
+    /// Note: The credential uses URL-encoded `%2F` for `/` separators.
     ///
     /// Returns `Some(region)` if found, `None` otherwise.
     fn detect_region_from_token(token: &str) -> Option<String> {
@@ -101,6 +103,9 @@ impl BedrockProvider {
             .decode(token)
             .ok()?;
         let text = String::from_utf8(decoded).ok()?;
+
+        // URL-decode the text since credential separators are %2F not /
+        let text = text.replace("%2F", "/").replace("%2f", "/");
 
         // Look for X-Amz-Credential=.../<date>/<region>/bedrock/aws4_request
         let cred_start = text.find("X-Amz-Credential=")?;

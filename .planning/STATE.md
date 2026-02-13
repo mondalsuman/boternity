@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 5 of 10 (Agent Hierarchy + Event System)
-Plan: 1 of 8 in current phase
+Plan: 3 of 8 in current phase
 Status: In progress
-Last activity: 2026-02-13 -- Completed 05-01-PLAN.md (domain types and event bus)
+Last activity: 2026-02-13 -- Completed 05-03-PLAN.md (spawn parser + context + prompt extensions)
 
-Progress: [███████████████████████████████████████░░░░░░░░░░░░░░] 35/53 (~66%)
+Progress: [█████████████████████████████████████████░░░░░░░░░░░░] 37/53 (~70%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 35
-- Average duration: 7m 14s
-- Total execution time: 254m 08s
+- Total plans completed: 37
+- Average duration: 7m 00s
+- Total execution time: 258m 08s
 
 **By Phase:**
 
@@ -31,11 +31,11 @@ Progress: [███████████████████████
 | 2. Single-Agent Chat + LLM | 7/8 | 31m 46s | 4m 32s |
 | 3. Multi-Provider + Memory | 13/13 | 127m 31s | 9m 49s |
 | 4. Web UI Core + Fleet Dashboard | 8/8 | 40m 37s | 5m 05s |
-| 5. Agent Hierarchy + Event System | 1/8 | 5m 00s | 5m 00s |
+| 5. Agent Hierarchy + Event System | 3/8 | 13m 00s | 4m 20s |
 
 **Recent Trend:**
-- Last 5 plans: 04-04 (5m 13s), 04-07 (3m 00s), 04-05 (3m 00s), 04-08 (5m 00s), 05-01 (5m 00s)
-- Trend: Type definition plans execute quickly (~5m)
+- Last 5 plans: 04-05 (3m 00s), 04-08 (5m 00s), 05-01 (5m 00s), 05-02 (4m 00s), 05-03 (4m 00s)
+- Trend: Core logic plans in Phase 5 executing efficiently (~4m)
 
 *Updated after each plan completion*
 
@@ -207,6 +207,10 @@ Recent decisions affecting current work:
 - [05-01]: toml as dev-dependency on boternity-types (only tests need TOML parsing)
 - [05-01]: source_agent_id: Option<Uuid> on MemoryEntry with None default for backward compatibility
 - [05-01]: AgentEvent serde tagged union: #[serde(tag = "type", rename_all = "snake_case")] for event bus
+- [05-03]: Only first <spawn_agents> block parsed per response (single spawn per turn)
+- [05-03]: Default spawn mode is Parallel when no mode attribute present
+- [05-03]: Sub-agent prompts exclude user_context/session_memory/long_term_memory (fresh context)
+- [05-03]: Depth < 3 includes agent_capabilities for recursive spawning; depth 3 excludes it
 
 ### Pending Todos
 
@@ -221,5 +225,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-13
-Stopped at: Completed 05-01-PLAN.md (domain types and event bus)
+Stopped at: Completed 05-03-PLAN.md (spawn parser + context + prompt extensions)
 Resume file: None

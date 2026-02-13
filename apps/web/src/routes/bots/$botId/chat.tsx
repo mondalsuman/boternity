@@ -15,7 +15,7 @@ import { useBotSessions, useMessages } from "@/hooks/use-chat-queries";
 import { useBot } from "@/hooks/use-bot-queries";
 import { useSSEChat } from "@/hooks/use-sse-chat";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, AlertCircle } from "lucide-react";
 
 export const Route = createFileRoute("/bots/$botId/chat")({
   component: BotChatPage,
@@ -46,6 +46,7 @@ function BotChatPage() {
     streamedContent,
     isStreaming,
     activeSessionId: streamSessionId,
+    error,
   } = useSSEChat();
 
   const handleSend = useCallback(
@@ -104,6 +105,14 @@ function BotChatPage() {
               {session.title || "Untitled"}
             </Button>
           ))}
+        </div>
+      )}
+
+      {/* Error banner */}
+      {error && (
+        <div className="mx-3 mt-2 flex items-center gap-2 rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          <span>{error}</span>
         </div>
       )}
 

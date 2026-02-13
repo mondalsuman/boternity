@@ -16,6 +16,7 @@ import { ChatLayout } from "@/components/chat/chat-layout";
 import { ChatHeader } from "@/components/chat/chat-header";
 import { MessageList } from "@/components/chat/message-list";
 import { ChatInput } from "@/components/chat/chat-input";
+import { AlertCircle } from "lucide-react";
 import {
   useSession,
   useMessages,
@@ -50,6 +51,7 @@ function ChatSessionPage() {
     stopGeneration,
     streamedContent,
     isStreaming,
+    error,
   } = useSSEChat();
 
   const handleSend = useCallback(
@@ -90,6 +92,14 @@ function ChatSessionPage() {
           onDelete={handleDelete}
           onClear={handleClear}
         />
+
+        {/* Error banner */}
+        {error && (
+          <div className="mx-4 mt-2 flex items-center gap-2 rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
 
         {/* Messages */}
         <MessageList

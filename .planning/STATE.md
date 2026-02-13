@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 5 of 10 (Agent Hierarchy + Event System)
-Plan: 5 of 8 in current phase
+Plan: 6 of 8 in current phase
 Status: In progress
-Last activity: 2026-02-13 -- Completed 05-05-PLAN.md (config loading and cost estimation)
+Last activity: 2026-02-13 -- Completed 05-06-PLAN.md (WebSocket infrastructure)
 
-Progress: [███████████████████████████████████████████░░░░░░░░░░] 39/53 (~74%)
+Progress: [████████████████████████████████████████████░░░░░░░░░] 40/53 (~75%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 39
-- Average duration: 6m 43s
-- Total execution time: 262m 08s
+- Total plans completed: 40
+- Average duration: 6m 38s
+- Total execution time: 265m 08s
 
 **By Phase:**
 
@@ -31,11 +31,11 @@ Progress: [███████████████████████
 | 2. Single-Agent Chat + LLM | 7/8 | 31m 46s | 4m 32s |
 | 3. Multi-Provider + Memory | 13/13 | 127m 31s | 9m 49s |
 | 4. Web UI Core + Fleet Dashboard | 8/8 | 40m 37s | 5m 05s |
-| 5. Agent Hierarchy + Event System | 5/8 | 17m 00s | 3m 24s |
+| 5. Agent Hierarchy + Event System | 6/8 | 20m 00s | 3m 20s |
 
 **Recent Trend:**
-- Last 5 plans: 05-01 (5m 00s), 05-02 (4m 00s), 05-03 (4m 00s), 05-04 (4m 00s), 05-05 (4m 00s)
-- Trend: Phase 5 infrastructure plans executing efficiently (~4m)
+- Last 5 plans: 05-02 (4m 00s), 05-03 (4m 00s), 05-04 (4m 00s), 05-05 (4m 00s), 05-06 (3m 00s)
+- Trend: Phase 5 infrastructure plans executing efficiently (~3-4m)
 
 *Updated after each plan completion*
 
@@ -219,6 +219,10 @@ Recent decisions affecting current work:
 - [05-05]: OpenAI gpt-4o-mini entry ordered before gpt-4o for correct prefix matching
 - [05-05]: Bedrock uses contains() fallback for region-prefixed model IDs
 - [05-05]: Minimum budget floor of 10,000 tokens in resolve_request_budget()
+- [05-06]: tokio::select! single-loop for WebSocket instead of socket.split() two-task (enables Ping/Pong in same scope)
+- [05-06]: WsCommand serde tagged enum matches AgentEvent convention (#[serde(tag = "type", rename_all = "snake_case")])
+- [05-06]: DashMap for agent_cancellations and budget_responses (concurrent access from WebSocket + orchestrator)
+- [05-06]: WebSocket disconnect does NOT auto-cancel agents (reconnection-safe, per research pitfall 4)
 
 ### Pending Todos
 
@@ -233,5 +237,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-13
-Stopped at: Completed 05-05-PLAN.md (config loading and cost estimation)
+Stopped at: Completed 05-06-PLAN.md (WebSocket infrastructure)
 Resume file: None

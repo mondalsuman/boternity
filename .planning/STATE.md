@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 6 of 10 (Skill System + WASM Sandbox)
-Plan: 1 of 12 in current phase
+Plan: 5 of 12 in current phase (2 complete)
 Status: In progress
-Last activity: 2026-02-14 -- Completed 06-01-PLAN.md (Skill domain types + workspace deps)
+Last activity: 2026-02-14 -- Completed 06-05-PLAN.md (WASM runtime + WIT interface)
 
-Progress: [███████████████████████████████████████████████░░░░░░] 43/54 (~80%)
+Progress: [████████████████████████████████████████████████░░░░░] 44/55 (~80%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 43
-- Average duration: 6m 25s
-- Total execution time: 276m 40s
+- Total plans completed: 44
+- Average duration: 6m 27s
+- Total execution time: 283m 40s
 
 **By Phase:**
 
@@ -32,11 +32,11 @@ Progress: [███████████████████████
 | 3. Multi-Provider + Memory | 13/13 | 127m 31s | 9m 49s |
 | 4. Web UI Core + Fleet Dashboard | 8/8 | 40m 37s | 5m 05s |
 | 5. Agent Hierarchy + Event System | 8/8 | 28m 00s | 3m 30s |
-| 6. Skill System + WASM Sandbox | 1/12 | 3m 32s | 3m 32s |
+| 6. Skill System + WASM Sandbox | 2/12 | 10m 32s | 5m 16s |
 
 **Recent Trend:**
-- Last 5 plans: 05-06 (3m 00s), 05-07 (4m 00s), 05-08 (4m 00s), 06-01 (3m 32s)
-- Trend: Consistent ~3-4m for foundational/types plans
+- Last 5 plans: 05-07 (4m 00s), 05-08 (4m 00s), 06-01 (3m 32s), 06-05 (7m 00s)
+- Trend: WASM runtime plan slightly longer due to wasmtime v40 API discovery
 
 *Updated after each plan completion*
 
@@ -245,6 +245,10 @@ Recent decisions affecting current work:
 - [06-01]: SkillSource tagged enum with type=local or type=registry
 - [06-01]: ResourceLimits defaults: 64MB memory, 1M fuel, 30s duration
 - [06-01]: landlock declared in workspace but NOT wired to any crate (Plan 08 will add with cfg gates)
+- [06-05]: wasmtime v40 bindgen! has no top-level async option; async governed by Engine Config::async_support(true)
+- [06-05]: Must disable wasm_relaxed_simd(false) before wasm_simd(false) in wasmtime v40 (relaxed depends on SIMD)
+- [06-05]: Untrusted tier: 16MB memory, 500K fuel, 10s duration; Verified: 64MB, 1M fuel, 30s
+- [06-05]: Separate Engine per trust tier (anti-pattern to share); engine_for_tier panics on Local
 
 ### Pending Todos
 
@@ -259,5 +263,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 06-01-PLAN.md (Skill domain types + workspace deps)
+Stopped at: Completed 06-05-PLAN.md (WASM runtime + WIT interface)
 Resume file: None

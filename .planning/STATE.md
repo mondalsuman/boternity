@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 4 of 10 (Web UI Core + Fleet Dashboard)
-Plan: 5 of 8 in current phase
+Plan: 7 of 8 in current phase
 Status: In progress
-Last activity: 2026-02-13 -- Completed 04-04-PLAN.md
+Last activity: 2026-02-13 -- Completed 04-07-PLAN.md
 
-Progress: [████████████████████████████████░░░░░░░░░░░░░░░░░░░░░] 31/53 (~58%)
+Progress: [█████████████████████████████████░░░░░░░░░░░░░░░░░░░░] 32/53 (~60%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 31
-- Average duration: 7m 41s
-- Total execution time: 238m 08s
+- Total plans completed: 32
+- Average duration: 7m 32s
+- Total execution time: 241m 08s
 
 **By Phase:**
 
@@ -30,11 +30,11 @@ Progress: [███████████████████████
 | 1. Foundation + Bot Identity | 6/6 | 49m 14s | 8m 12s |
 | 2. Single-Agent Chat + LLM | 7/8 | 31m 46s | 4m 32s |
 | 3. Multi-Provider + Memory | 13/13 | 127m 31s | 9m 49s |
-| 4. Web UI Core + Fleet Dashboard | 5/8 | 29m 37s | 5m 55s |
+| 4. Web UI Core + Fleet Dashboard | 7/8 | 32m 37s | 4m 40s |
 
 **Recent Trend:**
-- Last 5 plans: 04-01 (9m 00s), 04-02 (8m 00s), 04-03 (3m 24s), 04-06 (4m 00s), 04-04 (5m 13s)
-- Trend: Phase 4 UI plans averaging ~6m (focused component tasks)
+- Last 5 plans: 04-02 (8m 00s), 04-03 (3m 24s), 04-06 (4m 00s), 04-04 (5m 13s), 04-07 (3m 00s)
+- Trend: Phase 4 UI plans averaging ~5m (focused component tasks)
 
 *Updated after each plan completion*
 
@@ -193,6 +193,11 @@ Recent decisions affecting current work:
 - [04-06]: Identity form rebuilds raw IDENTITY.md frontmatter on every change (preserves body content)
 - [04-06]: Local editor buffers populated once from fetch data, then managed locally (prevents overwrite on refetch)
 - [04-06]: shadcn/ui primitives (Label, Slider, Select, Switch) added for identity form controls
+- [04-07]: Version timeline as collapsible right panel (280px) with smooth width transition, collapsed by default
+- [04-07]: DiffViewer in large Dialog overlay (max-w-6xl, 80vh) rather than replacing editor pane
+- [04-07]: Rollback uses AlertDialog for destructive confirmation with scrollable content preview
+- [04-07]: Version actions (Compare, Restore) visible only when version is selected in timeline
+- [04-07]: useSoulVersion has staleTime: Infinity since versions are immutable
 
 ### Pending Todos
 
@@ -207,5 +212,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-13
-Stopped at: Completed 04-04-PLAN.md
+Stopped at: Completed 04-07-PLAN.md
 Resume file: None

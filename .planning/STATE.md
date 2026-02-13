@@ -215,6 +215,11 @@ Recent decisions affecting current work:
 - [05-03]: Default spawn mode is Parallel when no mode attribute present
 - [05-03]: Sub-agent prompts exclude user_context/session_memory/long_term_memory (fresh context)
 - [05-03]: Depth < 3 includes agent_capabilities for recursive spawning; depth 3 excludes it
+- [05-04]: Orchestrator is stateless coordinator: no fields beyond max_depth, all state via parameters
+- [05-04]: BoxLlmProvider streams created before JoinSet spawn (stream is 'static, provider is not Clone)
+- [05-04]: Token estimation via 4 chars/token heuristic for streaming budget, corrected by real Usage events
+- [05-04]: Sequential sub-agents see only immediately prior result (not full chain) per user decision
+- [05-04]: Memory extraction deferred to chat handler via AgentMemoryContext (orchestrator surfaces data, caller extracts)
 - [05-05]: default_pricing_table() is private (not pub) since external callers use estimate_cost()
 - [05-05]: OpenAI gpt-4o-mini entry ordered before gpt-4o for correct prefix matching
 - [05-05]: Bedrock uses contains() fallback for region-prefixed model IDs

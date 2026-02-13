@@ -294,6 +294,7 @@ pub async fn remember(
         superseded_by: None,
         created_at: Utc::now(),
         is_manual: true,
+        source_agent_id: None,
     };
 
     // Save to SQLite

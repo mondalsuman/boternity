@@ -288,7 +288,7 @@ pub async fn run_chat_loop(
                                 id: uuid::Uuid::now_v7(), bot_id: bot.id.0, session_id,
                                 fact: fact.clone(), category: boternity_types::memory::MemoryCategory::Fact,
                                 importance: 4, source_message_id: None, superseded_by: None,
-                                created_at: chrono::Utc::now(), is_manual: true,
+                                created_at: chrono::Utc::now(), is_manual: true, source_agent_id: None,
                             };
                             match state.chat_service.memory_repo().save_memory(&memory).await {
                                 Ok(()) => println!("\n  {} Remembered: {}\n", style("*").cyan().bold(), style(&fact).dim()),

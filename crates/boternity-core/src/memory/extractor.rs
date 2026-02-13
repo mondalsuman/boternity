@@ -152,6 +152,7 @@ impl SessionMemoryExtractor {
                     superseded_by: None,
                     created_at: Utc::now(),
                     is_manual: false,
+                    source_agent_id: None,
                 })
             })
             .collect();

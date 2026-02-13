@@ -71,6 +71,8 @@ pub struct MemoryEntry {
     pub created_at: DateTime<Utc>,
     /// Whether this memory was manually created by the user.
     pub is_manual: bool,
+    /// Which sub-agent created this memory (None for root agent).
+    pub source_agent_id: Option<Uuid>,
 }
 
 /// A pending memory extraction job.
@@ -283,6 +285,7 @@ mod tests {
             superseded_by: None,
             created_at: Utc::now(),
             is_manual: false,
+            source_agent_id: None,
         };
         let json = serde_json::to_string(&entry).unwrap();
         assert!(json.contains("\"category\":\"preference\""));

@@ -7,5 +7,10 @@
     "test:rust": "cargo test",
     "check": "cargo check",
     "clippy": "cargo clippy --workspace -- -D warnings"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
   }
 }

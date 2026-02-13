@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-10)
 
 **Core value:** A user can create a bot with a distinct identity, give it skills through an interactive builder, and have meaningful parallel conversations with it -- all running locally with full observability.
-**Current focus:** Phase 4 (Web UI Core + Fleet Dashboard) - Not started
+**Current focus:** Phase 4 (Web UI Core + Fleet Dashboard) - Complete
 
 ## Current Position
 
 Phase: 4 of 10 (Web UI Core + Fleet Dashboard)
-Plan: 0 of ? in current phase (not yet planned)
-Status: Ready to plan
-Last activity: 2026-02-12 -- Completed Phase 3 (Multi-Provider + Memory)
+Plan: 8 of 8 in current phase
+Status: Complete
+Last activity: 2026-02-13 -- Phase 4 complete, all 8 plans executed and verified
 
-Progress: [██████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░] 26/53 (~49%)
+Progress: [██████████████████████████████████████░░░░░░░░░░░░░░░] 34/53 (~64%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 26
-- Average duration: 8m 01s
-- Total execution time: 208m 31s
+- Total plans completed: 34
+- Average duration: 7m 18s
+- Total execution time: 249m 08s
 
 **By Phase:**
 
@@ -30,10 +30,11 @@ Progress: [███████████████████████
 | 1. Foundation + Bot Identity | 6/6 | 49m 14s | 8m 12s |
 | 2. Single-Agent Chat + LLM | 7/8 | 31m 46s | 4m 32s |
 | 3. Multi-Provider + Memory | 13/13 | 127m 31s | 9m 49s |
+| 4. Web UI Core + Fleet Dashboard | 8/8 | 40m 37s | 5m 05s |
 
 **Recent Trend:**
-- Last 5 plans: 03-09 (3m 31s), 03-08 (6m 31s), 03-12 (7m 37s), 03-13 (7m 35s), 03-11 (9m 21s)
-- Trend: Steady 7-9m for CLI plans; faster when reusing established patterns
+- Last 5 plans: 04-06 (4m 00s), 04-04 (5m 13s), 04-07 (3m 00s), 04-05 (3m 00s), 04-08 (5m 00s)
+- Trend: Phase 4 UI plans averaging ~4m (focused component tasks)
 
 *Updated after each plan completion*
 
@@ -167,6 +168,40 @@ Recent decisions affecting current work:
 - [03-11]: Verbose mode uses short flag -V (not -v which is taken by global verbosity counter)
 - [03-11]: Vector memory search integrated directly in chat loop with Option<BoxVectorMemoryStore> for graceful fallback
 - [03-11]: Provider add tests connection by default, --skip-test to bypass
+- [04-01]: async_stream::stream! for SSE (avoids complex Pin<Box> manual construction, produces Send stream)
+- [04-01]: Direct SQL for stats endpoint (efficient COUNT with conditional aggregation instead of service-layer list+count)
+- [04-01]: ChatRepository trait extended with clear_messages, count_sessions, count_messages (rather than separate stats repository)
+- [04-01]: SPA fallback via BOTERNITY_WEB_DIR env var with graceful degradation when dir absent
+- [04-01]: Conversation history loaded into AgentContext for session continuation in streaming endpoint
+- [04-02]: Sonner component rewritten to use Zustand theme store instead of next-themes (avoiding unnecessary dependency)
+- [04-02]: Dark theme as :root default with .light class override (not .dark class, dark-first design)
+- [04-02]: Bot detail uses TanStack Router layout route (route.tsx) for shared tab navigation across child routes
+- [04-02]: SidebarProvider wraps entire app for consistent sidebar state across all routes
+- [04-02]: TooltipProvider at root level for sidebar tooltip support on collapsed rail
+- [04-02]: TanStack Router/Query devtools lazy-loaded only in development mode
+- [04-03]: Client-side search/sort for bot grid (single-user app, small bot counts, immediate responsiveness)
+- [04-03]: DropdownMenu RadioGroup for sort picker instead of Select component (simpler, consistent)
+- [04-03]: placeholderData: (prev) => prev in useBots for smooth filter transitions
+- [04-03]: Simple 16-emoji grid picker instead of full emoji picker library
+- [04-03]: AlertDialog added as shadcn component for destructive action confirmations
+- [04-04]: ChatLayout shared wrapper for sibling routes (/chat/ and /chat/$sessionId are siblings not nested under TanStack Router)
+- [04-04]: fetch + ReadableStream for SSE (POST body required, EventSource only supports GET)
+- [04-04]: Functional updater setStreamedContent(prev => prev + text) avoids stale closure during rapid token updates
+- [04-04]: Isolated StreamingMessage component prevents full message list re-render on each token delta
+- [04-04]: AbortController for stop generation + unmount cleanup pattern
+- [04-06]: Active tab detection via useMatchRoute instead of defaultValue on Tabs (tracks URL changes)
+- [04-06]: Identity form rebuilds raw IDENTITY.md frontmatter on every change (preserves body content)
+- [04-06]: Local editor buffers populated once from fetch data, then managed locally (prevents overwrite on refetch)
+- [04-06]: shadcn/ui primitives (Label, Slider, Select, Switch) added for identity form controls
+- [04-05]: github-dark highlight.js theme for code block syntax coloring (matches dark-first design)
+- [04-05]: extractTextContent helper traverses React node tree for code copy (no DOM refs needed)
+- [04-05]: data-copied attribute drives icon swap on copy button (avoids re-render for visual feedback)
+- [04-05]: highlight.js added as direct dependency for CSS import (transitive dep through lowlight not importable in pnpm strict mode)
+- [04-07]: Version timeline as collapsible right panel (280px) with smooth width transition, collapsed by default
+- [04-07]: DiffViewer in large Dialog overlay (max-w-6xl, 80vh) rather than replacing editor pane
+- [04-07]: Rollback uses AlertDialog for destructive confirmation with scrollable content preview
+- [04-07]: Version actions (Compare, Restore) visible only when version is selected in timeline
+- [04-07]: useSoulVersion has staleTime: Infinity since versions are immutable
 
 ### Pending Todos
 
@@ -181,5 +216,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-13
-Stopped at: Completed Phase 3 (Multi-Provider + Memory) — all 13 plans executed, verified 5/5
+Stopped at: Phase 4 complete — all 8 plans executed, verified (42/42 must-haves)
 Resume file: None

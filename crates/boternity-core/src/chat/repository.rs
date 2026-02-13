@@ -84,4 +84,22 @@ pub trait ChatRepository: Send + Sync {
         &self,
         session_id: &Uuid,
     ) -> impl std::future::Future<Output = Result<Option<ContextSummary>, RepositoryError>> + Send;
+
+    /// Clear all messages from a session, resetting message_count to 0.
+    ///
+    /// Keeps the session record intact but removes all chat_messages.
+    fn clear_messages(
+        &self,
+        session_id: &Uuid,
+    ) -> impl std::future::Future<Output = Result<(), RepositoryError>> + Send;
+
+    /// Count total sessions across all bots.
+    fn count_sessions(
+        &self,
+    ) -> impl std::future::Future<Output = Result<u64, RepositoryError>> + Send;
+
+    /// Count total messages across all sessions.
+    fn count_messages(
+        &self,
+    ) -> impl std::future::Future<Output = Result<u64, RepositoryError>> + Send;
 }

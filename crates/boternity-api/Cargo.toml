@@ -38,5 +38,7 @@ syntect = { workspace = true }
 rustyline-async = { workspace = true }
 crossterm = { workspace = true }
 futures-util = { workspace = true }
+async-stream = { workspace = true }
 secrecy = { workspace = true }
 boternity-observe = { workspace = true }
+tokio-stream = "0.1"

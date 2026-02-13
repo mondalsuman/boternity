@@ -463,6 +463,48 @@ impl ChatRepository for SqliteChatRepository {
             None => Ok(None),
         }
     }
+
+    async fn clear_messages(&self, session_id: &Uuid) -> Result<(), RepositoryError> {
+        sqlx::query("DELETE FROM chat_messages WHERE session_id = ?")
+            .bind(session_id.to_string())
+            .execute(&self.pool.writer)
+            .await
+            .map_err(|e| RepositoryError::Query(e.to_string()))?;
+
+        sqlx::query("UPDATE chat_sessions SET message_count = 0 WHERE id = ?")
+            .bind(session_id.to_string())
+            .execute(&self.pool.writer)
+            .await
+            .map_err(|e| RepositoryError::Query(e.to_string()))?;
+
+        Ok(())
+    }
+
+    async fn count_sessions(&self) -> Result<u64, RepositoryError> {
+        let row = sqlx::query("SELECT COUNT(*) as cnt FROM chat_sessions")
+            .fetch_one(&self.pool.reader)
+            .await
+            .map_err(|e| RepositoryError::Query(e.to_string()))?;
+
+        let count: i64 = row
+            .try_get("cnt")
+            .map_err(|e| RepositoryError::Query(e.to_string()))?;
+
+        Ok(count as u64)
+    }
+
+    async fn count_messages(&self) -> Result<u64, RepositoryError> {
+        let row = sqlx::query("SELECT COUNT(*) as cnt FROM chat_messages")
+            .fetch_one(&self.pool.reader)
+            .await
+            .map_err(|e| RepositoryError::Query(e.to_string()))?;
+
+        let count: i64 = row
+            .try_get("cnt")
+            .map_err(|e| RepositoryError::Query(e.to_string()))?;
+
+        Ok(count as u64)
+    }
 }
 
 #[cfg(test)]

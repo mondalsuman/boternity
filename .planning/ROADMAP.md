@@ -124,14 +124,17 @@ Plans:
   3. WebSocket live updates show agent spawning, execution progress, and completion in real-time in the web UI
   4. Per-request token budget is enforced -- when a sub-agent tree approaches the budget limit, execution pauses with an alert rather than silently running up costs
   5. Cycle detection catches and breaks infinite sub-agent spawning loops before they exhaust resources
-**Plans**: TBD
+**Plans**: 8 plans
 
 Plans:
-- [ ] 05-01: Sub-agent spawning engine (sequential + parallel)
-- [ ] 05-02: Depth cap, cycle detection, and circuit breakers
-- [ ] 05-03: Message passing and shared workspace
-- [ ] 05-04: Event bus and WebSocket live updates
-- [ ] 05-05: Token budget enforcement per request
+- [ ] 05-01-PLAN.md -- Domain types (AgentEvent, SpawnInstruction, SubAgentResult, GlobalConfig) and new workspace dependencies
+- [ ] 05-02-PLAN.md -- Core primitives (RequestBudget, SharedWorkspace, CycleDetector, RequestContext, EventBus)
+- [ ] 05-03-PLAN.md -- Spawn instruction parser, AgentContext.child_for_task(), SystemPromptBuilder agent_capabilities
+- [ ] 05-04-PLAN.md -- AgentOrchestrator (parallel/sequential execution, retry, synthesis, budget/cancel integration)
+- [ ] 05-05-PLAN.md -- Config.toml loader, cost estimation, and pricing table
+- [ ] 05-06-PLAN.md -- WebSocket handler, EventBus on AppState, /ws/events route
+- [ ] 05-07-PLAN.md -- CLI tree renderer, budget display, and orchestrator integration into CLI + HTTP handlers
+- [ ] 05-08-PLAN.md -- Web UI: WebSocket hook, agent store, agent blocks, tree panel, budget indicator, WS status
 
 ### Phase 6: Skill System + WASM Sandbox
 **Goal**: Agents can be extended with modular skills -- local skills run with permissions, untrusted registry skills run in a WASM sandbox, and users can discover, install, and manage skills from agentskills.io and community registries.
@@ -241,7 +244,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 2. Single-Agent Chat + LLM | 8/8 | Complete | 2026-02-12 |
 | 3. Multi-Provider + Memory | 13/13 | Complete | 2026-02-12 |
 | 4. Web UI Core + Fleet Dashboard | 0/8 | Not started | - |
-| 5. Agent Hierarchy + Event System | 0/5 | Not started | - |
+| 5. Agent Hierarchy + Event System | 0/8 | Not started | - |
 | 6. Skill System + WASM Sandbox | 0/6 | Not started | - |
 | 7. Builder System | 0/5 | Not started | - |
 | 8. Workflows + Pipelines | 0/6 | Not started | - |

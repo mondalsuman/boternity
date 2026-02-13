@@ -1026,6 +1026,7 @@ dependencies = [
  "comfy-table",
  "console",
  "crossterm 0.28.1",
+ "dashmap",
  "dialoguer",
  "futures-util",
  "indicatif",

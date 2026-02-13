@@ -146,15 +146,21 @@ Plans:
   3. Skill permission model works -- skills declare required capabilities at install time, user approves or denies, and the runtime enforces those grants (a skill cannot access capabilities it was not granted)
   4. Skill inheritance works -- a child skill extends a parent skill's features and the agent sees the combined capabilities
   5. Defense-in-depth is observable -- untrusted skills are sandboxed at WASM level, WASI capabilities are restricted, and OS-level sandboxing provides a second barrier
-**Plans**: TBD
+**Plans**: 12 plans
 
 Plans:
-- [ ] 06-01: Skill definition format and local skill execution
-- [ ] 06-02: Skill inheritance hierarchy
-- [ ] 06-03: WASM sandbox (Wasmtime + WASI)
-- [ ] 06-04: Registry discovery and installation (skills.sh + ComposioHQ)
-- [ ] 06-05: Permission model and trust tiers
-- [ ] 06-06: Skill browser UI and CLI skill management
+- [ ] 06-01-PLAN.md -- Skill domain types (SkillManifest, TrustTier, Capability, permissions, audit) and Phase 6 workspace dependencies
+- [ ] 06-02-PLAN.md -- SKILL.md manifest parser (agentskills.io format) and filesystem skill store (~/.boternity/skills/)
+- [ ] 06-03-PLAN.md -- Permission model (CapabilityEnforcer, granular grants/revocation) and SQLite audit logging
+- [ ] 06-04-PLAN.md -- Dependency resolution (petgraph DAG + toposort) and inheritance composition (mixin, max 3 levels)
+- [ ] 06-05-PLAN.md -- WIT interface definition (boternity:skill) and Wasmtime runtime configuration (dual engines per trust tier)
+- [ ] 06-06-PLAN.md -- SkillExecutor trait, prompt-based skill injection (progressive disclosure), and local skill executor
+- [ ] 06-07-PLAN.md -- WASM sandboxed executor (capability-gated host imports, ResourceLimiter, fresh Store per invocation)
+- [ ] 06-08-PLAN.md -- OS-level sandbox (macOS Seatbelt + Linux Landlock subprocess model) for defense-in-depth
+- [ ] 06-09-PLAN.md -- Registry discovery (GitHub API, skills.sh, ComposioHQ) with pluggable registry trait and local caching
+- [ ] 06-10-PLAN.md -- Agent integration (SystemPromptBuilder skills, skill chaining) and AppState wiring
+- [ ] 06-11-PLAN.md -- CLI skill commands (create, install, list, inspect, browse) and ratatui TUI skill browser
+- [ ] 06-12-PLAN.md -- REST API skill handlers and web UI skill management page (Skills tab in bot detail)
 
 ### Phase 7: Builder System
 **Goal**: Users can create fully-configured agents and skills through an interactive guided experience -- a universal builder agent powers both the CLI wizard and the web UI builder bot, asking adaptive questions and assembling the result.
@@ -245,7 +251,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 3. Multi-Provider + Memory | 13/13 | Complete | 2026-02-12 |
 | 4. Web UI Core + Fleet Dashboard | 8/8 | Complete | 2026-02-13 |
 | 5. Agent Hierarchy + Event System | 8/8 | Complete | 2026-02-13 |
-| 6. Skill System + WASM Sandbox | 0/6 | Not started | - |
+| 6. Skill System + WASM Sandbox | 0/12 | Not started | - |
 | 7. Builder System | 0/5 | Not started | - |
 | 8. Workflows + Pipelines | 0/6 | Not started | - |
 | 9. MCP Integration | 0/4 | Not started | - |

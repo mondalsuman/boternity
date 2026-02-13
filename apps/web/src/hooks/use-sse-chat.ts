@@ -7,6 +7,7 @@
  */
 
 import { useState, useCallback, useRef, useEffect } from "react";
+import { useApiKeyStore } from "@/stores/api-key-store";
 
 export interface StreamUsage {
   input_tokens: number;
@@ -30,9 +31,13 @@ export function useSSEChat() {
       abortRef.current = new AbortController();
 
       try {
+        const apiKey = useApiKeyStore.getState().apiKey;
         const res = await fetch(`/api/v1/bots/${botId}/chat/stream`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            ...(apiKey ? { "X-API-Key": apiKey } : {}),
+          },
           body: JSON.stringify({ session_id: sessionId, message }),
           signal: abortRef.current.signal,
         });

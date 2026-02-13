@@ -9,6 +9,7 @@
  */
 
 import type { ApiEnvelope } from "@/types/api";
+import { useApiKeyStore } from "@/stores/api-key-store";
 
 export class ApiError extends Error {
   public readonly code: string;
@@ -34,10 +35,12 @@ export async function apiFetch<T>(
   path: string,
   init?: RequestInit,
 ): Promise<T> {
+  const apiKey = useApiKeyStore.getState().apiKey;
   const res = await fetch(`/api/v1${path}`, {
     ...init,
     headers: {
       "Content-Type": "application/json",
+      ...(apiKey ? { "X-API-Key": apiKey } : {}),
       ...init?.headers,
     },
   });

@@ -14,6 +14,7 @@ import { MessageCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MessageBubble } from "@/components/chat/message-bubble";
+import { MarkdownRenderer } from "@/components/chat/markdown-renderer";
 import { StreamingIndicator } from "@/components/chat/streaming-indicator";
 import type { ChatMessage } from "@/types/chat";
 
@@ -96,7 +97,8 @@ export function MessageList({
 /**
  * Isolated streaming message component.
  *
- * Receives streamedContent as a prop and renders it. By being a separate
+ * Receives streamedContent as a prop and renders it through MarkdownRenderer
+ * for progressive markdown rendering during streaming. By being a separate
  * component, React can update just this node on each token delta without
  * re-rendering the entire message list (Pitfall 4 mitigation).
  */
@@ -113,8 +115,8 @@ function StreamingMessage({
         {botEmoji || "..."}
       </div>
       <div className="flex flex-col items-start max-w-[75%]">
-        <div className="bg-muted text-foreground rounded-2xl rounded-bl-md px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap break-words">
-          {content}
+        <div className="bg-muted text-foreground rounded-2xl rounded-bl-md px-4 py-2.5 text-sm leading-relaxed break-words">
+          <MarkdownRenderer content={content} />
           <span className="inline-block w-0.5 h-4 bg-foreground/70 ml-0.5 animate-pulse align-text-bottom" />
         </div>
       </div>

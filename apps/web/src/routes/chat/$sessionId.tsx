@@ -59,15 +59,15 @@ function ChatSessionPage() {
     async (message: string) => {
       if (!botId) return;
 
-      await sendMessage(botId, message, sessionId);
+      const resolvedId = await sendMessage(botId, message, sessionId);
 
       // After streaming completes, refresh messages from server.
-      // The server has saved both user and assistant messages.
-      // Await invalidation so server messages load before clearing streamed content.
-      await queryClient.invalidateQueries({ queryKey: ["messages", sessionId] });
+      // Use resolvedId (returned from stream) to avoid stale closure issues.
+      const sid = resolvedId ?? sessionId;
+      await queryClient.invalidateQueries({ queryKey: ["messages", sid] });
       clearStreamedContent();
       queryClient.invalidateQueries({ queryKey: ["sessions"] });
-      queryClient.invalidateQueries({ queryKey: ["session", sessionId] });
+      queryClient.invalidateQueries({ queryKey: ["session", sid] });
     },
     [botId, sessionId, sendMessage, clearStreamedContent, queryClient],
   );

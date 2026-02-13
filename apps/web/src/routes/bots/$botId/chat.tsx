@@ -46,36 +46,35 @@ function BotChatPage() {
     clearStreamedContent,
     streamedContent,
     isStreaming,
-    activeSessionId: streamSessionId,
     error,
   } = useSSEChat();
 
   const handleSend = useCallback(
     async (message: string) => {
-      // Send to current session, or null to create a new one
-      await sendMessage(botId, message, activeSessionId ?? undefined);
+      // Send to current session, or undefined to create a new one
+      const resolvedId = await sendMessage(
+        botId,
+        message,
+        activeSessionId ?? undefined,
+      );
 
-      // After streaming completes, refresh data.
-      // Await messages invalidation so server messages load before clearing streamed content.
-      if (activeSessionId) {
+      // Use resolvedId (returned from stream) to avoid stale closure issues.
+      // This is the actual session ID — either the existing one or a newly created one.
+      const sid = resolvedId ?? activeSessionId;
+      if (sid) {
         await queryClient.invalidateQueries({
-          queryKey: ["messages", activeSessionId],
+          queryKey: ["messages", sid],
         });
       }
       clearStreamedContent();
       queryClient.invalidateQueries({ queryKey: ["sessions", botId] });
       // If a new session was created, select it
-      if (!activeSessionId && streamSessionId) {
-        setSelectedSessionId(streamSessionId);
+      if (!activeSessionId && resolvedId) {
+        setSelectedSessionId(resolvedId);
       }
     },
-    [botId, activeSessionId, sendMessage, clearStreamedContent, queryClient, streamSessionId],
+    [botId, activeSessionId, sendMessage, clearStreamedContent, queryClient],
   );
-
-  // When stream creates a new session, auto-select it
-  if (streamSessionId && !activeSessionId) {
-    setSelectedSessionId(streamSessionId);
-  }
 
   const handleNewChat = () => {
     setSelectedSessionId(null);

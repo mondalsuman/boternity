@@ -23,12 +23,20 @@ export function useSSEChat() {
   const abortRef = useRef<AbortController | null>(null);
 
   const sendMessage = useCallback(
-    async (botId: string, message: string, sessionId?: string) => {
+    async (
+      botId: string,
+      message: string,
+      sessionId?: string,
+    ): Promise<string | null> => {
       setIsStreaming(true);
       setStreamedContent("");
       setError(null);
       setUsage(null);
       abortRef.current = new AbortController();
+
+      // Track session ID locally so the caller gets the resolved value
+      // (avoids stale closure issues with state)
+      let resolvedSessionId: string | null = sessionId ?? null;
 
       try {
         const apiKey = useApiKeyStore.getState().apiKey;
@@ -71,6 +79,7 @@ export function useSSEChat() {
 
                 switch (currentEventType) {
                   case "session":
+                    resolvedSessionId = event.session_id;
                     setActiveSessionId(event.session_id);
                     break;
                   case "text_delta":
@@ -108,6 +117,8 @@ export function useSSEChat() {
       } finally {
         setIsStreaming(false);
       }
+
+      return resolvedSessionId;
     },
     [],
   );

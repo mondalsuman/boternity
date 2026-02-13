@@ -5,7 +5,9 @@
 //! and session persistence. Entry point: `loop_runner::run_chat_loop`.
 
 pub mod banner;
+pub mod budget_display;
 pub mod commands;
 pub mod input;
 pub mod loop_runner;
 pub mod renderer;
+pub mod tree_renderer;

@@ -15,7 +15,16 @@ license = "MIT"
 
 [workspace.dependencies]
 # HTTP framework
-axum = { version = "0.8", features = ["macros"] }
+axum = { version = "0.8", features = ["macros", "ws"] }
+
+# Concurrent hash map
+dashmap = { version = "6.1", features = ["serde"] }
+
+# Config file parsing
+toml = "0.8"
+
+# Async utilities (CancellationToken)
+tokio-util = "0.7"
 
 # Async runtime
 tokio = { version = "1", features = ["full"] }

@@ -16,6 +16,8 @@ thiserror = { workspace = true }
 tokio = { version = "1", features = ["time"] }
 tracing = { workspace = true }
 uuid = { workspace = true }
+tokio-util = { workspace = true }
+dashmap = { workspace = true }
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["full"] }

@@ -42,3 +42,4 @@ async-stream = { workspace = true }
 secrecy = { workspace = true }
 boternity-observe = { workspace = true }
 tokio-stream = "0.1"
+tokio-util = { workspace = true }

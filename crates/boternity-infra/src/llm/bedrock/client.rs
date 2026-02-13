@@ -68,19 +68,21 @@ impl BedrockProvider {
             .build()
             .expect("failed to create reqwest client");
 
-        // Detect region from the token's embedded credential scope.
-        // The full key (including the bedrock-api-key- prefix) is sent as-is.
+        // Strip the bedrock-api-key- prefix so only the base64 token is used
+        // as the Bearer token in HTTP requests.
         let raw_key = api_key.expose_secret().to_string();
         let token_part = raw_key.strip_prefix(Self::KEY_PREFIX).unwrap_or(&raw_key);
         let effective_region = Self::detect_region_from_token(token_part)
             .unwrap_or(region);
+
+        let bearer_token = SecretString::from(token_part.to_string());
 
         let model_id = Self::to_bedrock_model_id(&model, &effective_region);
         let capabilities = Self::capabilities_for_model(&model);
 
         Self {
             client,
-            api_key,
+            api_key: bearer_token,
             region: effective_region,
             model_id,
             model,

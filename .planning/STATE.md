@@ -228,6 +228,10 @@ Recent decisions affecting current work:
 - [05-06]: WsCommand serde tagged enum matches AgentEvent convention (#[serde(tag = "type", rename_all = "snake_case")])
 - [05-06]: DashMap for agent_cancellations and budget_responses (concurrent access from WebSocket + orchestrator)
 - [05-06]: WebSocket disconnect does NOT auto-cancel agents (reconnection-safe, per research pitfall 4)
+- [05-07]: Two-path execution in loop_runner: parse_spawn_instructions() on initial response decides orchestrator vs direct stream
+- [05-07]: HTTP orchestrator runs in tokio::spawn with mpsc channel result delivery, EventBus subscriber in SSE stream loop
+- [05-07]: Budget warning auto-continues in CLI (stdin reading during orchestrator execution deferred as TODO)
+- [05-07]: --quiet / -q flag on Chat command suppresses sub-agent detail, showing only final synthesis
 - [05-08]: Native WebSocket API (no npm dep) with exponential backoff 1s-30s, 30% jitter, max 10 attempts
 - [05-08]: Map-based Zustand store with functional updates instead of immer for agent tree
 - [05-08]: AgentEvent forwarded from SSE via useAgentStore.getState().handleEvent() (outside React lifecycle)

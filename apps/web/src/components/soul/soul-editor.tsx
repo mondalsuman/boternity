@@ -24,8 +24,16 @@ const AUTOSAVE_DELAY = 2000;
 
 type SoulFileTab = "soul" | "identity" | "user";
 
+import type { SoulVersion } from "@/types/soul";
+
 interface SoulEditorProps {
   botId: string;
+  /** When set, opens the diff viewer dialog comparing two versions. */
+  diffVersions?: { original: SoulVersion; modified: SoulVersion } | null;
+  onCloseDiff?: () => void;
+  /** When set, opens the rollback confirmation dialog for this version. */
+  rollbackVersion?: SoulVersion | null;
+  onCloseRollback?: () => void;
 }
 
 /**
@@ -38,7 +46,13 @@ interface SoulEditorProps {
  * - Auto-save after 2s debounce
  * - Identity form view with toggle to raw text
  */
-export function SoulEditor({ botId }: SoulEditorProps) {
+export function SoulEditor({
+  botId,
+  diffVersions,
+  onCloseDiff,
+  rollbackVersion,
+  onCloseRollback,
+}: SoulEditorProps) {
   const theme = useThemeStore((s) => s.theme);
   const editorRef = useRef<MonacoEditor.IStandaloneCodeEditor | null>(null);
 

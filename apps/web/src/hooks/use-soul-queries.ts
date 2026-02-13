@@ -47,6 +47,39 @@ export function useUpdateSoul(botId: string) {
   });
 }
 
+/** Fetch a specific soul version by number. */
+export function useSoulVersion(botId: string, version: number | null) {
+  return useQuery({
+    queryKey: ["soul-version", botId, version],
+    queryFn: () =>
+      apiFetch<SoulVersion>(`/bots/${botId}/soul/versions/${version}`),
+    enabled: !!botId && version !== null,
+    staleTime: Infinity, // Versions are immutable
+  });
+}
+
+/** Rollback to a previous version (creates a new version with old content). */
+export function useRollbackSoul(botId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (version: number) =>
+      apiFetch<Soul>(`/bots/${botId}/soul/rollback`, {
+        method: "POST",
+        body: JSON.stringify({ version }),
+      }),
+    onSuccess: (_data, version) => {
+      queryClient.invalidateQueries({ queryKey: ["soul", botId] });
+      queryClient.invalidateQueries({ queryKey: ["soul-versions", botId] });
+      queryClient.invalidateQueries({ queryKey: ["bot", botId] });
+      toast.success(`Rolled back to version ${version}`);
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to rollback");
+    },
+  });
+}
+
 // ----- Identity (IDENTITY.md) -----
 
 /** API response shape for the identity endpoint. */

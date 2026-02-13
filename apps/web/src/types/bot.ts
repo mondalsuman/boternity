@@ -14,6 +14,7 @@ export interface Bot {
   category: string | null;
   created_at: string;
   updated_at: string;
+  last_active_at: string | null;
   version_count: number;
 }
 

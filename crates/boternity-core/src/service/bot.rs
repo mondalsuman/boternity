@@ -259,6 +259,19 @@ impl<B: BotRepository, S: SoulRepository, F: FileSystem, H: ContentHasher>
             .map_err(|e| BotError::StorageError(e.to_string()))
     }
 
+    /// Touch a bot's `last_active_at` timestamp (e.g., after a chat).
+    pub async fn touch_activity(&self, id: &BotId) -> Result<(), BotError> {
+        let mut bot = self.get_bot(id).await?;
+        let now = chrono::Utc::now();
+        bot.last_active_at = Some(now);
+        bot.updated_at = now;
+        self.bot_repo
+            .update(&bot)
+            .await
+            .map_err(|e| BotError::StorageError(e.to_string()))?;
+        Ok(())
+    }
+
     /// Delete a bot and remove its directory from disk.
     pub async fn delete_bot(&self, id: &BotId) -> Result<(), BotError> {
         // Get bot to find slug for directory cleanup

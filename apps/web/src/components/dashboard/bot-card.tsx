@@ -62,8 +62,9 @@ export function BotCard({ bot }: BotCardProps) {
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   const emoji = bot.emoji || bot.name.charAt(0).toUpperCase();
-  const lastActivity = bot.updated_at
-    ? formatDistanceToNow(new Date(bot.updated_at), { addSuffix: true })
+  const activityDate = bot.last_active_at ?? bot.updated_at;
+  const lastActivity = activityDate
+    ? formatDistanceToNow(new Date(activityDate), { addSuffix: true })
     : "Never";
 
   function handleToggleStatus() {
@@ -163,12 +164,19 @@ export function BotCard({ bot }: BotCardProps) {
         </CardContent>
 
         <CardFooter className="pt-0">
-          <Button variant="outline" size="sm" className="w-full" asChild>
-            <Link to="/bots/$botId/chat" params={{ botId: bot.id }}>
+          {bot.status === "active" ? (
+            <Button variant="outline" size="sm" className="w-full" asChild>
+              <Link to="/bots/$botId/chat" params={{ botId: bot.id }}>
+                <MessageSquare className="size-3.5" />
+                Chat
+              </Link>
+            </Button>
+          ) : (
+            <Button variant="outline" size="sm" className="w-full" disabled>
               <MessageSquare className="size-3.5" />
-              Chat
-            </Link>
-          </Button>
+              {bot.status === "disabled" ? "Disabled" : "Archived"}
+            </Button>
+          )}
         </CardFooter>
       </Card>
 

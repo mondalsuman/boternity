@@ -86,6 +86,8 @@ function BotChatPage() {
       }
       clearStreamedContent();
       queryClient.invalidateQueries({ queryKey: ["sessions", botId] });
+      queryClient.invalidateQueries({ queryKey: ["stats"] });
+      queryClient.invalidateQueries({ queryKey: ["bots"] });
       // If a new session was created, select it
       if (!activeSessionId && resolvedId) {
         setSelectedSessionId(resolvedId);
@@ -99,9 +101,18 @@ function BotChatPage() {
   };
 
   const hasMultipleSessions = sessions && sessions.length > 1;
+  const isChatDisabled = bot != null && bot.status !== "active";
 
   return (
     <div className="flex flex-col h-[calc(100vh-14rem)]">
+      {/* Disabled banner */}
+      {isChatDisabled && (
+        <div className="mx-3 mt-2 flex items-center gap-2 rounded-md border border-yellow-500/50 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-600 dark:text-yellow-400">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          <span>This bot is {bot.status} and cannot chat. Enable it from the dashboard to resume.</span>
+        </div>
+      )}
+
       {/* Session picker (only shown when there are multiple sessions) */}
       {hasMultipleSessions && (
         <div className="flex items-center gap-2 border-b px-3 py-2 overflow-x-auto">
@@ -150,6 +161,7 @@ function BotChatPage() {
         onSend={handleSend}
         onStop={stopGeneration}
         isStreaming={isStreaming}
+        disabled={isChatDisabled}
       />
     </div>
   );

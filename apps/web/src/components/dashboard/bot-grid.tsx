@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Search, ArrowUpDown, RefreshCw } from "lucide-react";
+import { Search, ArrowUpDown, ArrowUp, ArrowDown, RefreshCw } from "lucide-react";
 import type { Bot, BotStatus } from "@/types/bot";
 import { useBots } from "@/hooks/use-bot-queries";
 import { BotCard } from "./bot-card";
@@ -15,9 +15,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 type SortBy = "name" | "last_activity" | "status";
+type SortDirection = "asc" | "desc";
 
 const SORT_LABELS: Record<SortBy, string> = {
-  name: "Name (A-Z)",
+  name: "Name",
   last_activity: "Last Activity",
   status: "Status",
 };
@@ -45,6 +46,7 @@ function BotGridSkeleton() {
 export function BotGrid({ statusFilter }: BotGridProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortBy>("last_activity");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
   const { data: bots, isLoading, isError, refetch } = useBots();
 
@@ -65,26 +67,25 @@ export function BotGrid({ statusFilter }: BotGridProps) {
     }
 
     // Sort
+    const dir = sortDirection === "asc" ? 1 : -1;
     result.sort((a, b) => {
       switch (sortBy) {
         case "name":
-          return a.name.localeCompare(b.name);
-        case "last_activity":
-          return (
-            new Date(b.updated_at).getTime() -
-            new Date(a.updated_at).getTime()
-          );
+          return dir * a.name.localeCompare(b.name);
+        case "last_activity": {
+          const aDate = a.last_active_at ?? a.updated_at;
+          const bDate = b.last_active_at ?? b.updated_at;
+          return dir * (new Date(aDate).getTime() - new Date(bDate).getTime());
+        }
         case "status":
-          return (
-            (STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9)
-          );
+          return dir * ((STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9));
         default:
           return 0;
       }
     });
 
     return result;
-  }, [bots, statusFilter, searchQuery, sortBy]);
+  }, [bots, statusFilter, searchQuery, sortBy, sortDirection]);
 
   if (isLoading) {
     return <BotGridSkeleton />;
@@ -139,6 +140,20 @@ export function BotGrid({ statusFilter }: BotGridProps) {
               </DropdownMenuRadioGroup>
             </DropdownMenuContent>
           </DropdownMenu>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              setSortDirection((d) => (d === "asc" ? "desc" : "asc"))
+            }
+            title={sortDirection === "asc" ? "Ascending" : "Descending"}
+          >
+            {sortDirection === "asc" ? (
+              <ArrowUp className="size-3.5" />
+            ) : (
+              <ArrowDown className="size-3.5" />
+            )}
+          </Button>
         </div>
       )}
 

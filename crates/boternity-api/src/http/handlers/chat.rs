@@ -88,6 +88,14 @@ pub async fn stream_chat(
         }
     };
 
+    // Reject chat for non-active bots
+    if bot.status != boternity_types::bot::BotStatus::Active {
+        return Err(AppError::Validation(format!(
+            "Bot '{}' is {} and cannot chat",
+            bot.name, bot.status
+        )));
+    }
+
     // Read personality files
     let soul_content = tokio::fs::read_to_string(LocalFileSystem::soul_path(
         &state.data_dir,
@@ -239,6 +247,8 @@ pub async fn stream_chat(
     let user_message = body.message.clone();
     let chat_service = state.chat_service.clone();
     let model_for_save = model.clone();
+    let bot_service = state.bot_service.clone();
+    let bot_id = bot.id.clone();
 
     // Build the SSE stream
     let sse_stream = async_stream::stream! {
@@ -311,6 +321,9 @@ pub async fn stream_chat(
             let _ = chat_service
                 .update_session_tokens(&session_id, input_tokens, output_tokens)
                 .await;
+
+            // Update bot's last_active_at timestamp
+            let _ = bot_service.touch_activity(&bot_id).await;
         }
 
         // Emit done event

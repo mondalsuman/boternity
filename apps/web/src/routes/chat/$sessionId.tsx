@@ -85,6 +85,8 @@ function ChatSessionPage() {
       clearStreamedContent();
       queryClient.invalidateQueries({ queryKey: ["sessions"] });
       queryClient.invalidateQueries({ queryKey: ["session", sid] });
+      queryClient.invalidateQueries({ queryKey: ["stats"] });
+      queryClient.invalidateQueries({ queryKey: ["bots"] });
     },
     [botId, sessionId, sendMessage, clearStreamedContent, queryClient],
   );

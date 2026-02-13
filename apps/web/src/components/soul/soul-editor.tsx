@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Editor, { type OnMount } from "@monaco-editor/react";
 import type { editor as MonacoEditor } from "monaco-editor";
+import { format } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -18,6 +19,8 @@ import {
 } from "@/hooks/use-soul-queries";
 import { MarkdownPreview } from "./markdown-preview";
 import { IdentityForm, type IdentityFormValues } from "./identity-form";
+import { DiffViewer } from "./diff-viewer";
+import { RollbackDialog } from "./rollback-dialog";
 
 /** Auto-save debounce delay (2 seconds of inactivity). */
 const AUTOSAVE_DELAY = 2000;
@@ -297,6 +300,28 @@ export function SoulEditor({
           <MarkdownPreview content={activeContent} />
         </div>
       </div>
+
+      {/* Diff viewer dialog */}
+      {diffVersions && onCloseDiff && (
+        <DiffViewer
+          open={!!diffVersions}
+          onClose={onCloseDiff}
+          original={diffVersions.original.content}
+          modified={diffVersions.modified.content}
+          originalLabel={`Version ${diffVersions.original.version} — ${format(new Date(diffVersions.original.created_at), "MMM d, yyyy")}`}
+          modifiedLabel={`Version ${diffVersions.modified.version} (current) — ${format(new Date(diffVersions.modified.created_at), "MMM d, yyyy")}`}
+        />
+      )}
+
+      {/* Rollback confirmation dialog */}
+      {onCloseRollback && (
+        <RollbackDialog
+          botId={botId}
+          version={rollbackVersion ?? null}
+          open={!!rollbackVersion}
+          onClose={onCloseRollback}
+        />
+      )}
     </div>
   );
 }

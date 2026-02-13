@@ -1,0 +1,27 @@
+package boternity:skill;
+
+interface host {
+    record skill-context {
+        bot-name: string,
+        bot-slug: string,
+        skill-name: string,
+        invocation-id: string,
+    }
+
+    get-context: func() -> skill-context;
+    recall-memory: func(query: string, limit: u32) -> list<string>;
+    http-get: func(url: string) -> result<string, string>;
+    http-post: func(url: string, body: string) -> result<string, string>;
+    read-file: func(path: string) -> result<string, string>;
+    write-file: func(path: string, content: string) -> result<_, string>;
+    get-secret: func(name: string) -> result<string, string>;
+    read-env: func(name: string) -> result<string, string>;
+    log: func(level: string, message: string);
+}
+
+world skill-plugin {
+    import host;
+    export get-name: func() -> string;
+    export get-description: func() -> string;
+    export execute: func(input: string) -> result<string, string>;
+}

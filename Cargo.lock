@@ -1107,6 +1107,7 @@ dependencies = [
 name = "boternity-core"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "async-stream",
  "boternity-types",
  "chrono",
@@ -1120,6 +1121,7 @@ dependencies = [
  "thiserror 1.0.69",
  "tokio",
  "tokio-util",
+ "toml 0.8.23",
  "tracing",
  "uuid",
 ]

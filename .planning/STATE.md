@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 6 of 10 (Skill System + WASM Sandbox)
-Plan: 5 of 12 in current phase (4 complete)
+Plan: 4 of 12 in current phase (4 complete: 06-01, 06-03, 06-04, 06-05)
 Status: In progress
-Last activity: 2026-02-14 -- Completed 06-03-PLAN.md (Permission model + audit logging)
+Last activity: 2026-02-14 -- Completed 06-04-PLAN.md (Dependency resolution + inheritance composition)
 
 Progress: [██████████████████████████████████████████████████░░░] 46/55 (~84%)
 
@@ -35,8 +35,8 @@ Progress: [███████████████████████
 | 6. Skill System + WASM Sandbox | 4/12 | 19m 32s | 4m 53s |
 
 **Recent Trend:**
-- Last 5 plans: 05-08 (4m 00s), 06-01 (3m 32s), 06-05 (7m 00s), 06-03 (9m 00s)
-- Trend: Permission/audit plan slightly longer due to parallel plan conflict resolution
+- Last 5 plans: 06-01 (3m 32s), 06-05 (7m 00s), 06-03 (9m 00s), 06-04 (8m 24s)
+- Trend: Wave 2 plans averaging ~8m with type annotation fixes for Rust 2024 edition
 
 *Updated after each plan completion*
 
@@ -253,6 +253,11 @@ Recent decisions affecting current work:
 - [06-03]: Child grants take precedence over parent in merge_inherited_grants
 - [06-03]: skill_audit_log.bot_id is TEXT not FK (audit persists after bot deletion)
 - [06-03]: Capabilities stored as JSON array in SQLite TEXT column
+- [06-04]: resolve_inheritance takes mutable visited HashSet param for cycle detection across recursive calls
+- [06-04]: Version conflicts parsed from dep_name@version_req format in dependency strings
+- [06-04]: version_ranges_compatible tests representative versions for intersection (not algebraic)
+- [06-04]: Inheritance removes current skill from visited after resolution (allows diamond parent graphs)
+- [06-04]: MAX_INHERITANCE_DEPTH = 3 (depth 0 = skill, depth 3 = great-grandparent triggers error)
 
 ### Pending Todos
 
@@ -267,5 +272,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 06-03-PLAN.md (Permission model + audit logging)
+Stopped at: Completed 06-04-PLAN.md (Dependency resolution + inheritance composition)
 Resume file: None

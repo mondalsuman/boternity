@@ -43,6 +43,7 @@ function BotChatPage() {
   const {
     sendMessage,
     stopGeneration,
+    clearStreamedContent,
     streamedContent,
     isStreaming,
     activeSessionId: streamSessionId,
@@ -54,19 +55,21 @@ function BotChatPage() {
       // Send to current session, or null to create a new one
       await sendMessage(botId, message, activeSessionId ?? undefined);
 
-      // After streaming completes, refresh data
-      queryClient.invalidateQueries({ queryKey: ["sessions", botId] });
+      // After streaming completes, refresh data.
+      // Await messages invalidation so server messages load before clearing streamed content.
       if (activeSessionId) {
-        queryClient.invalidateQueries({
+        await queryClient.invalidateQueries({
           queryKey: ["messages", activeSessionId],
         });
       }
+      clearStreamedContent();
+      queryClient.invalidateQueries({ queryKey: ["sessions", botId] });
       // If a new session was created, select it
       if (!activeSessionId && streamSessionId) {
         setSelectedSessionId(streamSessionId);
       }
     },
-    [botId, activeSessionId, sendMessage, queryClient, streamSessionId],
+    [botId, activeSessionId, sendMessage, clearStreamedContent, queryClient, streamSessionId],
   );
 
   // When stream creates a new session, auto-select it

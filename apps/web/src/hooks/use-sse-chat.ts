@@ -124,9 +124,14 @@ export function useSSEChat() {
     };
   }, []);
 
+  const clearStreamedContent = useCallback(() => {
+    setStreamedContent("");
+  }, []);
+
   return {
     sendMessage,
     stopGeneration,
+    clearStreamedContent,
     streamedContent,
     isStreaming,
     activeSessionId,

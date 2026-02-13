@@ -49,6 +49,7 @@ function ChatSessionPage() {
   const {
     sendMessage,
     stopGeneration,
+    clearStreamedContent,
     streamedContent,
     isStreaming,
     error,
@@ -60,13 +61,15 @@ function ChatSessionPage() {
 
       await sendMessage(botId, message, sessionId);
 
-      // After streaming completes, refresh messages from server
-      // The server has saved both user and assistant messages
-      queryClient.invalidateQueries({ queryKey: ["messages", sessionId] });
+      // After streaming completes, refresh messages from server.
+      // The server has saved both user and assistant messages.
+      // Await invalidation so server messages load before clearing streamed content.
+      await queryClient.invalidateQueries({ queryKey: ["messages", sessionId] });
+      clearStreamedContent();
       queryClient.invalidateQueries({ queryKey: ["sessions"] });
       queryClient.invalidateQueries({ queryKey: ["session", sessionId] });
     },
-    [botId, sessionId, sendMessage, queryClient],
+    [botId, sessionId, sendMessage, clearStreamedContent, queryClient],
   );
 
   const handleDelete = useCallback(() => {

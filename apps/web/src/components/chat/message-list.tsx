@@ -83,8 +83,12 @@ export function MessageList({
         {isStreaming && !streamedContent && (
           <StreamingIndicator botEmoji={botEmoji} />
         )}
-        {isStreaming && streamedContent && (
-          <StreamingMessage content={streamedContent} botEmoji={botEmoji} />
+        {streamedContent && (
+          <StreamingMessage
+            content={streamedContent}
+            botEmoji={botEmoji}
+            showCursor={isStreaming}
+          />
         )}
 
         {/* Scroll anchor */}
@@ -105,9 +109,11 @@ export function MessageList({
 function StreamingMessage({
   content,
   botEmoji,
+  showCursor,
 }: {
   content: string;
   botEmoji?: string;
+  showCursor: boolean;
 }) {
   return (
     <div className="flex gap-3">
@@ -117,7 +123,9 @@ function StreamingMessage({
       <div className="flex flex-col items-start max-w-[75%]">
         <div className="bg-muted text-foreground rounded-2xl rounded-bl-md px-4 py-2.5 text-sm leading-relaxed break-words">
           <MarkdownRenderer content={content} />
-          <span className="inline-block w-0.5 h-4 bg-foreground/70 ml-0.5 animate-pulse align-text-bottom" />
+          {showCursor && (
+            <span className="inline-block w-0.5 h-4 bg-foreground/70 ml-0.5 animate-pulse align-text-bottom" />
+          )}
         </div>
       </div>
     </div>

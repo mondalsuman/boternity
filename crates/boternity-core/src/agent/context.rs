@@ -141,6 +141,39 @@ impl AgentContext {
         self.token_budget.should_summarize(estimated_tokens)
     }
 
+    /// Create a child context for a sub-agent task.
+    ///
+    /// Inherits the bot's personality (SOUL.md) and model config but gets:
+    /// - Fresh conversation history (empty)
+    /// - Fresh recalled memories (empty)
+    /// - A task-focused system prompt with the task injected
+    ///
+    /// The sub-agent responds in character (inherits soul) but is focused
+    /// on a specific task. Per user decision: sub-agents inherit parent bot's
+    /// personality and always use the same model.
+    pub fn child_for_task(&self, task: &str, depth: u8) -> Self {
+        let system_prompt = SystemPromptBuilder::build_for_sub_agent(
+            &self.agent_config,
+            &self.soul_content,
+            &self.identity_content,
+            task,
+            depth,
+        );
+
+        Self {
+            agent_config: self.agent_config.clone(),
+            soul_content: self.soul_content.clone(),
+            identity_content: self.identity_content.clone(),
+            user_content: String::new(),
+            memories: Vec::new(),
+            recalled_memories: Vec::new(),
+            conversation_history: Vec::new(),
+            token_budget: self.token_budget.clone(),
+            system_prompt,
+            verbose: self.verbose,
+        }
+    }
+
     /// Rough estimate of tokens used by conversation history.
     ///
     /// Uses 1 token ~ 4 characters as a conservative heuristic.
@@ -261,5 +294,66 @@ mod tests {
         let long_msg = "x".repeat(3000);
         ctx.add_user_message(long_msg);
         assert!(ctx.should_summarize());
+    }
+
+    #[test]
+    fn test_child_for_task_has_empty_conversation_history() {
+        let mut ctx = AgentContext::new(
+            test_config(),
+            "I am creative.".to_string(),
+            "Name: Luna".to_string(),
+            "Be concise.".to_string(),
+            vec![],
+            TokenBudget::new(200_000),
+        );
+        ctx.add_user_message("Hello!".to_string());
+        ctx.add_assistant_message("Hi there!".to_string());
+
+        let child = ctx.child_for_task("Research quantum computing", 1);
+
+        assert!(child.conversation_history.is_empty());
+        assert!(child.memories.is_empty());
+        assert!(child.recalled_memories.is_empty());
+        assert!(child.user_content.is_empty());
+    }
+
+    #[test]
+    fn test_child_for_task_inherits_soul_and_config() {
+        let ctx = AgentContext::new(
+            test_config(),
+            "I am creative.".to_string(),
+            "Name: Luna".to_string(),
+            "Be concise.".to_string(),
+            vec![],
+            TokenBudget::new(200_000),
+        );
+
+        let child = ctx.child_for_task("Research quantum computing", 1);
+
+        assert_eq!(child.soul_content, "I am creative.");
+        assert_eq!(child.identity_content, "Name: Luna");
+        assert_eq!(child.agent_config.bot_name, "Luna");
+        assert_eq!(child.agent_config.model, "claude-sonnet-4-20250514");
+    }
+
+    #[test]
+    fn test_child_for_task_has_task_focused_system_prompt() {
+        let ctx = AgentContext::new(
+            test_config(),
+            "I am creative.".to_string(),
+            "Name: Luna".to_string(),
+            String::new(),
+            vec![],
+            TokenBudget::new(200_000),
+        );
+
+        let child = ctx.child_for_task("Research quantum computing", 1);
+
+        assert!(child.system_prompt.contains("<task>"));
+        assert!(child.system_prompt.contains("Research quantum computing"));
+        assert!(child.system_prompt.contains("<sub_agent_instructions>"));
+        assert!(child.system_prompt.contains("<soul>"));
+        // Does not include user_context (sub-agents don't get USER.md)
+        assert!(!child.system_prompt.contains("<user_context>"));
     }
 }

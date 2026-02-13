@@ -4,37 +4,50 @@
 //! session creation, welcome banner, greeting, input loop with streaming
 //! responses, slash commands, memory extraction, and session cleanup.
 //!
-//! Uses a [`FallbackChain`] for provider selection with automatic failover.
-//! Failover events are printed to stderr during chat. When `--verbose` is
-//! enabled, recalled memories and provider selection details are shown on stderr.
+//! Uses a [`FallbackChain`] for provider selection with automatic failover
+//! for simple (single-agent) messages. When the LLM response contains spawn
+//! instructions, the [`AgentOrchestrator`] takes over for sub-agent execution,
+//! publishing events to the [`EventBus`] for real-time tree rendering.
+//!
+//! The `--quiet` flag suppresses sub-agent detail, showing only the final
+//! synthesized response. `Ctrl+C` cancels the entire sub-agent tree.
+//! `cancel N` stops an individual sub-agent by index.
 
+use std::collections::HashMap;
 use std::io::Write;
 use std::time::Instant;
 
 use console::style;
 use futures_util::StreamExt;
-use tracing::{info, warn};
+use tracing::{debug, info, warn};
+use uuid::Uuid;
 
+use boternity_core::agent::budget::RequestBudget;
 use boternity_core::agent::context::AgentContext;
+use boternity_core::agent::orchestrator::AgentOrchestrator;
+use boternity_core::agent::request_context::RequestContext;
 use boternity_core::agent::title::generate_title;
 use boternity_core::chat::session::SessionManager;
 use boternity_core::llm::health::ProviderHealth;
 use boternity_core::llm::token_budget::TokenBudget;
-use boternity_core::memory::box_embedder::BoxEmbedder;
 use boternity_core::memory::box_vector::BoxVectorMemoryStore;
 use boternity_core::memory::extractor::SessionMemoryExtractor;
 use boternity_core::memory::store::MemoryRepository;
 use boternity_infra::filesystem::identity::parse_identity_frontmatter;
 use boternity_infra::filesystem::LocalFileSystem;
+use boternity_infra::llm::pricing::estimate_cost;
+use boternity_types::event::AgentEvent;
 use boternity_types::llm::{CompletionRequest, LlmError, StreamEvent};
 use boternity_types::memory::RankedMemory;
 
 use crate::state::AppState;
 
 use super::banner::print_welcome_banner;
+use super::budget_display;
 use super::commands::{self, ChatCommand};
 use super::input::{ChatInput, InputEvent};
 use super::renderer::ChatRenderer;
+use super::tree_renderer;
 
 /// Build a [`CompletionRequest`] from agent context and a user message.
 ///
@@ -118,11 +131,15 @@ fn print_verbose_provider_info(provider_name: &str, provider_count: usize) {
 ///
 /// When `verbose` is true, shows memory recall details and provider info
 /// on stderr before each LLM request.
+///
+/// When `quiet` is true, suppresses sub-agent detail output, showing only
+/// the final synthesized response.
 pub async fn run_chat_loop(
     state: &AppState,
     bot_slug: &str,
     _resume_session_id: Option<String>,
     verbose: bool,
+    quiet: bool,
 ) -> anyhow::Result<()> {
     let bot = state.bot_service.get_bot_by_slug(bot_slug).await?;
 
@@ -173,6 +190,15 @@ pub async fn run_chat_loop(
     };
     let token_budget = TokenBudget::from_capabilities(&primary_caps);
     let mut agent_context = AgentContext::new(agent_config, soul_content, identity_content.clone(), user_content, memories, token_budget);
+
+    // Create orchestrator for sub-agent execution
+    let orchestrator = AgentOrchestrator::new(3);
+
+    // Resolve per-request token budget
+    let request_budget_total = boternity_infra::config::resolve_request_budget(
+        &state.global_config,
+        None, // IdentityFrontmatter does not have max_request_tokens field yet
+    );
 
     // Create session
     let session = state.chat_service.create_session(bot.id.0, model.clone()).await?;
@@ -425,21 +451,253 @@ pub async fn run_chat_loop(
                 if !first_token_received && !had_error { spinner.finish_and_clear(); }
                 if had_error { continue; }
 
-                let response_ms = start_time.elapsed().as_millis() as u64;
-                println!();
+                // Check if the response contains spawn instructions.
+                // If it does, hand off to the orchestrator for sub-agent execution.
+                let spawn_instruction = boternity_core::agent::spawner::parse_spawn_instructions(&full_response);
 
-                // Include provider name in stats footer when using a non-primary provider
-                if stream_selection.failover_warning.is_some() {
-                    renderer.print_stats_footer(output_tokens, response_ms, &format!("{} via {}", model, stream_provider_name));
+                if let Some(_spawn_instr) = spawn_instruction {
+                    // Sub-agent execution via orchestrator.
+                    // Subscribe to the event bus for real-time rendering.
+                    let mut event_rx = state.event_bus.subscribe();
+
+                    // Show pre-spawn text from the initial response
+                    let pre_spawn_text = boternity_core::agent::spawner::extract_text_before_spawn(&full_response);
+                    if !pre_spawn_text.is_empty() {
+                        println!();
+                        println!("  {}", pre_spawn_text.trim());
+                    }
+                    println!();
+
+                    // Create a per-request budget and context
+                    let request_budget = RequestBudget::new(request_budget_total);
+                    let request_ctx = RequestContext::new(Uuid::now_v7(), request_budget);
+
+                    // Register the root cancellation token so Ctrl+C can cancel the tree.
+                    // The orchestrator's RequestContext.cancellation is the root token.
+                    state.agent_cancellations.insert(request_ctx.request_id, request_ctx.cancellation.clone());
+
+                    // Create a fresh provider for the orchestrator
+                    let orch_provider = match state.create_single_provider(&model).await {
+                        Ok(p) => p,
+                        Err(e) => {
+                            eprintln!("\n  {} Failed to create provider for orchestrator: {e}", style("!").red().bold());
+                            continue;
+                        }
+                    };
+
+                    // Clone what we need for the rendering task
+                    let quiet_mode = quiet;
+                    let _event_bus = state.event_bus.clone();
+
+                    // Spawn a background task to render events from the bus.
+                    // We track agent_id -> (index, total) for tree rendering.
+                    let render_handle = tokio::spawn(async move {
+                        let mut agent_map: HashMap<Uuid, (u8, usize, usize)> = HashMap::new();
+
+                        loop {
+                            match event_rx.recv().await {
+                                Ok(event) => {
+                                    if quiet_mode {
+                                        // In quiet mode, only show SynthesisStarted indicator
+                                        if matches!(&event, AgentEvent::SynthesisStarted { .. }) {
+                                            eprintln!("  {} Synthesizing response...", style("[agents]").dim());
+                                        }
+                                        continue;
+                                    }
+
+                                    match &event {
+                                        AgentEvent::AgentSpawned { agent_id, depth, index, total, task_description, .. } => {
+                                            agent_map.insert(*agent_id, (*depth, *index, *total));
+                                            println!("{}", tree_renderer::render_agent_header(*depth, *index, *total, task_description));
+                                        }
+                                        AgentEvent::AgentTextDelta { agent_id, text } => {
+                                            if let Some(&(depth, index, total)) = agent_map.get(agent_id) {
+                                                for line in text.lines() {
+                                                    if !line.is_empty() {
+                                                        println!("{}", tree_renderer::render_agent_text_line(depth, index, total, line));
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        AgentEvent::AgentCompleted { agent_id, tokens_used, duration_ms, .. } => {
+                                            if let Some(&(depth, index, total)) = agent_map.get(agent_id) {
+                                                println!("{}", tree_renderer::render_agent_completion(depth, index, total, *tokens_used, *duration_ms));
+                                            }
+                                        }
+                                        AgentEvent::AgentFailed { agent_id, error, will_retry } => {
+                                            let retry_note = if *will_retry { " (retrying)" } else { "" };
+                                            eprintln!("  {} Agent {:?} failed: {error}{retry_note}",
+                                                style("!").red().bold(),
+                                                agent_map.get(agent_id).map(|(_, i, _)| i + 1).unwrap_or(0),
+                                            );
+                                        }
+                                        AgentEvent::AgentCancelled { agent_id, reason } => {
+                                            eprintln!("  {} Agent {} cancelled: {reason}",
+                                                style("!").yellow().bold(),
+                                                agent_map.get(agent_id).map(|(_, i, _)| i + 1).unwrap_or(0),
+                                            );
+                                        }
+                                        AgentEvent::BudgetUpdate { tokens_used, budget_total, .. } => {
+                                            // Overwrite current line with budget counter
+                                            eprint!("\r{}", budget_display::render_budget_counter(*tokens_used, *budget_total));
+                                        }
+                                        AgentEvent::BudgetWarning { tokens_used: _, budget_total: _, .. } => {
+                                            eprintln!();
+                                            eprintln!("{}", budget_display::render_budget_warning_prompt());
+                                            // Budget pause: the orchestrator waits for a decision via
+                                            // budget_responses DashMap. In the CLI, the main input loop
+                                            // can handle this. For now we auto-continue (budget pause
+                                            // requires stdin reading during orchestrator execution which
+                                            // is complex with rustyline-async).
+                                            // TODO: wire stdin budget pause for CLI
+                                        }
+                                        AgentEvent::BudgetExhausted { tokens_used, budget_total, completed_agents, incomplete_agents, .. } => {
+                                            eprintln!();
+                                            eprintln!("{}", budget_display::render_budget_exhausted(
+                                                *tokens_used, *budget_total,
+                                                completed_agents.len(), incomplete_agents.len(),
+                                            ));
+                                        }
+                                        AgentEvent::DepthLimitReached { attempted_depth, max_depth, .. } => {
+                                            eprintln!("{}", tree_renderer::render_depth_limit_warning(*attempted_depth, *max_depth));
+                                        }
+                                        AgentEvent::CycleDetected { cycle_description, .. } => {
+                                            eprintln!("{}", tree_renderer::render_cycle_warning(cycle_description));
+                                        }
+                                        AgentEvent::SynthesisStarted { .. } => {
+                                            eprintln!();
+                                            eprintln!("  {} Synthesizing final response...", style("[synthesis]").dim());
+                                        }
+                                        _ => {} // MemoryCreated, ProviderFailover handled elsewhere
+                                    }
+                                }
+                                Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
+                                    debug!(skipped = n, "Event renderer lagged, some events missed");
+                                }
+                                Err(tokio::sync::broadcast::error::RecvError::Closed) => {
+                                    break;
+                                }
+                            }
+                        }
+                    });
+
+                    // Execute via orchestrator
+                    let orch_result = orchestrator.execute(
+                        &orch_provider,
+                        &mut agent_context,
+                        &text,
+                        &request_ctx,
+                        &state.event_bus,
+                    ).await;
+
+                    // Clean up cancellation token
+                    state.agent_cancellations.remove(&request_ctx.request_id);
+
+                    // Drop the render handle (it will stop when event_bus has no more events)
+                    render_handle.abort();
+                    let _ = render_handle.await;
+
+                    match orch_result {
+                        Ok(result) => {
+                            let response_ms = start_time.elapsed().as_millis() as u64;
+
+                            // Print the final synthesized response
+                            println!();
+                            print!("  {} ", style(&bot.name).cyan().bold());
+                            let _ = std::io::stdout().flush();
+                            let rendered = renderer.render_final(&result.final_response);
+                            println!("{}", rendered.trim());
+                            println!();
+
+                            // Show completion stats with cost estimate
+                            let cost = estimate_cost(
+                                result.total_tokens_used / 2, // rough input/output split
+                                result.total_tokens_used / 2,
+                                &model,
+                                &stream_provider_name,
+                                &state.global_config.provider_pricing,
+                            );
+                            println!("{}", budget_display::render_completion_stats(
+                                result.total_tokens_used,
+                                request_budget_total,
+                                cost,
+                                response_ms as f64 / 1000.0,
+                            ));
+                            println!();
+
+                            // Persist messages
+                            agent_context.add_user_message(text.clone());
+                            agent_context.add_assistant_message(result.final_response.clone());
+                            let _ = state.chat_service.save_assistant_message(
+                                session_id, result.final_response.clone(), model.clone(),
+                                input_tokens + result.total_tokens_used / 2,
+                                output_tokens + result.total_tokens_used / 2,
+                                stop_reason.clone(), response_ms,
+                            ).await;
+
+                            // Memory extraction for sub-agents with source_agent_id tagging
+                            for mem_ctx in &result.memory_contexts {
+                                if let Ok(extract_provider) = state.create_single_provider(&model).await {
+                                    let mem_messages = vec![
+                                        boternity_types::llm::Message {
+                                            role: boternity_types::llm::MessageRole::User,
+                                            content: mem_ctx.task_description.clone(),
+                                        },
+                                        boternity_types::llm::Message {
+                                            role: boternity_types::llm::MessageRole::Assistant,
+                                            content: mem_ctx.response_text.clone(),
+                                        },
+                                    ];
+                                    match SessionMemoryExtractor::extract(&extract_provider, &mem_messages, bot.id.0, session_id).await {
+                                        Ok(entries) => {
+                                            for mut entry in entries {
+                                                entry.source_agent_id = Some(mem_ctx.agent_id);
+                                                let _ = state.chat_service.memory_repo().save_memory(&entry).await;
+                                            }
+                                        }
+                                        Err(e) => {
+                                            debug!(error = %e, agent_id = %mem_ctx.agent_id, "Sub-agent memory extraction failed");
+                                        }
+                                    }
+                                }
+                            }
+
+                            full_response = result.final_response;
+                        }
+                        Err(e) => {
+                            let response_ms = start_time.elapsed().as_millis() as u64;
+                            eprintln!("\n  {} Orchestrator error: {e}", style("!").red().bold());
+                            eprintln!("  {}", style("Type a message to retry, /exit to quit.").dim());
+
+                            // Still persist what we have
+                            agent_context.add_user_message(text.clone());
+                            if !full_response.is_empty() {
+                                agent_context.add_assistant_message(full_response.clone());
+                                let _ = state.chat_service.save_assistant_message(
+                                    session_id, full_response.clone(), model.clone(),
+                                    input_tokens, output_tokens, stop_reason.clone(), response_ms,
+                                ).await;
+                            }
+                        }
+                    }
                 } else {
-                    renderer.print_stats_footer(output_tokens, response_ms, &model);
-                }
-                println!();
+                    // Simple (no spawn) path -- use the direct streaming response
+                    let response_ms = start_time.elapsed().as_millis() as u64;
+                    println!();
 
-                // Persist user + assistant messages to conversation history
-                agent_context.add_user_message(text.clone());
-                agent_context.add_assistant_message(full_response.clone());
-                let _ = state.chat_service.save_assistant_message(session_id, full_response.clone(), model.clone(), input_tokens, output_tokens, stop_reason, response_ms).await;
+                    // Include provider name in stats footer when using a non-primary provider
+                    if stream_selection.failover_warning.is_some() {
+                        renderer.print_stats_footer(output_tokens, response_ms, &format!("{} via {}", model, stream_provider_name));
+                    } else {
+                        renderer.print_stats_footer(output_tokens, response_ms, &model);
+                    }
+                    println!();
+
+                    // Persist user + assistant messages to conversation history
+                    agent_context.add_user_message(text.clone());
+                    agent_context.add_assistant_message(full_response.clone());
+                    let _ = state.chat_service.save_assistant_message(session_id, full_response.clone(), model.clone(), input_tokens, output_tokens, stop_reason, response_ms).await;
+                }
 
                 session_manager.add_token_usage(input_tokens, output_tokens);
                 let _ = state.chat_service.update_session_tokens(&session_id, input_tokens, output_tokens).await;

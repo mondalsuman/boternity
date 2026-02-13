@@ -185,6 +185,10 @@ pub enum Commands {
         /// Show verbose output (memory recall details, provider info).
         #[arg(long, short = 'V')]
         verbose: bool,
+
+        /// Suppress sub-agent detail, showing only the final synthesized response.
+        #[arg(long, short = 'q')]
+        quiet: bool,
     },
 
     // --- Short aliases ---

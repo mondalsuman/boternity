@@ -7,12 +7,29 @@
 //! parse identity frontmatter -> build fallback chain -> build AgentContext
 //! -> build CompletionRequest -> stream via FallbackChain.
 //!
+//! When the initial LLM response contains spawn instructions, the
+//! [`AgentOrchestrator`] takes over. Sub-agent lifecycle events are
+//! forwarded as SSE events alongside text deltas. The budget pause
+//! flow uses the WebSocket `budget_continue`/`budget_stop` commands
+//! via the shared `budget_responses` DashMap.
+//!
 //! SSE event types:
-//! - `session` — initial event with `{ "session_id": "..." }`
-//! - `text_delta` — incremental text: `{ "text": "..." }`
-//! - `usage` — token usage: `{ "input_tokens": N, "output_tokens": N }`
-//! - `done` — stream complete: `{}`
-//! - `error` — error occurred: `{ "message": "..." }`
+//! - `session` -- initial event with `{ "session_id": "..." }`
+//! - `text_delta` -- incremental text: `{ "text": "..." }`
+//! - `usage` -- token usage: `{ "input_tokens": N, "output_tokens": N }`
+//! - `done` -- stream complete: `{}`
+//! - `error` -- error occurred: `{ "message": "..." }`
+//! - `agent_spawned` -- `{ "agent_id", "parent_id", "task", "depth", "index", "total" }`
+//! - `agent_text_delta` -- `{ "agent_id", "text" }`
+//! - `agent_completed` -- `{ "agent_id", "tokens_used", "duration_ms" }`
+//! - `agent_failed` -- `{ "agent_id", "error", "will_retry" }`
+//! - `agent_cancelled` -- `{ "agent_id", "reason" }`
+//! - `budget_update` -- `{ "tokens_used", "budget_total", "percentage" }`
+//! - `budget_warning` -- `{ "tokens_used", "budget_total" }`
+//! - `budget_exhausted` -- `{ "tokens_used", "budget_total" }`
+//! - `depth_limit` -- `{ "agent_id", "attempted_depth", "max_depth" }`
+//! - `cycle_detected` -- `{ "agent_id", "description" }`
+//! - `synthesis_started` -- `{}`
 
 use std::convert::Infallible;
 use std::time::{Duration, Instant};
@@ -23,13 +40,18 @@ use axum::Json;
 use futures_util::StreamExt;
 use serde::Deserialize;
 use tokio_stream::Stream;
+use uuid::Uuid;
 
+use boternity_core::agent::budget::RequestBudget;
 use boternity_core::agent::context::AgentContext;
+use boternity_core::agent::orchestrator::AgentOrchestrator;
+use boternity_core::agent::request_context::RequestContext;
 use boternity_core::llm::health::ProviderHealth;
 use boternity_core::llm::token_budget::TokenBudget;
 use boternity_core::memory::box_vector::BoxVectorMemoryStore;
 use boternity_infra::filesystem::identity::parse_identity_frontmatter;
 use boternity_infra::filesystem::LocalFileSystem;
+use boternity_types::event::AgentEvent;
 use boternity_types::llm::{CompletionRequest, StreamEvent};
 
 use crate::http::error::AppError;
@@ -67,10 +89,137 @@ fn build_completion_request(context: &AgentContext, user_message: &str) -> Compl
     }
 }
 
-/// POST /api/v1/bots/{id}/chat/stream — SSE streaming chat.
+/// Convert an [`AgentEvent`] into an SSE [`Event`].
+///
+/// Maps each event variant to a named SSE event type with a JSON payload.
+fn agent_event_to_sse(event: &AgentEvent) -> Option<Event> {
+    let (event_name, data) = match event {
+        AgentEvent::AgentSpawned {
+            agent_id,
+            parent_id,
+            task_description,
+            depth,
+            index,
+            total,
+        } => (
+            "agent_spawned",
+            serde_json::json!({
+                "agent_id": agent_id,
+                "parent_id": parent_id,
+                "task": task_description,
+                "depth": depth,
+                "index": index,
+                "total": total,
+            }),
+        ),
+        AgentEvent::AgentTextDelta { agent_id, text } => (
+            "agent_text_delta",
+            serde_json::json!({ "agent_id": agent_id, "text": text }),
+        ),
+        AgentEvent::AgentCompleted {
+            agent_id,
+            tokens_used,
+            duration_ms,
+            ..
+        } => (
+            "agent_completed",
+            serde_json::json!({
+                "agent_id": agent_id,
+                "tokens_used": tokens_used,
+                "duration_ms": duration_ms,
+            }),
+        ),
+        AgentEvent::AgentFailed {
+            agent_id,
+            error,
+            will_retry,
+        } => (
+            "agent_failed",
+            serde_json::json!({
+                "agent_id": agent_id,
+                "error": error,
+                "will_retry": will_retry,
+            }),
+        ),
+        AgentEvent::AgentCancelled { agent_id, reason } => (
+            "agent_cancelled",
+            serde_json::json!({ "agent_id": agent_id, "reason": reason }),
+        ),
+        AgentEvent::BudgetUpdate {
+            tokens_used,
+            budget_total,
+            percentage,
+            ..
+        } => (
+            "budget_update",
+            serde_json::json!({
+                "tokens_used": tokens_used,
+                "budget_total": budget_total,
+                "percentage": percentage,
+            }),
+        ),
+        AgentEvent::BudgetWarning {
+            tokens_used,
+            budget_total,
+            ..
+        } => (
+            "budget_warning",
+            serde_json::json!({
+                "tokens_used": tokens_used,
+                "budget_total": budget_total,
+            }),
+        ),
+        AgentEvent::BudgetExhausted {
+            tokens_used,
+            budget_total,
+            ..
+        } => (
+            "budget_exhausted",
+            serde_json::json!({
+                "tokens_used": tokens_used,
+                "budget_total": budget_total,
+            }),
+        ),
+        AgentEvent::DepthLimitReached {
+            agent_id,
+            attempted_depth,
+            max_depth,
+        } => (
+            "depth_limit",
+            serde_json::json!({
+                "agent_id": agent_id,
+                "attempted_depth": attempted_depth,
+                "max_depth": max_depth,
+            }),
+        ),
+        AgentEvent::CycleDetected {
+            agent_id,
+            cycle_description,
+        } => (
+            "cycle_detected",
+            serde_json::json!({
+                "agent_id": agent_id,
+                "description": cycle_description,
+            }),
+        ),
+        AgentEvent::SynthesisStarted { .. } => (
+            "synthesis_started",
+            serde_json::json!({}),
+        ),
+        // MemoryCreated and ProviderFailover are not forwarded to the client
+        _ => return None,
+    };
+
+    Some(Event::default().event(event_name).data(data.to_string()))
+}
+
+/// POST /api/v1/bots/{id}/chat/stream -- SSE streaming chat.
 ///
 /// Resolves the bot, builds the LLM context, streams the response as SSE
 /// events, and persists both user and assistant messages after completion.
+///
+/// When the initial response contains spawn instructions, the orchestrator
+/// takes over and sub-agent events are emitted as additional SSE event types.
 pub async fn stream_chat(
     State(state): State<AppState>,
     _auth: Authenticated,
@@ -247,8 +396,16 @@ pub async fn stream_chat(
     let user_message = body.message.clone();
     let chat_service = state.chat_service.clone();
     let model_for_save = model.clone();
+    let model_for_orch = model.clone();
     let bot_service = state.bot_service.clone();
     let bot_id = bot.id.clone();
+    let event_bus = state.event_bus.clone();
+    let global_config = state.global_config.clone();
+    let agent_cancellations = state.agent_cancellations.clone();
+    let state_for_orch = state.clone();
+
+    // Subscribe to EventBus for sub-agent events BEFORE starting orchestrator
+    let mut event_rx = state.event_bus.subscribe();
 
     // Build the SSE stream
     let sse_stream = async_stream::stream! {
@@ -266,6 +423,7 @@ pub async fn stream_chat(
 
         let mut llm_stream = std::pin::pin!(llm_stream);
 
+        // Phase 1: Stream the initial LLM response
         while let Some(event_result) = llm_stream.next().await {
             match event_result {
                 Ok(stream_event) => match stream_event {
@@ -298,10 +456,137 @@ pub async fn stream_chat(
             }
         }
 
-        if !had_error && !full_response.is_empty() {
+        // Phase 2: Check for spawn instructions in the initial response
+        let has_spawn = !had_error
+            && boternity_core::agent::spawner::parse_spawn_instructions(&full_response).is_some();
+
+        if has_spawn {
+            // Sub-agent execution via orchestrator.
+            // Resolve per-request budget.
+            let request_budget_total = boternity_infra::config::resolve_request_budget(
+                &global_config,
+                None,
+            );
+            let request_budget = RequestBudget::new(request_budget_total);
+            let request_ctx = RequestContext::new(Uuid::now_v7(), request_budget);
+
+            // Register cancellation token
+            let orch_request_id = request_ctx.request_id;
+            agent_cancellations.insert(orch_request_id, request_ctx.cancellation.clone());
+
+            // Create orchestrator and provider
+            let orchestrator = AgentOrchestrator::new(3);
+            let orch_provider = match state_for_orch.create_single_provider(&model_for_orch).await {
+                Ok(p) => Some(p),
+                Err(_) => None,
+            };
+
+            if let Some(orch_provider) = orch_provider {
+                // Spawn orchestrator in a background task.
+                // We communicate the result back via a channel.
+                let (result_tx, mut result_rx) = tokio::sync::mpsc::channel(1);
+                let mut orch_context = agent_context;
+                let orch_user_msg = user_message.clone();
+                let orch_event_bus = event_bus.clone();
+
+                let _orch_handle = tokio::spawn(async move {
+                    let result = orchestrator.execute(
+                        &orch_provider,
+                        &mut orch_context,
+                        &orch_user_msg,
+                        &request_ctx,
+                        &orch_event_bus,
+                    ).await;
+                    let _ = result_tx.send(result).await;
+                });
+
+                // Forward events from the EventBus as SSE events until the
+                // orchestrator completes.
+                loop {
+                    tokio::select! {
+                        biased;
+                        event = event_rx.recv() => {
+                            match event {
+                                Ok(agent_event) => {
+                                    if let Some(sse_event) = agent_event_to_sse(&agent_event) {
+                                        yield Ok(sse_event);
+                                    }
+                                }
+                                Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => {
+                                    // Some events were missed; continue
+                                }
+                                Err(tokio::sync::broadcast::error::RecvError::Closed) => {
+                                    break;
+                                }
+                            }
+                        }
+                        result = result_rx.recv() => {
+                            // Orchestrator completed. Drain remaining events.
+                            loop {
+                                match event_rx.try_recv() {
+                                    Ok(agent_event) => {
+                                        if let Some(sse_event) = agent_event_to_sse(&agent_event) {
+                                            yield Ok(sse_event);
+                                        }
+                                    }
+                                    Err(_) => break,
+                                }
+                            }
+
+                            // Emit the final synthesis as text_delta events
+                            if let Some(Ok(orch_result)) = result {
+                                // Emit synthesis text
+                                let synthesis = &orch_result.final_response;
+                                let data = serde_json::json!({ "text": synthesis });
+                                yield Ok(Event::default().event("text_delta").data(data.to_string()));
+
+                                // Emit usage with total tokens
+                                let usage_data = serde_json::json!({
+                                    "input_tokens": input_tokens + orch_result.total_tokens_used / 2,
+                                    "output_tokens": output_tokens + orch_result.total_tokens_used / 2,
+                                });
+                                yield Ok(Event::default().event("usage").data(usage_data.to_string()));
+
+                                let response_ms = start_time.elapsed().as_millis() as u64;
+
+                                // Persist messages
+                                let _ = chat_service
+                                    .save_user_message(session_id, user_message.clone())
+                                    .await;
+                                let _ = chat_service
+                                    .save_assistant_message(
+                                        session_id,
+                                        orch_result.final_response,
+                                        model_for_save.clone(),
+                                        input_tokens + orch_result.total_tokens_used / 2,
+                                        output_tokens + orch_result.total_tokens_used / 2,
+                                        stop_reason.clone(),
+                                        response_ms,
+                                    )
+                                    .await;
+
+                                let _ = chat_service
+                                    .update_session_tokens(&session_id, input_tokens, output_tokens)
+                                    .await;
+
+                                let _ = bot_service.touch_activity(&bot_id).await;
+                            } else if let Some(Err(e)) = result {
+                                let data = serde_json::json!({ "message": e.to_string() });
+                                yield Ok(Event::default().event("error").data(data.to_string()));
+                            }
+
+                            break;
+                        }
+                    }
+                }
+
+                // Clean up cancellation token
+                agent_cancellations.remove(&orch_request_id);
+            }
+        } else if !had_error && !full_response.is_empty() {
+            // Simple (no spawn) path -- persist messages directly
             let response_ms = start_time.elapsed().as_millis() as u64;
 
-            // Persist messages
             let _ = chat_service
                 .save_user_message(session_id, user_message)
                 .await;
@@ -317,12 +602,10 @@ pub async fn stream_chat(
                 )
                 .await;
 
-            // Update session token counts
             let _ = chat_service
                 .update_session_tokens(&session_id, input_tokens, output_tokens)
                 .await;
 
-            // Update bot's last_active_at timestamp
             let _ = bot_service.touch_activity(&bot_id).await;
         }
 

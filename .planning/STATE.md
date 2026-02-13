@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-10)
 
 **Core value:** A user can create a bot with a distinct identity, give it skills through an interactive builder, and have meaningful parallel conversations with it -- all running locally with full observability.
-**Current focus:** Phase 5 (Agent Hierarchy + Event System) - In progress
+**Current focus:** Phase 5 (Agent Hierarchy + Event System) - Complete
 
 ## Current Position
 
 Phase: 5 of 10 (Agent Hierarchy + Event System)
-Plan: 6 of 8 in current phase
-Status: In progress
-Last activity: 2026-02-13 -- Completed 05-06-PLAN.md (WebSocket infrastructure)
+Plan: 8 of 8 in current phase
+Status: Phase complete
+Last activity: 2026-02-13 -- Completed 05-08-PLAN.md (Web UI agent hierarchy)
 
-Progress: [████████████████████████████████████████████░░░░░░░░░] 40/53 (~75%)
+Progress: [██████████████████████████████████████████████░░░░░░░] 42/53 (~79%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 40
-- Average duration: 6m 38s
-- Total execution time: 265m 08s
+- Total plans completed: 42
+- Average duration: 6m 30s
+- Total execution time: 273m 08s
 
 **By Phase:**
 
@@ -31,11 +31,11 @@ Progress: [███████████████████████
 | 2. Single-Agent Chat + LLM | 7/8 | 31m 46s | 4m 32s |
 | 3. Multi-Provider + Memory | 13/13 | 127m 31s | 9m 49s |
 | 4. Web UI Core + Fleet Dashboard | 8/8 | 40m 37s | 5m 05s |
-| 5. Agent Hierarchy + Event System | 6/8 | 20m 00s | 3m 20s |
+| 5. Agent Hierarchy + Event System | 8/8 | 28m 00s | 3m 30s |
 
 **Recent Trend:**
-- Last 5 plans: 05-02 (4m 00s), 05-03 (4m 00s), 05-04 (4m 00s), 05-05 (4m 00s), 05-06 (3m 00s)
-- Trend: Phase 5 infrastructure plans executing efficiently (~3-4m)
+- Last 5 plans: 05-04 (4m 00s), 05-05 (4m 00s), 05-06 (3m 00s), 05-07 (4m 00s), 05-08 (4m 00s)
+- Trend: Phase 5 complete, all plans executed efficiently (~3-4m)
 
 *Updated after each plan completion*
 
@@ -228,6 +228,12 @@ Recent decisions affecting current work:
 - [05-06]: WsCommand serde tagged enum matches AgentEvent convention (#[serde(tag = "type", rename_all = "snake_case")])
 - [05-06]: DashMap for agent_cancellations and budget_responses (concurrent access from WebSocket + orchestrator)
 - [05-06]: WebSocket disconnect does NOT auto-cancel agents (reconnection-safe, per research pitfall 4)
+- [05-08]: Native WebSocket API (no npm dep) with exponential backoff 1s-30s, 30% jitter, max 10 attempts
+- [05-08]: Map-based Zustand store with functional updates instead of immer for agent tree
+- [05-08]: AgentEvent forwarded from SSE via useAgentStore.getState().handleEvent() (outside React lifecycle)
+- [05-08]: AgentBlock auto-collapses on completion, auto-expands on running (useEffect on status)
+- [05-08]: Recursive TreeNode component with depth-based paddingLeft for tree indentation
+- [05-08]: Blended $9/1M cost estimate for budget indicator (rough hint, not exact billing)
 
 ### Pending Todos
 
@@ -242,5 +248,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-13
-Stopped at: Completed 05-06-PLAN.md (WebSocket infrastructure)
+Stopped at: Completed 05-08-PLAN.md (Web UI agent hierarchy) - Phase 5 complete
 Resume file: None

@@ -6,6 +6,7 @@
 
 pub mod agent;
 pub mod chat;
+pub mod event;
 pub mod llm;
 pub mod memory;
 pub mod repository;

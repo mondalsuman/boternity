@@ -10,6 +10,7 @@ pub mod context;
 pub mod cycle_detector;
 pub mod engine;
 pub mod prompt;
+pub mod request_context;
 pub mod spawner;
 pub mod summarizer;
 pub mod title;

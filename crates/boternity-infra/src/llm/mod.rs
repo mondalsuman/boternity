@@ -11,6 +11,7 @@ pub mod anthropic;
 pub mod bedrock;
 pub mod claude_sub;
 pub mod openai_compat;
+pub mod pricing;
 
 use secrecy::SecretString;
 

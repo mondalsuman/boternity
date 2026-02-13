@@ -1,6 +1,7 @@
 //! Axum router configuration with middleware.
 //!
-//! All routes are under `/api/v1/`.
+//! All REST routes are under `/api/v1/`.
+//! WebSocket endpoint at `/ws/events` (outside the REST namespace).
 //! Middleware: CORS, tracing, response time.
 //!
 //! In production, the built React SPA is served from `apps/web/dist/`
@@ -99,6 +100,9 @@ pub fn build_router(state: AppState) -> Router {
     let mut router = Router::new()
         .nest("/api/v1", api_routes)
         .route("/health", get(health_check))
+        // WebSocket for real-time agent events and bidirectional commands.
+        // Outside /api/v1 since WebSocket is not a REST endpoint.
+        .route("/ws/events", get(handlers::ws::ws_handler))
         .layer(cors)
         .layer(TraceLayer::new_for_http())
         .with_state(state);

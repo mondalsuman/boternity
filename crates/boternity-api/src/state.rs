@@ -12,6 +12,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use boternity_core::chat::service::ChatService;
+use boternity_core::event::EventBus;
 use boternity_core::llm::fallback::FallbackChain;
 use boternity_core::llm::provider::LlmProvider;
 use boternity_core::memory::box_embedder::BoxEmbedder;
@@ -19,6 +20,11 @@ use boternity_core::memory::embedder::Embedder;
 use boternity_core::service::bot::BotService;
 use boternity_core::service::secret::SecretService;
 use boternity_core::service::soul::SoulService;
+use boternity_types::config::GlobalConfig;
+use dashmap::DashMap;
+use tokio::sync::oneshot;
+use tokio_util::sync::CancellationToken;
+use uuid::Uuid;
 use boternity_infra::crypto::hash::Sha256ContentHasher;
 use boternity_infra::crypto::vault::VaultCrypto;
 use boternity_infra::filesystem::{resolve_data_dir, LocalFileSystem};
@@ -99,6 +105,18 @@ pub struct AppState {
     pub audit_log: Arc<SqliteAuditLog>,
     /// Provider health persistence for circuit breaker state across restarts.
     pub provider_health_store: Arc<SqliteProviderHealthStore>,
+
+    // --- Phase 5 services ---
+    /// Event bus for agent lifecycle events (broadcast to WebSocket + CLI).
+    pub event_bus: EventBus,
+    /// Global configuration from `~/.boternity/config.toml`.
+    pub global_config: GlobalConfig,
+    /// Active agent cancellation tokens, keyed by agent_id.
+    /// Inserted by orchestrator when spawning, removed on completion.
+    pub agent_cancellations: Arc<DashMap<Uuid, CancellationToken>>,
+    /// Budget pause channels, keyed by request_id.
+    /// Orchestrator inserts sender; WebSocket/CLI sends continue/stop decision.
+    pub budget_responses: Arc<DashMap<Uuid, oneshot::Sender<bool>>>,
 }
 
 impl AppState {
@@ -213,6 +231,12 @@ impl AppState {
         // Provider health persistence (SQLite)
         let provider_health_store = Arc::new(SqliteProviderHealthStore::new(db_pool.clone()));
 
+        // --- Phase 5 services ---
+        let global_config = boternity_infra::config::load_global_config(&data_dir).await;
+        let event_bus = EventBus::new(1024);
+        let agent_cancellations = Arc::new(DashMap::new());
+        let budget_responses = Arc::new(DashMap::new());
+
         Ok(Self {
             bot_service: Arc::new(bot_service),
             soul_service: Arc::new(api_soul_service),
@@ -229,6 +253,10 @@ impl AppState {
             kv_store,
             audit_log,
             provider_health_store,
+            event_bus,
+            global_config,
+            agent_cancellations,
+            budget_responses,
         })
     }
 

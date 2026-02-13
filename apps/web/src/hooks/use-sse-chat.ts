@@ -3,11 +3,18 @@
  *
  * Uses POST with JSON body (NOT EventSource which only supports GET).
  * Parses SSE events: session, text_delta, usage, done, error.
+ * Also handles agent hierarchy events: agent_spawned, agent_text_delta,
+ * agent_completed, agent_failed, agent_cancelled, budget_update,
+ * budget_warning, budget_exhausted, synthesis_started.
+ *
+ * Agent events are forwarded to the Zustand agent store.
  * AbortController for stop generation and cleanup on unmount.
  */
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useApiKeyStore } from "@/stores/api-key-store";
+import { useAgentStore } from "@/stores/agent-store";
+import type { AgentEvent } from "@/types/agent";
 
 export interface StreamUsage {
   input_tokens: number;
@@ -32,6 +39,8 @@ export function useSSEChat() {
       setStreamedContent("");
       setError(null);
       setUsage(null);
+      // Reset agent store for new request
+      useAgentStore.getState().reset();
       abortRef.current = new AbortController();
 
       // Track session ID locally so the caller gets the resolved value
@@ -97,6 +106,25 @@ export function useSSEChat() {
                     break;
                   case "error":
                     setError(event.message || "Unknown streaming error");
+                    break;
+
+                  // Agent hierarchy events -- forward to agent store
+                  case "agent_spawned":
+                  case "agent_text_delta":
+                  case "agent_completed":
+                  case "agent_failed":
+                  case "agent_cancelled":
+                  case "budget_update":
+                  case "budget_warning":
+                  case "budget_exhausted":
+                    useAgentStore
+                      .getState()
+                      .handleEvent(event as AgentEvent);
+                    break;
+
+                  case "synthesis_started":
+                    // Reset streamed content for the synthesis phase
+                    setStreamedContent("");
                     break;
                 }
               } catch {

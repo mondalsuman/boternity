@@ -95,6 +95,7 @@ impl MemoryEntryRow {
             superseded_by,
             created_at,
             is_manual: self.is_manual != 0,
+            source_agent_id: None,
         })
     }
 }
@@ -412,6 +413,7 @@ mod tests {
             superseded_by: None,
             created_at: Utc::now(),
             is_manual: false,
+            source_agent_id: None,
         }
     }
 

@@ -8,7 +8,9 @@
 pub mod agent;
 pub mod bot;
 pub mod chat;
+pub mod config;
 pub mod error;
+pub mod event;
 pub mod identity;
 pub mod llm;
 pub mod memory;

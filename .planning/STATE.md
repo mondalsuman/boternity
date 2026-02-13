@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-10)
 
 **Core value:** A user can create a bot with a distinct identity, give it skills through an interactive builder, and have meaningful parallel conversations with it -- all running locally with full observability.
-**Current focus:** Phase 4 (Web UI Core + Fleet Dashboard) - Complete
+**Current focus:** Phase 5 (Agent Hierarchy + Event System) - Complete
 
 ## Current Position
 
-Phase: 4 of 10 (Web UI Core + Fleet Dashboard)
+Phase: 5 of 10 (Agent Hierarchy + Event System)
 Plan: 8 of 8 in current phase
-Status: Complete
-Last activity: 2026-02-13 -- Phase 4 complete, all 8 plans executed and verified
+Status: Phase complete
+Last activity: 2026-02-13 -- Completed 05-08-PLAN.md (Web UI agent hierarchy)
 
-Progress: [██████████████████████████████████████░░░░░░░░░░░░░░░] 34/53 (~64%)
+Progress: [██████████████████████████████████████████████░░░░░░░] 42/53 (~79%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 34
-- Average duration: 7m 18s
-- Total execution time: 249m 08s
+- Total plans completed: 42
+- Average duration: 6m 30s
+- Total execution time: 273m 08s
 
 **By Phase:**
 
@@ -31,10 +31,11 @@ Progress: [███████████████████████
 | 2. Single-Agent Chat + LLM | 7/8 | 31m 46s | 4m 32s |
 | 3. Multi-Provider + Memory | 13/13 | 127m 31s | 9m 49s |
 | 4. Web UI Core + Fleet Dashboard | 8/8 | 40m 37s | 5m 05s |
+| 5. Agent Hierarchy + Event System | 8/8 | 28m 00s | 3m 30s |
 
 **Recent Trend:**
-- Last 5 plans: 04-06 (4m 00s), 04-04 (5m 13s), 04-07 (3m 00s), 04-05 (3m 00s), 04-08 (5m 00s)
-- Trend: Phase 4 UI plans averaging ~4m (focused component tasks)
+- Last 5 plans: 05-04 (4m 00s), 05-05 (4m 00s), 05-06 (3m 00s), 05-07 (4m 00s), 05-08 (4m 00s)
+- Trend: Phase 5 complete, all plans executed efficiently (~3-4m)
 
 *Updated after each plan completion*
 
@@ -202,6 +203,41 @@ Recent decisions affecting current work:
 - [04-07]: Rollback uses AlertDialog for destructive confirmation with scrollable content preview
 - [04-07]: Version actions (Compare, Restore) visible only when version is selected in timeline
 - [04-07]: useSoulVersion has staleTime: Infinity since versions are immutable
+- [05-01]: tokio-util 0.7 without feature gates (CancellationToken available by default, no sync feature exists)
+- [05-01]: toml as dev-dependency on boternity-types (only tests need TOML parsing)
+- [05-01]: source_agent_id: Option<Uuid> on MemoryEntry with None default for backward compatibility
+- [05-01]: AgentEvent serde tagged union: #[serde(tag = "type", rename_all = "snake_case")] for event bus
+- [05-02]: Clone-on-read for SharedWorkspace::get() to prevent DashMap Ref held across await
+- [05-02]: HashMap<u64, usize> for CycleDetector instead of HashSet (tracks repetition count, not just presence)
+- [05-02]: RequestContext.child() uses saturating_add for depth to prevent u8 overflow
+- [05-02]: EventBus publish silently drops events when no subscribers (let _ = sender.send())
+- [05-03]: Only first <spawn_agents> block parsed per response (single spawn per turn)
+- [05-03]: Default spawn mode is Parallel when no mode attribute present
+- [05-03]: Sub-agent prompts exclude user_context/session_memory/long_term_memory (fresh context)
+- [05-03]: Depth < 3 includes agent_capabilities for recursive spawning; depth 3 excludes it
+- [05-04]: Orchestrator is stateless coordinator: no fields beyond max_depth, all state via parameters
+- [05-04]: BoxLlmProvider streams created before JoinSet spawn (stream is 'static, provider is not Clone)
+- [05-04]: Token estimation via 4 chars/token heuristic for streaming budget, corrected by real Usage events
+- [05-04]: Sequential sub-agents see only immediately prior result (not full chain) per user decision
+- [05-04]: Memory extraction deferred to chat handler via AgentMemoryContext (orchestrator surfaces data, caller extracts)
+- [05-05]: default_pricing_table() is private (not pub) since external callers use estimate_cost()
+- [05-05]: OpenAI gpt-4o-mini entry ordered before gpt-4o for correct prefix matching
+- [05-05]: Bedrock uses contains() fallback for region-prefixed model IDs
+- [05-05]: Minimum budget floor of 10,000 tokens in resolve_request_budget()
+- [05-06]: tokio::select! single-loop for WebSocket instead of socket.split() two-task (enables Ping/Pong in same scope)
+- [05-06]: WsCommand serde tagged enum matches AgentEvent convention (#[serde(tag = "type", rename_all = "snake_case")])
+- [05-06]: DashMap for agent_cancellations and budget_responses (concurrent access from WebSocket + orchestrator)
+- [05-06]: WebSocket disconnect does NOT auto-cancel agents (reconnection-safe, per research pitfall 4)
+- [05-07]: Two-path execution in loop_runner: parse_spawn_instructions() on initial response decides orchestrator vs direct stream
+- [05-07]: HTTP orchestrator runs in tokio::spawn with mpsc channel result delivery, EventBus subscriber in SSE stream loop
+- [05-07]: Budget warning auto-continues in CLI (stdin reading during orchestrator execution deferred as TODO)
+- [05-07]: --quiet / -q flag on Chat command suppresses sub-agent detail, showing only final synthesis
+- [05-08]: Native WebSocket API (no npm dep) with exponential backoff 1s-30s, 30% jitter, max 10 attempts
+- [05-08]: Map-based Zustand store with functional updates instead of immer for agent tree
+- [05-08]: AgentEvent forwarded from SSE via useAgentStore.getState().handleEvent() (outside React lifecycle)
+- [05-08]: AgentBlock auto-collapses on completion, auto-expands on running (useEffect on status)
+- [05-08]: Recursive TreeNode component with depth-based paddingLeft for tree indentation
+- [05-08]: Blended $9/1M cost estimate for budget indicator (rough hint, not exact billing)
 
 ### Pending Todos
 
@@ -216,5 +252,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-13
-Stopped at: Phase 4 complete — all 8 plans executed, verified (42/42 must-haves)
+Stopped at: Completed 05-08-PLAN.md (Web UI agent hierarchy) - Phase 5 complete
 Resume file: None

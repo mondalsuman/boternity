@@ -113,6 +113,111 @@ impl SystemPromptBuilder {
         sections.join("\n\n")
     }
 
+    /// Build the complete system prompt with agent spawning capabilities.
+    ///
+    /// Same as [`build()`] but appends an `<agent_capabilities>` section that
+    /// teaches the LLM how to spawn sub-agents via XML blocks. Used for the
+    /// root agent (depth 0) when agent hierarchy is enabled.
+    pub fn build_with_capabilities(
+        config: &AgentConfig,
+        soul: &str,
+        identity: &str,
+        user: &str,
+        memories: &[MemoryEntry],
+        recalled_memories: &[RankedMemory],
+    ) -> String {
+        let base = Self::build(config, soul, identity, user, memories, recalled_memories);
+        format!("{base}\n\n{}", Self::agent_capabilities_section())
+    }
+
+    /// Build a focused system prompt for a sub-agent executing a specific task.
+    ///
+    /// Includes the bot's soul and identity (sub-agents stay in character) plus
+    /// a `<task>` section and `<sub_agent_instructions>`. Does NOT include
+    /// user_context, session_memory, or long_term_memory (sub-agents get fresh
+    /// context).
+    ///
+    /// If `depth < 3`, the `<agent_capabilities>` section is included to allow
+    /// recursive spawning (sub-agents can spawn their own sub-agents).
+    pub fn build_for_sub_agent(
+        config: &AgentConfig,
+        soul: &str,
+        identity: &str,
+        task: &str,
+        depth: u8,
+    ) -> String {
+        let mut sections = Vec::with_capacity(6);
+
+        // Soul section -- sub-agents stay in character
+        if !soul.trim().is_empty() {
+            sections.push(format!("<soul>\n{}\n</soul>", soul.trim()));
+        }
+
+        // Identity section
+        if !identity.trim().is_empty() {
+            sections.push(format!("<identity>\n{}\n</identity>", identity.trim()));
+        } else {
+            let emoji_line = config
+                .bot_emoji
+                .as_deref()
+                .map(|e| format!("\nEmoji: {e}"))
+                .unwrap_or_default();
+            sections.push(format!(
+                "<identity>\nName: {}{emoji_line}\nModel: {}\n</identity>",
+                config.bot_name, config.model
+            ));
+        }
+
+        // Task section -- the specific task this sub-agent is focused on
+        sections.push(format!("<task>\n{}\n</task>", task.trim()));
+
+        // Sub-agent instructions
+        sections.push(
+            "<sub_agent_instructions>\n\
+            You are executing a focused sub-task. Respond with your result directly. \
+            Be thorough but stay focused on the task.\n\
+            </sub_agent_instructions>"
+                .to_string(),
+        );
+
+        // Agent capabilities -- only if recursive spawning is allowed (depth < 3)
+        if depth < 3 {
+            sections.push(Self::agent_capabilities_section());
+        }
+
+        sections.join("\n\n")
+    }
+
+    /// The `<agent_capabilities>` XML section content.
+    ///
+    /// Instructs the LLM on how to spawn sub-agents using `<spawn_agents>` blocks.
+    fn agent_capabilities_section() -> String {
+        "<agent_capabilities>\n\
+        You can decompose complex tasks by spawning sub-agents. To do this, include a spawn block in your response:\n\
+        \n\
+        For parallel execution (tasks run simultaneously):\n\
+        <spawn_agents mode=\"parallel\">\n  \
+          <agent task=\"Description of sub-task 1\" />\n  \
+          <agent task=\"Description of sub-task 2\" />\n\
+        </spawn_agents>\n\
+        \n\
+        For sequential execution (each task sees the previous result):\n\
+        <spawn_agents mode=\"sequential\">\n  \
+          <agent task=\"First step description\" />\n  \
+          <agent task=\"Second step description\" />\n\
+        </spawn_agents>\n\
+        \n\
+        Guidelines:\n\
+        - Only spawn sub-agents when the task genuinely benefits from decomposition\n\
+        - Each task description should be specific and self-contained\n\
+        - Sub-agents inherit your personality and respond in character\n\
+        - You may include text before the spawn block to explain your approach\n\
+        - After sub-agents complete, you will receive their results and should synthesize a cohesive response\n\
+        - Sub-agents can spawn their own sub-agents up to 3 levels deep\n\
+        </agent_capabilities>"
+            .to_string()
+    }
+
     /// Format a single recalled memory for the system prompt.
     ///
     /// Outputs natural-language facts without scores or metadata.
@@ -156,6 +261,7 @@ mod tests {
             superseded_by: None,
             created_at: Utc::now(),
             is_manual: false,
+            source_agent_id: None,
         }
     }
 
@@ -309,5 +415,82 @@ mod tests {
         let session_pos = prompt.find("<session_memory>").unwrap();
         let ltm_pos = prompt.find("<long_term_memory>").unwrap();
         assert!(session_pos < ltm_pos);
+    }
+
+    #[test]
+    fn test_build_with_capabilities_includes_agent_capabilities() {
+        let config = test_config();
+        let prompt = SystemPromptBuilder::build_with_capabilities(
+            &config,
+            "Creative soul",
+            "Identity content",
+            "User context",
+            &[],
+            &[],
+        );
+
+        assert!(prompt.contains("<agent_capabilities>"));
+        assert!(prompt.contains("</agent_capabilities>"));
+        assert!(prompt.contains("spawn sub-agents"));
+        assert!(prompt.contains("<spawn_agents"));
+        // Also has regular sections
+        assert!(prompt.contains("<soul>"));
+        assert!(prompt.contains("<instructions>"));
+    }
+
+    #[test]
+    fn test_build_for_sub_agent_includes_soul_but_not_user_context() {
+        let config = test_config();
+        let prompt = SystemPromptBuilder::build_for_sub_agent(
+            &config,
+            "I am a creative assistant.",
+            "Name: Luna",
+            "Research quantum computing",
+            1,
+        );
+
+        assert!(prompt.contains("<soul>"));
+        assert!(prompt.contains("I am a creative assistant."));
+        assert!(prompt.contains("<identity>"));
+        assert!(prompt.contains("<task>"));
+        assert!(prompt.contains("Research quantum computing"));
+        assert!(prompt.contains("<sub_agent_instructions>"));
+        // Does NOT include user_context, session_memory, long_term_memory
+        assert!(!prompt.contains("<user_context>"));
+        assert!(!prompt.contains("<session_memory>"));
+        assert!(!prompt.contains("<long_term_memory>"));
+    }
+
+    #[test]
+    fn test_build_for_sub_agent_depth_less_than_3_includes_capabilities() {
+        let config = test_config();
+
+        for depth in [0, 1, 2] {
+            let prompt = SystemPromptBuilder::build_for_sub_agent(
+                &config,
+                "Soul",
+                "Identity",
+                "Some task",
+                depth,
+            );
+            assert!(
+                prompt.contains("<agent_capabilities>"),
+                "depth {depth} should include agent_capabilities"
+            );
+        }
+    }
+
+    #[test]
+    fn test_build_for_sub_agent_depth_3_excludes_capabilities() {
+        let config = test_config();
+        let prompt = SystemPromptBuilder::build_for_sub_agent(
+            &config,
+            "Soul",
+            "Identity",
+            "Some task",
+            3,
+        );
+
+        assert!(!prompt.contains("<agent_capabilities>"));
     }
 }

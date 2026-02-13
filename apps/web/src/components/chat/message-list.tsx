@@ -5,6 +5,9 @@
  * at the bottom when the bot is actively generating a response.
  * Auto-scrolls to the bottom on new messages.
  *
+ * When sub-agents are active, inline AgentBlock components are rendered
+ * between the pre-spawn message and the synthesis response.
+ *
  * StreamingMessage is its OWN component with its OWN state to prevent
  * the entire message list from re-rendering on each token delta.
  */
@@ -16,6 +19,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { MessageBubble } from "@/components/chat/message-bubble";
 import { MarkdownRenderer } from "@/components/chat/markdown-renderer";
 import { StreamingIndicator } from "@/components/chat/streaming-indicator";
+import { AgentBlock } from "@/components/chat/agent-block";
+import { useAgentStore } from "@/stores/agent-store";
 import type { ChatMessage } from "@/types/chat";
 
 interface MessageListProps {
@@ -34,6 +39,8 @@ export function MessageList({
   botEmoji,
 }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
+  const agents = useAgentStore((s) => s.agents);
+  const rootAgentIds = useAgentStore((s) => s.rootAgentIds);
 
   // Auto-scroll to bottom when messages change or streaming content arrives
   useEffect(() => {
@@ -78,6 +85,15 @@ export function MessageList({
         {messages?.map((msg) => (
           <MessageBubble key={msg.id} message={msg} botEmoji={botEmoji} />
         ))}
+
+        {/* Inline sub-agent blocks (between pre-spawn message and synthesis) */}
+        {agents.size > 0 && (
+          <div className="space-y-1">
+            {rootAgentIds.map((agentId) => (
+              <AgentBlock key={agentId} agentId={agentId} />
+            ))}
+          </div>
+        )}
 
         {/* Streaming: thinking indicator or live content */}
         {isStreaming && !streamedContent && (

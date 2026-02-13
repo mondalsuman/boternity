@@ -39,6 +39,7 @@ fastembed = { workspace = true }
 text-splitter = { workspace = true }
 arrow-schema = { workspace = true }
 arrow-array = { workspace = true }
+toml = { workspace = true }
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["full"] }

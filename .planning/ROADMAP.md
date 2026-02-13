@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Single-Agent Chat + LLM** - LLM provider abstraction, Anthropic Claude integration, streaming chat via CLI, session memory, chat persistence, structured logging
 - [x] **Phase 3: Multi-Provider + Memory** - Additional LLM providers with fallback chains, long-term vector memory, shared memory with trust partitioning, per-bot storage
 - [x] **Phase 4: Web UI Core + Fleet Dashboard** - React app scaffold, chat interface with streaming, fleet dashboard, soul editor with version history, PWA foundation
-- [ ] **Phase 5: Agent Hierarchy + Event System** - Sub-agent spawning (sequential + parallel), depth cap enforcement, message passing, event bus, WebSocket live updates, budget enforcement
+- [x] **Phase 5: Agent Hierarchy + Event System** - Sub-agent spawning (sequential + parallel), depth cap enforcement, message passing, event bus, WebSocket live updates, budget enforcement
 - [ ] **Phase 6: Skill System + WASM Sandbox** - Skill definition and execution, local skills, WASM sandbox for untrusted skills, registry discovery, permission model, trust tiers
 - [ ] **Phase 7: Builder System** - Universal builder agent, CLI wizard, web builder bot, adaptive question flow, skill creation and attachment via builder
 - [ ] **Phase 8: Workflows + Pipelines** - YAML workflow engine, visual builder, SDK, triggers (manual/cron/event), bot-to-bot communication, workflow composition
@@ -127,14 +127,14 @@ Plans:
 **Plans**: 8 plans
 
 Plans:
-- [ ] 05-01-PLAN.md -- Domain types (AgentEvent, SpawnInstruction, SubAgentResult, GlobalConfig) and new workspace dependencies
-- [ ] 05-02-PLAN.md -- Core primitives (RequestBudget, SharedWorkspace, CycleDetector, RequestContext, EventBus)
-- [ ] 05-03-PLAN.md -- Spawn instruction parser, AgentContext.child_for_task(), SystemPromptBuilder agent_capabilities
-- [ ] 05-04-PLAN.md -- AgentOrchestrator (parallel/sequential execution, retry, synthesis, budget/cancel integration)
-- [ ] 05-05-PLAN.md -- Config.toml loader, cost estimation, and pricing table
-- [ ] 05-06-PLAN.md -- WebSocket handler, EventBus on AppState, /ws/events route
-- [ ] 05-07-PLAN.md -- CLI tree renderer, budget display, and orchestrator integration into CLI + HTTP handlers
-- [ ] 05-08-PLAN.md -- Web UI: WebSocket hook, agent store, agent blocks, tree panel, budget indicator, WS status
+- [x] 05-01-PLAN.md -- Domain types (AgentEvent, SpawnInstruction, SubAgentResult, GlobalConfig) and new workspace dependencies
+- [x] 05-02-PLAN.md -- Core primitives (RequestBudget, SharedWorkspace, CycleDetector, RequestContext, EventBus)
+- [x] 05-03-PLAN.md -- Spawn instruction parser, AgentContext.child_for_task(), SystemPromptBuilder agent_capabilities
+- [x] 05-04-PLAN.md -- AgentOrchestrator (parallel/sequential execution, retry, synthesis, budget/cancel integration)
+- [x] 05-05-PLAN.md -- Config.toml loader, cost estimation, and pricing table
+- [x] 05-06-PLAN.md -- WebSocket handler, EventBus on AppState, /ws/events route
+- [x] 05-07-PLAN.md -- CLI tree renderer, budget display, and orchestrator integration into CLI + HTTP handlers
+- [x] 05-08-PLAN.md -- Web UI: WebSocket hook, agent store, agent blocks, tree panel, budget indicator, WS status
 
 ### Phase 6: Skill System + WASM Sandbox
 **Goal**: Agents can be extended with modular skills -- local skills run with permissions, untrusted registry skills run in a WASM sandbox, and users can discover, install, and manage skills from agentskills.io and community registries.
@@ -146,15 +146,21 @@ Plans:
   3. Skill permission model works -- skills declare required capabilities at install time, user approves or denies, and the runtime enforces those grants (a skill cannot access capabilities it was not granted)
   4. Skill inheritance works -- a child skill extends a parent skill's features and the agent sees the combined capabilities
   5. Defense-in-depth is observable -- untrusted skills are sandboxed at WASM level, WASI capabilities are restricted, and OS-level sandboxing provides a second barrier
-**Plans**: TBD
+**Plans**: 12 plans
 
 Plans:
-- [ ] 06-01: Skill definition format and local skill execution
-- [ ] 06-02: Skill inheritance hierarchy
-- [ ] 06-03: WASM sandbox (Wasmtime + WASI)
-- [ ] 06-04: Registry discovery and installation (skills.sh + ComposioHQ)
-- [ ] 06-05: Permission model and trust tiers
-- [ ] 06-06: Skill browser UI and CLI skill management
+- [ ] 06-01-PLAN.md -- Skill domain types (SkillManifest, TrustTier, Capability, permissions, audit) and Phase 6 workspace dependencies
+- [ ] 06-02-PLAN.md -- SKILL.md manifest parser (agentskills.io format) and filesystem skill store (~/.boternity/skills/)
+- [ ] 06-03-PLAN.md -- Permission model (CapabilityEnforcer, granular grants/revocation) and SQLite audit logging
+- [ ] 06-04-PLAN.md -- Dependency resolution (petgraph DAG + toposort) and inheritance composition (mixin, max 3 levels)
+- [ ] 06-05-PLAN.md -- WIT interface definition (boternity:skill) and Wasmtime runtime configuration (dual engines per trust tier)
+- [ ] 06-06-PLAN.md -- SkillExecutor trait, prompt-based skill injection (progressive disclosure), and local skill executor
+- [ ] 06-07-PLAN.md -- WASM sandboxed executor (capability-gated host imports, ResourceLimiter, fresh Store per invocation)
+- [ ] 06-08-PLAN.md -- OS-level sandbox (macOS Seatbelt + Linux Landlock subprocess model) for defense-in-depth
+- [ ] 06-09-PLAN.md -- Registry discovery (GitHub API, skills.sh, ComposioHQ) with pluggable registry trait and local caching
+- [ ] 06-10-PLAN.md -- Agent integration (SystemPromptBuilder skills, skill chaining) and AppState wiring
+- [ ] 06-11-PLAN.md -- CLI skill commands (create, install, list, inspect, browse) and ratatui TUI skill browser
+- [ ] 06-12-PLAN.md -- REST API skill handlers and web UI skill management page (Skills tab in bot detail)
 
 ### Phase 7: Builder System
 **Goal**: Users can create fully-configured agents and skills through an interactive guided experience -- a universal builder agent powers both the CLI wizard and the web UI builder bot, asking adaptive questions and assembling the result.
@@ -244,8 +250,8 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 2. Single-Agent Chat + LLM | 8/8 | Complete | 2026-02-12 |
 | 3. Multi-Provider + Memory | 13/13 | Complete | 2026-02-12 |
 | 4. Web UI Core + Fleet Dashboard | 8/8 | Complete | 2026-02-13 |
-| 5. Agent Hierarchy + Event System | 0/8 | Not started | - |
-| 6. Skill System + WASM Sandbox | 0/6 | Not started | - |
+| 5. Agent Hierarchy + Event System | 8/8 | Complete | 2026-02-13 |
+| 6. Skill System + WASM Sandbox | 0/12 | Not started | - |
 | 7. Builder System | 0/5 | Not started | - |
 | 8. Workflows + Pipelines | 0/6 | Not started | - |
 | 9. MCP Integration | 0/4 | Not started | - |

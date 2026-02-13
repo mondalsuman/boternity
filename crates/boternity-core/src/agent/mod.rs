@@ -5,8 +5,14 @@
 //! - `SystemPromptBuilder`: assembles soul + identity + user + memories into an XML-tagged prompt
 //! - `AgentEngine`: sends messages through the LLM provider and returns streaming events
 
+pub mod budget;
 pub mod context;
+pub mod cycle_detector;
 pub mod engine;
+pub mod orchestrator;
 pub mod prompt;
+pub mod request_context;
+pub mod spawner;
 pub mod summarizer;
 pub mod title;
+pub mod workspace;

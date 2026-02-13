@@ -9,6 +9,7 @@
 import { useState, useCallback } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
+import type { ChatMessage } from "@/types/chat";
 import { MessageList } from "@/components/chat/message-list";
 import { ChatInput } from "@/components/chat/chat-input";
 import { useBotSessions, useMessages } from "@/hooks/use-chat-queries";
@@ -51,6 +52,24 @@ function BotChatPage() {
 
   const handleSend = useCallback(
     async (message: string) => {
+      // Optimistically add the user's message so it appears immediately
+      if (activeSessionId) {
+        const optimisticMsg: ChatMessage = {
+          id: `optimistic-${Date.now()}`,
+          session_id: activeSessionId,
+          role: "user",
+          content: message,
+          created_at: new Date().toISOString(),
+          input_tokens: null,
+          output_tokens: null,
+          model: null,
+        };
+        queryClient.setQueryData<ChatMessage[]>(
+          ["messages", activeSessionId],
+          (old) => [...(old ?? []), optimisticMsg],
+        );
+      }
+
       // Send to current session, or undefined to create a new one
       const resolvedId = await sendMessage(
         botId,
@@ -59,7 +78,6 @@ function BotChatPage() {
       );
 
       // Use resolvedId (returned from stream) to avoid stale closure issues.
-      // This is the actual session ID — either the existing one or a newly created one.
       const sid = resolvedId ?? activeSessionId;
       if (sid) {
         await queryClient.invalidateQueries({

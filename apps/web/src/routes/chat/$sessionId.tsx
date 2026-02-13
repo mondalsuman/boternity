@@ -12,6 +12,7 @@
 import { useCallback } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
+import type { ChatMessage } from "@/types/chat";
 import { ChatLayout } from "@/components/chat/chat-layout";
 import { ChatHeader } from "@/components/chat/chat-header";
 import { MessageList } from "@/components/chat/message-list";
@@ -58,6 +59,22 @@ function ChatSessionPage() {
   const handleSend = useCallback(
     async (message: string) => {
       if (!botId) return;
+
+      // Optimistically add the user's message so it appears immediately
+      const optimisticMsg: ChatMessage = {
+        id: `optimistic-${Date.now()}`,
+        session_id: sessionId,
+        role: "user",
+        content: message,
+        created_at: new Date().toISOString(),
+        input_tokens: null,
+        output_tokens: null,
+        model: null,
+      };
+      queryClient.setQueryData<ChatMessage[]>(
+        ["messages", sessionId],
+        (old) => [...(old ?? []), optimisticMsg],
+      );
 
       const resolvedId = await sendMessage(botId, message, sessionId);
 

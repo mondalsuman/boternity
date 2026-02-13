@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 6 of 10 (Skill System + WASM Sandbox)
-Plan: 4 of 12 in current phase (4 complete: 06-01, 06-03, 06-04, 06-05)
+Plan: 5 of 12 in current phase (5 complete: 06-01, 06-02, 06-03, 06-04, 06-05)
 Status: In progress
-Last activity: 2026-02-14 -- Completed 06-04-PLAN.md (Dependency resolution + inheritance composition)
+Last activity: 2026-02-14 -- Completed 06-02-PLAN.md (SKILL.md manifest parsing + filesystem skill store)
 
-Progress: [██████████████████████████████████████████████████░░░] 46/55 (~84%)
+Progress: [███████████████████████████████████████████████████░░░] 47/55 (~85%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 46
-- Average duration: 6m 21s
-- Total execution time: 292m 40s
+- Total plans completed: 47
+- Average duration: 6m 26s
+- Total execution time: 302m 54s
 
 **By Phase:**
 
@@ -32,11 +32,11 @@ Progress: [███████████████████████
 | 3. Multi-Provider + Memory | 13/13 | 127m 31s | 9m 49s |
 | 4. Web UI Core + Fleet Dashboard | 8/8 | 40m 37s | 5m 05s |
 | 5. Agent Hierarchy + Event System | 8/8 | 28m 00s | 3m 30s |
-| 6. Skill System + WASM Sandbox | 4/12 | 19m 32s | 4m 53s |
+| 6. Skill System + WASM Sandbox | 5/12 | 29m 46s | 5m 57s |
 
 **Recent Trend:**
-- Last 5 plans: 06-01 (3m 32s), 06-05 (7m 00s), 06-03 (9m 00s), 06-04 (8m 24s)
-- Trend: Wave 2 plans averaging ~8m with type annotation fixes for Rust 2024 edition
+- Last 5 plans: 06-01 (3m 32s), 06-05 (7m 00s), 06-03 (9m 00s), 06-04 (8m 24s), 06-02 (10m 14s)
+- Trend: 06-02 took longer due to linter/template engine generating parallel artifacts requiring conflict resolution
 
 *Updated after each plan completion*
 
@@ -258,6 +258,11 @@ Recent decisions affecting current work:
 - [06-04]: version_ranges_compatible tests representative versions for intersection (not algebraic)
 - [06-04]: Inheritance removes current skill from visited after resolution (allows diamond parent graphs)
 - [06-04]: MAX_INHERITANCE_DEPTH = 3 (depth 0 = skill, depth 3 = great-grandparent triggers error)
+- [06-02]: anyhow for manifest parsing errors (utility functions, not repository traits)
+- [06-02]: Slug validation: lowercase alphanumeric + hyphens, no leading/trailing hyphens
+- [06-02]: SkillStore returns empty Vec on missing skills directory (graceful for fresh installs)
+- [06-02]: SkillSource::Local default when .boternity-meta.toml absent
+- [06-02]: get_bot_skills_config returns empty BotSkillsFile when skills.toml missing
 
 ### Pending Todos
 
@@ -272,5 +277,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 06-04-PLAN.md (Dependency resolution + inheritance composition)
+Stopped at: Completed 06-02-PLAN.md (SKILL.md manifest parsing + filesystem skill store)
 Resume file: None

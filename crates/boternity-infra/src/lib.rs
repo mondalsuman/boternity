@@ -10,6 +10,7 @@ pub mod filesystem;
 pub mod keychain;
 pub mod llm;
 pub mod secret;
+pub mod skill;
 pub mod sqlite;
 pub mod storage;
 pub mod vector;

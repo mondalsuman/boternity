@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 5 of 10 (Agent Hierarchy + Event System)
-Plan: 3 of 8 in current phase
+Plan: 5 of 8 in current phase
 Status: In progress
-Last activity: 2026-02-13 -- Completed 05-03-PLAN.md (spawn parser + context + prompt extensions)
+Last activity: 2026-02-13 -- Completed 05-05-PLAN.md (config loading and cost estimation)
 
-Progress: [█████████████████████████████████████████░░░░░░░░░░░░] 37/53 (~70%)
+Progress: [███████████████████████████████████████████░░░░░░░░░░] 39/53 (~74%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 37
-- Average duration: 7m 00s
-- Total execution time: 258m 08s
+- Total plans completed: 39
+- Average duration: 6m 43s
+- Total execution time: 262m 08s
 
 **By Phase:**
 
@@ -31,11 +31,11 @@ Progress: [███████████████████████
 | 2. Single-Agent Chat + LLM | 7/8 | 31m 46s | 4m 32s |
 | 3. Multi-Provider + Memory | 13/13 | 127m 31s | 9m 49s |
 | 4. Web UI Core + Fleet Dashboard | 8/8 | 40m 37s | 5m 05s |
-| 5. Agent Hierarchy + Event System | 3/8 | 13m 00s | 4m 20s |
+| 5. Agent Hierarchy + Event System | 5/8 | 17m 00s | 3m 24s |
 
 **Recent Trend:**
-- Last 5 plans: 04-05 (3m 00s), 04-08 (5m 00s), 05-01 (5m 00s), 05-02 (4m 00s), 05-03 (4m 00s)
-- Trend: Core logic plans in Phase 5 executing efficiently (~4m)
+- Last 5 plans: 05-01 (5m 00s), 05-02 (4m 00s), 05-03 (4m 00s), 05-04 (4m 00s), 05-05 (4m 00s)
+- Trend: Phase 5 infrastructure plans executing efficiently (~4m)
 
 *Updated after each plan completion*
 
@@ -215,6 +215,10 @@ Recent decisions affecting current work:
 - [05-03]: Default spawn mode is Parallel when no mode attribute present
 - [05-03]: Sub-agent prompts exclude user_context/session_memory/long_term_memory (fresh context)
 - [05-03]: Depth < 3 includes agent_capabilities for recursive spawning; depth 3 excludes it
+- [05-05]: default_pricing_table() is private (not pub) since external callers use estimate_cost()
+- [05-05]: OpenAI gpt-4o-mini entry ordered before gpt-4o for correct prefix matching
+- [05-05]: Bedrock uses contains() fallback for region-prefixed model IDs
+- [05-05]: Minimum budget floor of 10,000 tokens in resolve_request_budget()
 
 ### Pending Todos
 
@@ -229,5 +233,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-13
-Stopped at: Completed 05-03-PLAN.md (spawn parser + context + prompt extensions)
+Stopped at: Completed 05-05-PLAN.md (config loading and cost estimation)
 Resume file: None

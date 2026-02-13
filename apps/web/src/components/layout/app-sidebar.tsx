@@ -148,7 +148,7 @@ export function AppSidebar() {
                   tooltip="Chat"
                   isActive={currentPath.startsWith("/chat")}
                 >
-                  <Link to="/chat">
+                  <Link to="/chat" search={{ bot: undefined }}>
                     <MessageCircle />
                     <span>Chat</span>
                   </Link>

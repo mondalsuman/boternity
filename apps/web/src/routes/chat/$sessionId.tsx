@@ -94,7 +94,7 @@ function ChatSessionPage() {
   const handleDelete = useCallback(() => {
     deleteSession.mutate(sessionId, {
       onSuccess: () => {
-        navigate({ to: "/chat" });
+        navigate({ to: "/chat", search: { bot: undefined } });
       },
     });
   }, [deleteSession, sessionId, navigate]);

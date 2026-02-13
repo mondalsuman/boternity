@@ -86,7 +86,7 @@ function extractTextContent(node: ReactNode): string {
   if (node == null || typeof node === "boolean") return "";
   if (Array.isArray(node)) return node.map(extractTextContent).join("");
   if (typeof node === "object" && "props" in node) {
-    return extractTextContent(node.props.children);
+    return extractTextContent((node.props as { children?: ReactNode }).children);
   }
   return "";
 }

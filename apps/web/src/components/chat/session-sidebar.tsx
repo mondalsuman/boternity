@@ -59,7 +59,7 @@ export function SessionSidebar({ activeSessionId }: SessionSidebarProps) {
     deleteSession.mutate(sessionId, {
       onSuccess: () => {
         if (activeSessionId === sessionId) {
-          navigate({ to: "/chat" });
+          navigate({ to: "/chat", search: { bot: undefined } });
         }
       },
     });

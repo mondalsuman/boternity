@@ -11,7 +11,7 @@ import { useCallback, useEffect, useRef } from "react";
  * @param delay - Debounce delay in milliseconds.
  * @returns A stable debounced callback and a cancel function.
  */
-export function useDebouncedCallback<T extends (...args: unknown[]) => void>(
+export function useDebouncedCallback<T extends (...args: never[]) => void>(
   callback: T,
   delay: number,
 ): [(...args: Parameters<T>) => void, () => void] {

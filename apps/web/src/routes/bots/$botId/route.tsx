@@ -21,6 +21,7 @@ function useActiveTab(botId: string): string {
   const matchRoute = useMatchRoute();
   if (matchRoute({ to: "/bots/$botId/chat", params: { botId } })) return "chat";
   if (matchRoute({ to: "/bots/$botId/soul", params: { botId } })) return "soul";
+  if (matchRoute({ to: "/bots/$botId/skills", params: { botId } })) return "skills";
   if (matchRoute({ to: "/bots/$botId/settings", params: { botId } })) return "settings";
   return "overview";
 }
@@ -88,6 +89,11 @@ function BotDetailLayout() {
           <TabsTrigger value="soul" asChild>
             <Link to="/bots/$botId/soul" params={{ botId }}>
               Soul
+            </Link>
+          </TabsTrigger>
+          <TabsTrigger value="skills" asChild>
+            <Link to="/bots/$botId/skills" params={{ botId }}>
+              Skills
             </Link>
           </TabsTrigger>
           <TabsTrigger value="settings" asChild>

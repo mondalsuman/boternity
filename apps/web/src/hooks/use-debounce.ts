@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 /**
  * Returns a debounced version of the given callback.
@@ -44,4 +44,24 @@ export function useDebouncedCallback<T extends (...args: never[]) => void>(
   useEffect(() => cancel, [cancel]);
 
   return [debouncedFn, cancel];
+}
+
+/**
+ * Returns a debounced version of the given value.
+ * The returned value updates only after `delay` ms of the input value
+ * remaining stable.
+ *
+ * @param value - The value to debounce.
+ * @param delay - Debounce delay in milliseconds.
+ * @returns The debounced value.
+ */
+export function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(timer);
+  }, [value, delay]);
+
+  return debouncedValue;
 }

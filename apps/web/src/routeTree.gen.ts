@@ -16,6 +16,7 @@ import { Route as ChatSessionIdRouteImport } from './routes/chat/$sessionId'
 import { Route as BotsBotIdRouteRouteImport } from './routes/bots/$botId/route'
 import { Route as BotsBotIdIndexRouteImport } from './routes/bots/$botId/index'
 import { Route as BotsBotIdSoulRouteImport } from './routes/bots/$botId/soul'
+import { Route as BotsBotIdSkillsRouteImport } from './routes/bots/$botId/skills'
 import { Route as BotsBotIdSettingsRouteImport } from './routes/bots/$botId/settings'
 import { Route as BotsBotIdChatRouteImport } from './routes/bots/$botId/chat'
 
@@ -54,6 +55,11 @@ const BotsBotIdSoulRoute = BotsBotIdSoulRouteImport.update({
   path: '/soul',
   getParentRoute: () => BotsBotIdRouteRoute,
 } as any)
+const BotsBotIdSkillsRoute = BotsBotIdSkillsRouteImport.update({
+  id: '/skills',
+  path: '/skills',
+  getParentRoute: () => BotsBotIdRouteRoute,
+} as any)
 const BotsBotIdSettingsRoute = BotsBotIdSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -73,6 +79,7 @@ export interface FileRoutesByFullPath {
   '/chat/': typeof ChatIndexRoute
   '/bots/$botId/chat': typeof BotsBotIdChatRoute
   '/bots/$botId/settings': typeof BotsBotIdSettingsRoute
+  '/bots/$botId/skills': typeof BotsBotIdSkillsRoute
   '/bots/$botId/soul': typeof BotsBotIdSoulRoute
   '/bots/$botId/': typeof BotsBotIdIndexRoute
 }
@@ -83,6 +90,7 @@ export interface FileRoutesByTo {
   '/chat': typeof ChatIndexRoute
   '/bots/$botId/chat': typeof BotsBotIdChatRoute
   '/bots/$botId/settings': typeof BotsBotIdSettingsRoute
+  '/bots/$botId/skills': typeof BotsBotIdSkillsRoute
   '/bots/$botId/soul': typeof BotsBotIdSoulRoute
   '/bots/$botId': typeof BotsBotIdIndexRoute
 }
@@ -95,6 +103,7 @@ export interface FileRoutesById {
   '/chat/': typeof ChatIndexRoute
   '/bots/$botId/chat': typeof BotsBotIdChatRoute
   '/bots/$botId/settings': typeof BotsBotIdSettingsRoute
+  '/bots/$botId/skills': typeof BotsBotIdSkillsRoute
   '/bots/$botId/soul': typeof BotsBotIdSoulRoute
   '/bots/$botId/': typeof BotsBotIdIndexRoute
 }
@@ -108,6 +117,7 @@ export interface FileRouteTypes {
     | '/chat/'
     | '/bots/$botId/chat'
     | '/bots/$botId/settings'
+    | '/bots/$botId/skills'
     | '/bots/$botId/soul'
     | '/bots/$botId/'
   fileRoutesByTo: FileRoutesByTo
@@ -118,6 +128,7 @@ export interface FileRouteTypes {
     | '/chat'
     | '/bots/$botId/chat'
     | '/bots/$botId/settings'
+    | '/bots/$botId/skills'
     | '/bots/$botId/soul'
     | '/bots/$botId'
   id:
@@ -129,6 +140,7 @@ export interface FileRouteTypes {
     | '/chat/'
     | '/bots/$botId/chat'
     | '/bots/$botId/settings'
+    | '/bots/$botId/skills'
     | '/bots/$botId/soul'
     | '/bots/$botId/'
   fileRoutesById: FileRoutesById
@@ -192,6 +204,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BotsBotIdSoulRouteImport
       parentRoute: typeof BotsBotIdRouteRoute
     }
+    '/bots/$botId/skills': {
+      id: '/bots/$botId/skills'
+      path: '/skills'
+      fullPath: '/bots/$botId/skills'
+      preLoaderRoute: typeof BotsBotIdSkillsRouteImport
+      parentRoute: typeof BotsBotIdRouteRoute
+    }
     '/bots/$botId/settings': {
       id: '/bots/$botId/settings'
       path: '/settings'
@@ -212,6 +231,7 @@ declare module '@tanstack/react-router' {
 interface BotsBotIdRouteRouteChildren {
   BotsBotIdChatRoute: typeof BotsBotIdChatRoute
   BotsBotIdSettingsRoute: typeof BotsBotIdSettingsRoute
+  BotsBotIdSkillsRoute: typeof BotsBotIdSkillsRoute
   BotsBotIdSoulRoute: typeof BotsBotIdSoulRoute
   BotsBotIdIndexRoute: typeof BotsBotIdIndexRoute
 }
@@ -219,6 +239,7 @@ interface BotsBotIdRouteRouteChildren {
 const BotsBotIdRouteRouteChildren: BotsBotIdRouteRouteChildren = {
   BotsBotIdChatRoute: BotsBotIdChatRoute,
   BotsBotIdSettingsRoute: BotsBotIdSettingsRoute,
+  BotsBotIdSkillsRoute: BotsBotIdSkillsRoute,
   BotsBotIdSoulRoute: BotsBotIdSoulRoute,
   BotsBotIdIndexRoute: BotsBotIdIndexRoute,
 }

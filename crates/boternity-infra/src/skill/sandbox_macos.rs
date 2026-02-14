@@ -198,7 +198,7 @@ pub async fn run_sandboxed_macos(config: &SandboxConfig) -> anyhow::Result<Strin
 #[cfg(test)]
 mod tests {
     use super::*;
-    use boternity_types::skill::ResourceLimits;
+    use boternity_types::skill::{ResourceLimits, TrustTier};
     use std::path::PathBuf;
 
     fn test_config() -> SandboxConfig {

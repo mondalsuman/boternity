@@ -8,6 +8,8 @@
 
 use serde_json::{json, Value};
 
+use super::context::WorkflowContext;
+
 // ---------------------------------------------------------------------------
 // Error type
 // ---------------------------------------------------------------------------
@@ -199,62 +201,6 @@ impl Default for WorkflowEvaluator {
 }
 
 // ---------------------------------------------------------------------------
-// WorkflowContext (minimal definition for expression evaluation)
-// ---------------------------------------------------------------------------
-
-/// Minimal workflow execution context for expression evaluation.
-///
-/// This provides the data surface that JEXL expressions can reference:
-/// `steps.<id>.output`, `trigger.<field>`, `variables.<name>`.
-///
-/// The full `WorkflowContext` (with size limits, checkpointing, etc.) is
-/// defined in the `context` module; this struct captures just enough for
-/// expression evaluation and retry handling.
-#[derive(Debug, Clone)]
-pub struct WorkflowContext {
-    /// Step outputs keyed by step ID.
-    pub step_outputs: std::collections::HashMap<String, Value>,
-    /// Trigger payload (webhook body, cron metadata, etc.).
-    pub trigger_payload: Option<Value>,
-    /// User-defined variables.
-    pub variables: std::collections::HashMap<String, Value>,
-    /// Workflow name.
-    pub workflow_name: String,
-    /// Run ID (as string for expression context).
-    pub run_id: String,
-}
-
-impl WorkflowContext {
-    /// Build the JSON context object that JEXL expressions evaluate against.
-    ///
-    /// Shape:
-    /// ```json
-    /// {
-    ///   "steps": { "<step_id>": { "output": <value> }, ... },
-    ///   "trigger": <trigger_payload or {}>,
-    ///   "variables": { ... },
-    ///   "workflow": { "name": "...", "run_id": "..." }
-    /// }
-    /// ```
-    pub fn to_expression_context(&self) -> Value {
-        let mut steps = serde_json::Map::new();
-        for (id, output) in &self.step_outputs {
-            steps.insert(id.clone(), json!({ "output": output }));
-        }
-
-        json!({
-            "steps": steps,
-            "trigger": self.trigger_payload.clone().unwrap_or(json!({})),
-            "variables": self.variables,
-            "workflow": {
-                "name": self.workflow_name,
-                "run_id": self.run_id,
-            }
-        })
-    }
-}
-
-// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
@@ -262,6 +208,7 @@ impl WorkflowContext {
 mod tests {
     use super::*;
     use serde_json::json;
+    use uuid::Uuid;
 
     fn evaluator() -> WorkflowEvaluator {
         WorkflowEvaluator::new()
@@ -578,13 +525,11 @@ mod tests {
     #[test]
     fn test_evaluate_in_workflow_context_step_output() {
         let eval = evaluator();
-        let mut wf_ctx = WorkflowContext {
-            step_outputs: std::collections::HashMap::new(),
-            trigger_payload: None,
-            variables: std::collections::HashMap::new(),
-            workflow_name: "test-wf".to_string(),
-            run_id: "run-001".to_string(),
-        };
+        let mut wf_ctx = WorkflowContext::new(
+            "test-wf".to_string(),
+            Uuid::now_v7(),
+            None,
+        );
         wf_ctx
             .step_outputs
             .insert("gather".to_string(), json!("news articles"));
@@ -600,13 +545,11 @@ mod tests {
     #[test]
     fn test_evaluate_in_workflow_context_trigger() {
         let eval = evaluator();
-        let wf_ctx = WorkflowContext {
-            step_outputs: std::collections::HashMap::new(),
-            trigger_payload: Some(json!({ "source": "github", "event": "push" })),
-            variables: std::collections::HashMap::new(),
-            workflow_name: "test-wf".to_string(),
-            run_id: "run-001".to_string(),
-        };
+        let wf_ctx = WorkflowContext::new(
+            "test-wf".to_string(),
+            Uuid::now_v7(),
+            Some(json!({ "source": "github", "event": "push" })),
+        );
 
         assert!(eval
             .evaluate_in_workflow_context("trigger.source == 'github'", &wf_ctx)
@@ -616,13 +559,11 @@ mod tests {
     #[test]
     fn test_evaluate_in_workflow_context_variables() {
         let eval = evaluator();
-        let mut wf_ctx = WorkflowContext {
-            step_outputs: std::collections::HashMap::new(),
-            trigger_payload: None,
-            variables: std::collections::HashMap::new(),
-            workflow_name: "test-wf".to_string(),
-            run_id: "run-001".to_string(),
-        };
+        let mut wf_ctx = WorkflowContext::new(
+            "test-wf".to_string(),
+            Uuid::now_v7(),
+            None,
+        );
         wf_ctx
             .variables
             .insert("max_retries".to_string(), json!(5.0));
@@ -635,13 +576,11 @@ mod tests {
     #[test]
     fn test_evaluate_in_workflow_context_workflow_metadata() {
         let eval = evaluator();
-        let wf_ctx = WorkflowContext {
-            step_outputs: std::collections::HashMap::new(),
-            trigger_payload: None,
-            variables: std::collections::HashMap::new(),
-            workflow_name: "daily-digest".to_string(),
-            run_id: "run-123".to_string(),
-        };
+        let wf_ctx = WorkflowContext::new(
+            "daily-digest".to_string(),
+            Uuid::now_v7(),
+            None,
+        );
 
         assert!(eval
             .evaluate_in_workflow_context(

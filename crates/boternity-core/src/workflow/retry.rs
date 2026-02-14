@@ -52,7 +52,7 @@ impl RetryHandler {
         config: &RetryConfig,
         step: &StepDefinition,
         error: &str,
-        _context: &super::expression::WorkflowContext,
+        _context: &super::context::WorkflowContext,
     ) -> RetryAction {
         match config.strategy {
             RetryStrategy::Simple => RetryAction::Rerun,
@@ -176,14 +176,12 @@ mod tests {
         }
     }
 
-    fn make_workflow_context() -> super::super::expression::WorkflowContext {
-        super::super::expression::WorkflowContext {
-            step_outputs: std::collections::HashMap::new(),
-            trigger_payload: None,
-            variables: std::collections::HashMap::new(),
-            workflow_name: "test-workflow".to_string(),
-            run_id: "run-001".to_string(),
-        }
+    fn make_workflow_context() -> super::super::context::WorkflowContext {
+        super::super::context::WorkflowContext::new(
+            "test-workflow".to_string(),
+            uuid::Uuid::now_v7(),
+            None,
+        )
     }
 
     // -------------------------------------------------------------------

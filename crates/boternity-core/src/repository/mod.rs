@@ -5,8 +5,10 @@
 //! specific storage technology.
 
 pub mod bot;
+pub mod message;
 pub mod secret;
 pub mod soul;
+pub mod workflow;
 
 /// Sort order for list queries.
 #[derive(Debug, Clone, PartialEq, Eq)]

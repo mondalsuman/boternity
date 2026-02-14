@@ -12,7 +12,7 @@
  * phase field in the turn / state summary.
  */
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -50,9 +50,11 @@ function WizardPage() {
     reset,
   } = useBuilderStore();
 
-  // If we landed on wizard without a session, start one
+  // If we landed on wizard without a session, start one (once)
+  const startedRef = useRef(false);
   useEffect(() => {
-    if (!sessionId && description && !isLoading) {
+    if (!sessionId && description && !isLoading && !startedRef.current) {
+      startedRef.current = true;
       startSession(description);
     }
   }, [sessionId, description, isLoading, startSession]);

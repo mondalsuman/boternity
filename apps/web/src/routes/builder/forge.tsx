@@ -103,6 +103,7 @@ function ForgePage() {
   const [inputValue, setInputValue] = useState("");
   const [hasStarted, setHasStarted] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const initRef = useRef(false);
 
   // Store state
   const messages = useForgeStore((s) => s.messages);
@@ -135,25 +136,19 @@ function ForgePage() {
   // -----------------------------------------------------------------------
 
   useEffect(() => {
+    if (initRef.current) return;
+    initRef.current = true;
+
     // Reset store for fresh session
     reset();
     const sid = generateSessionId();
     setSessionId(sid);
 
     // Add greeting message as a clarify turn
-    const greetingTurn = {
+    addForgeMessage({
       action: "clarify" as const,
       message: FORGE_GREETING,
-    };
-    // Defer to next tick so the store is initialized
-    setTimeout(() => {
-      addForgeMessage(greetingTurn);
-    }, 100);
-
-    return () => {
-      // Cleanup on unmount
-    };
-    // Run once on mount
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

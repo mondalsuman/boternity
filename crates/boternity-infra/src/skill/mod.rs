@@ -12,5 +12,6 @@ pub mod sandbox_macos;
 #[cfg(target_os = "linux")]
 pub mod sandbox_linux;
 pub mod skill_store;
+pub mod wasm_compiler;
 pub mod wasm_executor;
 pub mod wasm_runtime;

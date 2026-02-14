@@ -5,6 +5,7 @@ import {
   LayoutDashboard,
   MessageCircle,
   Settings,
+  Wand2,
 } from "lucide-react";
 import { apiFetch } from "@/lib/api-client";
 import type { Bot as BotType } from "@/types/bot";
@@ -132,6 +133,27 @@ export function AppSidebar() {
                     ))
                   )}
                 </SidebarMenuSub>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Builder */}
+        <SidebarGroup>
+          <SidebarGroupLabel>Builder</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  tooltip="Builder"
+                  isActive={currentPath.startsWith("/builder")}
+                >
+                  <Link to="/builder">
+                    <Wand2 />
+                    <span>Create Bot</span>
+                  </Link>
+                </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>

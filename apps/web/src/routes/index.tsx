@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
 import { useBots } from "@/hooks/use-bot-queries";
 import { StatsBar } from "@/components/dashboard/stats-bar";
@@ -32,12 +32,11 @@ function DashboardPage() {
           </p>
         </div>
         {!isEmpty && (
-          <Button
-            className="hidden md:inline-flex"
-            onClick={() => setCreateOpen(true)}
-          >
-            <Plus className="size-4" />
-            Create Bot
+          <Button className="hidden md:inline-flex" asChild>
+            <Link to="/builder">
+              <Plus className="size-4" />
+              Create Bot
+            </Link>
           </Button>
         )}
       </div>
@@ -62,14 +61,16 @@ function DashboardPage() {
         <Button
           size="icon-lg"
           className="fixed bottom-6 right-6 z-40 rounded-full shadow-lg md:hidden safe-bottom"
-          onClick={() => setCreateOpen(true)}
+          asChild
         >
-          <Plus className="size-5" />
-          <span className="sr-only">Create Bot</span>
+          <Link to="/builder">
+            <Plus className="size-5" />
+            <span className="sr-only">Create Bot</span>
+          </Link>
         </Button>
       )}
 
-      {/* Create bot dialog - shared between desktop button, mobile FAB, and empty state CTA */}
+      {/* Create bot dialog - kept for quick create from empty state */}
       <CreateBotDialog open={createOpen} onOpenChange={setCreateOpen} />
     </div>
   );

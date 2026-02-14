@@ -12,7 +12,10 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ChatIndexRouteImport } from './routes/chat/index'
+import { Route as BuilderIndexRouteImport } from './routes/builder/index'
 import { Route as ChatSessionIdRouteImport } from './routes/chat/$sessionId'
+import { Route as BuilderWizardRouteImport } from './routes/builder/wizard'
+import { Route as BuilderForgeRouteImport } from './routes/builder/forge'
 import { Route as BotsBotIdRouteRouteImport } from './routes/bots/$botId/route'
 import { Route as BotsBotIdIndexRouteImport } from './routes/bots/$botId/index'
 import { Route as BotsBotIdSoulRouteImport } from './routes/bots/$botId/soul'
@@ -35,9 +38,24 @@ const ChatIndexRoute = ChatIndexRouteImport.update({
   path: '/chat/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BuilderIndexRoute = BuilderIndexRouteImport.update({
+  id: '/builder/',
+  path: '/builder/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ChatSessionIdRoute = ChatSessionIdRouteImport.update({
   id: '/chat/$sessionId',
   path: '/chat/$sessionId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BuilderWizardRoute = BuilderWizardRouteImport.update({
+  id: '/builder/wizard',
+  path: '/builder/wizard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BuilderForgeRoute = BuilderForgeRouteImport.update({
+  id: '/builder/forge',
+  path: '/builder/forge',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BotsBotIdRouteRoute = BotsBotIdRouteRouteImport.update({
@@ -75,7 +93,10 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/settings': typeof SettingsRoute
   '/bots/$botId': typeof BotsBotIdRouteRouteWithChildren
+  '/builder/forge': typeof BuilderForgeRoute
+  '/builder/wizard': typeof BuilderWizardRoute
   '/chat/$sessionId': typeof ChatSessionIdRoute
+  '/builder/': typeof BuilderIndexRoute
   '/chat/': typeof ChatIndexRoute
   '/bots/$botId/chat': typeof BotsBotIdChatRoute
   '/bots/$botId/settings': typeof BotsBotIdSettingsRoute
@@ -86,7 +107,10 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/settings': typeof SettingsRoute
+  '/builder/forge': typeof BuilderForgeRoute
+  '/builder/wizard': typeof BuilderWizardRoute
   '/chat/$sessionId': typeof ChatSessionIdRoute
+  '/builder': typeof BuilderIndexRoute
   '/chat': typeof ChatIndexRoute
   '/bots/$botId/chat': typeof BotsBotIdChatRoute
   '/bots/$botId/settings': typeof BotsBotIdSettingsRoute
@@ -99,7 +123,10 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/settings': typeof SettingsRoute
   '/bots/$botId': typeof BotsBotIdRouteRouteWithChildren
+  '/builder/forge': typeof BuilderForgeRoute
+  '/builder/wizard': typeof BuilderWizardRoute
   '/chat/$sessionId': typeof ChatSessionIdRoute
+  '/builder/': typeof BuilderIndexRoute
   '/chat/': typeof ChatIndexRoute
   '/bots/$botId/chat': typeof BotsBotIdChatRoute
   '/bots/$botId/settings': typeof BotsBotIdSettingsRoute
@@ -113,7 +140,10 @@ export interface FileRouteTypes {
     | '/'
     | '/settings'
     | '/bots/$botId'
+    | '/builder/forge'
+    | '/builder/wizard'
     | '/chat/$sessionId'
+    | '/builder/'
     | '/chat/'
     | '/bots/$botId/chat'
     | '/bots/$botId/settings'
@@ -124,7 +154,10 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/settings'
+    | '/builder/forge'
+    | '/builder/wizard'
     | '/chat/$sessionId'
+    | '/builder'
     | '/chat'
     | '/bots/$botId/chat'
     | '/bots/$botId/settings'
@@ -136,7 +169,10 @@ export interface FileRouteTypes {
     | '/'
     | '/settings'
     | '/bots/$botId'
+    | '/builder/forge'
+    | '/builder/wizard'
     | '/chat/$sessionId'
+    | '/builder/'
     | '/chat/'
     | '/bots/$botId/chat'
     | '/bots/$botId/settings'
@@ -149,7 +185,10 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   SettingsRoute: typeof SettingsRoute
   BotsBotIdRouteRoute: typeof BotsBotIdRouteRouteWithChildren
+  BuilderForgeRoute: typeof BuilderForgeRoute
+  BuilderWizardRoute: typeof BuilderWizardRoute
   ChatSessionIdRoute: typeof ChatSessionIdRoute
+  BuilderIndexRoute: typeof BuilderIndexRoute
   ChatIndexRoute: typeof ChatIndexRoute
 }
 
@@ -176,11 +215,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChatIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/builder/': {
+      id: '/builder/'
+      path: '/builder'
+      fullPath: '/builder/'
+      preLoaderRoute: typeof BuilderIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/chat/$sessionId': {
       id: '/chat/$sessionId'
       path: '/chat/$sessionId'
       fullPath: '/chat/$sessionId'
       preLoaderRoute: typeof ChatSessionIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/builder/wizard': {
+      id: '/builder/wizard'
+      path: '/builder/wizard'
+      fullPath: '/builder/wizard'
+      preLoaderRoute: typeof BuilderWizardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/builder/forge': {
+      id: '/builder/forge'
+      path: '/builder/forge'
+      fullPath: '/builder/forge'
+      preLoaderRoute: typeof BuilderForgeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/bots/$botId': {
@@ -252,7 +312,10 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SettingsRoute: SettingsRoute,
   BotsBotIdRouteRoute: BotsBotIdRouteRouteWithChildren,
+  BuilderForgeRoute: BuilderForgeRoute,
+  BuilderWizardRoute: BuilderWizardRoute,
   ChatSessionIdRoute: ChatSessionIdRoute,
+  BuilderIndexRoute: BuilderIndexRoute,
   ChatIndexRoute: ChatIndexRoute,
 }
 export const routeTree = rootRouteImport

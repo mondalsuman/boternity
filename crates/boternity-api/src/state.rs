@@ -458,6 +458,111 @@ impl AppState {
             );
         }
 
+        // EventBus listener for event-driven workflow triggers
+        let event_triggers = trigger_manager.get_event_triggers().await;
+        if !event_triggers.is_empty() {
+            let mut rx = event_bus.subscribe();
+            let executor_for_events = Arc::clone(&workflow_executor);
+            let repo_for_events = Arc::clone(&workflow_repo);
+            let tm_for_events = Arc::clone(&trigger_manager);
+
+            tokio::spawn(async move {
+                loop {
+                    match rx.recv().await {
+                        Ok(event) => {
+                            let event_type = serde_json::to_value(&event)
+                                .ok()
+                                .and_then(|v| v["type"].as_str().map(|s| s.to_string()))
+                                .unwrap_or_default();
+                            let event_json = serde_json::to_value(&event).ok();
+
+                            let triggers = tm_for_events.get_event_triggers().await;
+                            for (workflow_id, _source, trigger_event_type, when_clause) in &triggers
+                            {
+                                if trigger_event_type != &event_type {
+                                    continue;
+                                }
+
+                                let trigger_ctx =
+                                    boternity_core::workflow::trigger::TriggerContext::new(
+                                        "event",
+                                        &event_type,
+                                        *workflow_id,
+                                        event_json.clone(),
+                                    );
+                                match tm_for_events
+                                    .evaluate_when_clause(when_clause.as_deref(), &trigger_ctx)
+                                {
+                                    Ok(true) => {
+                                        let exec = Arc::clone(&executor_for_events);
+                                        let repo = Arc::clone(&repo_for_events);
+                                        let wf_id = *workflow_id;
+                                        let payload = event_json.clone();
+                                        tokio::spawn(async move {
+                                            match repo.get_definition(&wf_id).await {
+                                                Ok(Some(def)) => {
+                                                    match exec
+                                                        .execute(&def, "event", payload)
+                                                        .await
+                                                    {
+                                                        Ok(result) => {
+                                                            tracing::info!(
+                                                                %wf_id,
+                                                                run_id = %result.run_id,
+                                                                "event-triggered workflow completed"
+                                                            );
+                                                        }
+                                                        Err(e) => {
+                                                            tracing::error!(
+                                                                %wf_id,
+                                                                error = %e,
+                                                                "event-triggered workflow failed"
+                                                            );
+                                                        }
+                                                    }
+                                                }
+                                                _ => {
+                                                    tracing::warn!(
+                                                        %wf_id,
+                                                        "event trigger: workflow not found"
+                                                    );
+                                                }
+                                            }
+                                        });
+                                    }
+                                    Ok(false) => {}
+                                    Err(e) => {
+                                        tracing::warn!(
+                                            %workflow_id,
+                                            error = %e,
+                                            "event trigger when-clause evaluation failed"
+                                        );
+                                    }
+                                }
+                            }
+                        }
+                        Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
+                            tracing::warn!(
+                                skipped = n,
+                                "workflow event listener lagged"
+                            );
+                        }
+                        Err(tokio::sync::broadcast::error::RecvError::Closed) => {
+                            tracing::info!(
+                                "event bus closed, workflow event listener shutting down"
+                            );
+                            break;
+                        }
+                    }
+                }
+            });
+
+            tracing::info!(
+                event_triggers = event_triggers.len(),
+                "started workflow event trigger listener"
+            );
+        }
+
         Ok(Self {
             bot_service: Arc::new(bot_service),
             soul_service: Arc::new(api_soul_service),

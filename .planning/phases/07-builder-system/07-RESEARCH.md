@@ -1,8 +1,8 @@
 # Phase 7: Builder System - Research
 
-**Researched:** 2026-02-14
+**Researched:** 2026-02-14 (updated with deep-dive corrections)
 **Domain:** LLM-driven interactive builder agent, multi-turn structured conversation, CLI wizard, web UI builder, adaptive question flows, artifact generation (SOUL.md, IDENTITY.md, USER.md, skills)
-**Confidence:** HIGH (architecture patterns), HIGH (CLI stack), HIGH (structured output), MEDIUM (builder memory persistence), HIGH (draft saving)
+**Confidence:** HIGH (architecture patterns), HIGH (CLI stack), HIGH (structured output), HIGH (storage strategy), HIGH (service integration), MEDIUM (web builder protocol)
 
 <user_constraints>
 ## User Constraints (from CONTEXT.md)
@@ -80,7 +80,525 @@ The standard approach uses Claude's **structured output** (`output_config.format
 
 The key architectural insight is the **surface adapter pattern**: the core `BuilderAgent` trait is surface-agnostic. It accepts user input (selected option index or free text) and returns a `BuilderTurn` (question with options, preview update, or completion). CLI and web adapters translate `BuilderTurn` into their respective UIs. This means the LLM interaction logic, state management, and artifact generation are written once.
 
-**Primary recommendation:** Use Claude structured outputs (`output_config.format` with `json_schema`) to enforce parseable LLM responses on every builder turn. Use `dialoguer` (already in workspace) for CLI interaction. Store builder state as JSON in SQLite via the existing `SqliteKvStore`. Generate artifacts by calling the existing `BotService::create_bot` and `SoulService::write_and_save_soul` after assembly.
+**Primary recommendation:** Use Claude structured outputs (`output_config.format` with `json_schema`) to enforce parseable LLM responses on every builder turn. Use `dialoguer` (already in workspace) for CLI interaction. Store builder drafts and memory in a dedicated `builder_drafts` SQLite table (NOT the bot-scoped KvStore). Generate artifacts by calling the existing `BotService::create_bot` and `SoulService::write_and_save_soul` after assembly.
+
+---
+
+## CORRECTIONS: Deep-Dive Findings (2026-02-14)
+
+This section documents corrections to the initial research based on actual codebase verification.
+
+### CORRECTION 1: KvStore is Bot-Scoped, NOT Namespace-Scoped
+
+**Initial assumption (WRONG):** The research assumed `SqliteKvStore` has namespace-based operations like `set(NAMESPACE, key, value)` and `list(NAMESPACE)`.
+
+**Actual codebase (VERIFIED):**
+
+```rust
+// crates/boternity-core/src/storage/kv_store.rs
+pub trait KvStore: Send + Sync {
+    fn get(&self, bot_id: &Uuid, key: &str) -> impl Future<Output = Result<Option<serde_json::Value>, RepositoryError>> + Send;
+    fn set(&self, bot_id: &Uuid, key: &str, value: &serde_json::Value) -> impl Future<Output = Result<(), RepositoryError>> + Send;
+    fn delete(&self, bot_id: &Uuid, key: &str) -> impl Future<Output = Result<(), RepositoryError>> + Send;
+    fn list_keys(&self, bot_id: &Uuid) -> impl Future<Output = Result<Vec<String>, RepositoryError>> + Send;
+    fn get_entry(&self, bot_id: &Uuid, key: &str) -> impl Future<Output = Result<Option<KvEntry>, RepositoryError>> + Send;
+}
+```
+
+The `SqliteKvStore` implementation uses a `bot_kv_store` table with `(bot_id, key)` as the compound primary key. There is **no namespace concept**. All operations require a `bot_id: &Uuid`.
+
+**Impact on builder:** Builder drafts and builder memory CANNOT use the existing KvStore because:
+- Builder data is not bot-scoped (drafts exist before any bot is created)
+- There is no "Forge bot_id" to use as a scope (Forge should be embedded, not a real bot)
+- There is no `list_prefix` method, and no namespace concept
+
+**Resolution: Create a dedicated `BuilderDraftRepository` trait + `SqliteBuilderDraftStore` implementation.**
+
+This is the correct pattern because:
+1. Builder drafts are a fundamentally different data model (session-scoped, not bot-scoped)
+2. Builder memory entries need listing by category prefix -- requires a `LIKE` query on keys
+3. Adding namespace support to KvStore would pollute its clean bot-scoped API
+4. A dedicated table (`builder_drafts`) with proper schema is cleaner than abusing JSON blobs
+5. This follows the existing codebase pattern: each domain has its own repository trait and SQLite implementation
+
+**Recommended schema:**
+
+```sql
+CREATE TABLE builder_drafts (
+    session_id TEXT PRIMARY KEY,
+    state_json TEXT NOT NULL,           -- serialized BuilderState
+    schema_version INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+CREATE TABLE builder_memory (
+    id TEXT PRIMARY KEY,                -- UUID
+    purpose_category TEXT NOT NULL,     -- e.g., "coding", "creative"
+    bot_name TEXT NOT NULL,
+    choices_json TEXT NOT NULL,         -- serialized BuilderMemoryEntry
+    created_at TEXT NOT NULL
+);
+
+CREATE INDEX idx_builder_memory_category ON builder_memory(purpose_category);
+```
+
+**Recommended trait:**
+
+```rust
+// crates/boternity-core/src/builder/draft_store.rs
+pub trait BuilderDraftStore: Send + Sync {
+    /// Save or update a builder draft.
+    fn save_draft(
+        &self,
+        session_id: &str,
+        state: &BuilderState,
+    ) -> impl Future<Output = Result<(), BuilderError>> + Send;
+
+    /// Load a builder draft by session ID.
+    fn load_draft(
+        &self,
+        session_id: &str,
+    ) -> impl Future<Output = Result<Option<BuilderState>, BuilderError>> + Send;
+
+    /// List all active drafts, most recently updated first.
+    fn list_drafts(
+        &self,
+    ) -> impl Future<Output = Result<Vec<BuilderDraftSummary>, BuilderError>> + Send;
+
+    /// Delete a draft (after successful assembly or manual discard).
+    fn delete_draft(
+        &self,
+        session_id: &str,
+    ) -> impl Future<Output = Result<(), BuilderError>> + Send;
+}
+
+// crates/boternity-core/src/builder/memory_store.rs
+pub trait BuilderMemoryStore: Send + Sync {
+    /// Record choices from a completed builder session.
+    fn record_memory(
+        &self,
+        entry: &BuilderMemoryEntry,
+    ) -> impl Future<Output = Result<(), BuilderError>> + Send;
+
+    /// Recall past sessions for a given purpose category.
+    fn recall_by_category(
+        &self,
+        category: &PurposeCategory,
+        limit: usize,
+    ) -> impl Future<Output = Result<Vec<BuilderMemoryEntry>, BuilderError>> + Send;
+}
+```
+
+**Confidence: HIGH** -- verified by reading actual `KvStore` trait, `SqliteKvStore` implementation, and `bot_kv_store` table schema.
+
+### CORRECTION 2: CompletionRequest Needs `output_config` Extension
+
+**Initial assumption (PARTIALLY CORRECT):** The research correctly identified that `CompletionRequest` lacks `output_config`, but the approach needs more specificity.
+
+**Actual codebase (VERIFIED):**
+
+The `CompletionRequest` (in `boternity-types/src/llm.rs`) has these fields:
+```rust
+pub struct CompletionRequest {
+    pub model: String,
+    pub messages: Vec<Message>,
+    pub system: Option<String>,
+    pub max_tokens: u32,
+    pub temperature: Option<f64>,
+    pub stream: bool,
+    pub stop_sequences: Option<Vec<String>>,
+}
+```
+
+The `AnthropicProvider` converts `CompletionRequest` into `AnthropicRequest` via `to_anthropic_request()`:
+```rust
+fn to_anthropic_request(&self, request: &CompletionRequest, stream: bool) -> AnthropicRequest {
+    AnthropicRequest {
+        model: request.model.clone(),
+        max_tokens: request.max_tokens,
+        messages: /* converted */,
+        system: request.system.clone(),
+        stream,
+        temperature: request.temperature,
+        stop_sequences: request.stop_sequences.clone(),
+    }
+}
+```
+
+The `BedrockProvider` similarly converts to `BedrockRequest` which has the same fields minus `model` plus `anthropic_version`.
+
+Neither `AnthropicRequest` nor `BedrockRequest` currently has an `output_config` field.
+
+**Resolution: Add `output_config` to ALL THREE types.**
+
+Step 1: Add to `CompletionRequest` (boternity-types):
+```rust
+/// Optional structured output configuration.
+/// When present, constrains Claude's response to match the given JSON schema.
+#[serde(skip_serializing_if = "Option::is_none")]
+pub output_config: Option<OutputConfig>,
+```
+
+Step 2: Define `OutputConfig` types (boternity-types):
+```rust
+/// Configuration for structured output.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OutputConfig {
+    pub format: OutputFormat,
+}
+
+/// Output format specification.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum OutputFormat {
+    /// Constrain output to a JSON schema.
+    JsonSchema {
+        /// The JSON Schema that the output must conform to.
+        schema: serde_json::Value,
+    },
+}
+```
+
+Step 3: Add to `AnthropicRequest` (boternity-infra):
+```rust
+#[serde(skip_serializing_if = "Option::is_none")]
+pub output_config: Option<OutputConfig>,
+```
+
+Step 4: Add to `BedrockRequest` (boternity-infra):
+```rust
+#[serde(skip_serializing_if = "Option::is_none")]
+pub output_config: Option<OutputConfig>,
+```
+
+Step 5: Wire through in both provider `to_*_request()` methods:
+```rust
+output_config: request.output_config.clone(),
+```
+
+**Bedrock compatibility:** Bedrock's structured output support is confirmed GA for the same models. The `output_config` field is passed in the request body the same way as direct API. The Bedrock request omits `model` (in URL path) and adds `anthropic_version`, but `output_config` serializes identically. No special handling needed.
+
+**Backward compatibility:** `Option<OutputConfig>` with `skip_serializing_if = "Option::is_none"` means existing calls that don't use structured output are unaffected. The field simply doesn't appear in the serialized JSON.
+
+**Response handling:** Structured output responses use the same `content[0].text` field as normal responses. The `CompletionResponse.content: String` already handles this. The response content is valid JSON matching the schema. Callers parse it with `serde_json::from_str::<BuilderTurn>(&response.content)`.
+
+**Confidence: HIGH** -- verified by reading all three request types, both provider implementations, and confirmed against official Anthropic documentation.
+
+### CORRECTION 3: Structured Output API is GA (Not Beta)
+
+**Initial concern:** Whether structured outputs are beta or GA, and what headers are needed.
+
+**Verified (2026-02-14) from official Anthropic docs:**
+
+Structured outputs are **generally available** on:
+- Claude API: Opus 4.6, Sonnet 4.5, Opus 4.5, Haiku 4.5
+- Amazon Bedrock: same models
+- Microsoft Foundry: still in public beta
+
+**No beta header needed.** The old `anthropic-beta: structured-outputs-2025-11-13` header is not required for GA models. The `output_format` parameter has been deprecated and moved to `output_config.format`.
+
+The existing `AnthropicProvider` uses `anthropic-version: 2023-06-01` which is correct and sufficient. No header changes needed.
+
+**API shape confirmed:**
+```json
+{
+  "model": "claude-opus-4-6",
+  "max_tokens": 1024,
+  "messages": [...],
+  "output_config": {
+    "format": {
+      "type": "json_schema",
+      "schema": {
+        "type": "object",
+        "properties": {...},
+        "required": [...],
+        "additionalProperties": false
+      }
+    }
+  }
+}
+```
+
+**Confidence: HIGH** -- verified directly from https://platform.claude.com/docs/en/build-with-claude/structured-outputs.
+
+### FINDING 1: Tagged Enum Schema Compatibility with Claude
+
+**Question:** Does `schemars::schema_for!(BuilderTurn)` generate a valid JSON schema for Claude's structured output when using `#[serde(tag = "action")]`?
+
+**Answer: YES, with the `additionalProperties: false` requirement handled.**
+
+For an internally-tagged enum like:
+```rust
+#[derive(JsonSchema)]
+#[serde(tag = "action", rename_all = "snake_case")]
+pub enum BuilderTurn {
+    AskQuestion { question: String, options: Vec<BuilderOption> },
+    ReadyToAssemble { summary: BuilderSummary },
+    Clarify { question: String, context: String },
+}
+```
+
+Schemars generates a schema using `anyOf` where each variant is an object with:
+- The tag property (`"action"`) set to a `const` value matching the variant name
+- The variant's fields as additional properties
+- All properties in `required`
+
+Approximate generated schema structure:
+```json
+{
+  "anyOf": [
+    {
+      "type": "object",
+      "properties": {
+        "action": { "const": "ask_question" },
+        "question": { "type": "string" },
+        "options": { "type": "array", "items": { "$ref": "#/$defs/BuilderOption" } },
+        "allow_other": { "type": "boolean" },
+        "phase_label": { "type": "string" },
+        "config_preview": { "type": "string" }
+      },
+      "required": ["action", "question", "options", "allow_other", "phase_label", "config_preview"]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "action": { "const": "ready_to_assemble" },
+        "summary": { "$ref": "#/$defs/BuilderSummary" },
+        "confirmation_message": { "type": "string" }
+      },
+      "required": ["action", "summary", "confirmation_message"]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "action": { "const": "clarify" },
+        "phase_label": { "type": "string" },
+        "question": { "type": "string" },
+        "context": { "type": "string" }
+      },
+      "required": ["action", "phase_label", "question", "context"]
+    }
+  ],
+  "$defs": {
+    "BuilderOption": { ... },
+    "BuilderSummary": { ... }
+  }
+}
+```
+
+**Claude's support for this:**
+- `anyOf` is explicitly supported by Claude structured outputs
+- `const` values are supported
+- `$ref` and `$defs` / `definitions` are supported (external `$ref` is not, but schemars uses local refs)
+- `additionalProperties: false` is **required by Claude** on all objects -- schemars does NOT add this by default
+
+**CRITICAL: Post-processing required.** After generating the schema with `schemars::schema_for!()`, the schema MUST be post-processed to add `"additionalProperties": false` to every object type. Without this, Claude returns a 400 error.
+
+```rust
+/// Post-process a schemars-generated schema to add additionalProperties: false
+/// to all object types, as required by Claude's structured output.
+fn add_additional_properties_false(schema: &mut serde_json::Value) {
+    if let Some(obj) = schema.as_object_mut() {
+        // If this is an object type, add additionalProperties: false
+        if obj.get("type").and_then(|t| t.as_str()) == Some("object") {
+            obj.insert("additionalProperties".to_string(), serde_json::json!(false));
+        }
+        // Recurse into nested schemas
+        for key in ["properties", "items", "anyOf", "allOf", "$defs", "definitions"] {
+            if let Some(nested) = obj.get_mut(key) {
+                if let Some(arr) = nested.as_array_mut() {
+                    for item in arr {
+                        add_additional_properties_false(item);
+                    }
+                } else if let Some(obj_nested) = nested.as_object_mut() {
+                    for (_, v) in obj_nested {
+                        add_additional_properties_false(v);
+                    }
+                }
+            }
+        }
+    }
+}
+```
+
+**Schema complexity assessment:** The `BuilderTurn` enum has 3 variants with flat fields. `BuilderSummary` is a flat object with 11 string/number/array fields. `BuilderOption` has 2 string fields. This is well within Claude's schema complexity limits. The total schema is roughly equivalent to 3 tool definitions, which is trivial.
+
+**JSON Schema limitations that apply:**
+- No recursive schemas (not applicable -- BuilderTurn is not recursive)
+- `additionalProperties` must be `false` on all objects (requires post-processing)
+- No `minimum`/`maximum`/`minLength`/`maxLength` constraints (not applicable)
+- `enum` values must be primitives only (string enums for PurposeCategory are fine)
+
+**Confidence: HIGH** -- `anyOf` confirmed supported by official Anthropic docs, schemars tagged enum behavior confirmed by library docs and source code analysis.
+
+### FINDING 2: Exact Service Method Signatures for Assembly
+
+**Verified from codebase:**
+
+**`BotService::create_bot`:**
+```rust
+pub async fn create_bot(&self, request: CreateBotRequest) -> Result<Bot, BotError>
+
+pub struct CreateBotRequest {
+    pub name: String,
+    pub description: Option<String>,
+    pub category: Option<BotCategory>,
+    pub tags: Option<Vec<String>>,
+}
+
+pub enum BotCategory {
+    Assistant, Creative, Research, Utility,
+}
+```
+The builder's `PurposeCategory` (7 variants) is richer than `BotCategory` (4 variants). The builder must map its categories to `BotCategory`:
+- `SimpleUtility` -> `Utility`
+- `ComplexAnalyst` -> `Assistant`
+- `Creative` -> `Creative`
+- `Coding` -> `Assistant`
+- `Research` -> `Research`
+- `CustomerService` -> `Assistant`
+- `Custom` -> `Assistant`
+
+**`SoulService::write_and_save_soul`:**
+```rust
+pub async fn write_and_save_soul(
+    &self,
+    bot_id: &BotId,
+    content: &str,
+    soul_path: &Path,
+) -> Result<Soul, SoulError>
+```
+Creates parent directory, writes file, computes SHA-256 hash, saves version to DB. This is the ONLY correct path for writing SOUL.md after `create_bot`.
+
+**`SoulService::write_identity` and `write_user`:**
+```rust
+pub async fn write_identity(&self, content: &str, identity_path: &Path) -> Result<(), SoulError>
+pub async fn write_user(&self, content: &str, user_path: &Path) -> Result<(), SoulError>
+```
+Simple file writes, no versioning. The builder generates custom content instead of using `generate_default_identity()`.
+
+**Assembly sequence must be:**
+1. `bot_service.create_bot(request)` -- creates bot record + default SOUL/IDENTITY/USER files
+2. `soul_service.write_and_save_soul(&bot.id, &custom_soul, &soul_path)` -- overwrites default soul with builder-generated content (creates version 2)
+3. `soul_service.write_identity(&custom_identity, &identity_path)` -- overwrites default identity
+4. `soul_service.write_user(&custom_user, &user_path)` -- overwrites default user
+5. Attach skills via `SkillStore`
+
+Note: `create_bot` already writes default files (version 1). The builder overwrites them in steps 2-4 (version 2 for soul). This is slightly wasteful (write twice) but correct and safe. An alternative is to refactor `create_bot` to accept optional content overrides, but that would change an existing stable API.
+
+**Confidence: HIGH** -- all signatures read directly from source code.
+
+### FINDING 3: Web Builder Protocol Design
+
+**Existing WebSocket at `/ws/events`:**
+
+```rust
+// crates/boternity-api/src/http/handlers/ws.rs
+enum WsCommand {
+    CancelAgent { agent_id: String },
+    BudgetContinue { request_id: String },
+    BudgetStop { request_id: String },
+    Ping,
+}
+```
+
+This is a one-to-many event broadcast + command handler for agent lifecycle. It is NOT suitable for the builder because:
+- It broadcasts all events to all connected clients (no session isolation)
+- It has no concept of request/response pairing (builder needs: "I sent answer X, give me the next question")
+- It uses `tokio::sync::broadcast` which is fire-and-forget, not session-scoped
+
+**Recommended approach: REST for wizard, WebSocket for Forge chat.**
+
+**Step-by-step wizard (REST endpoints):**
+```
+POST   /api/v1/builder/sessions              -- Start new builder session, returns first question
+POST   /api/v1/builder/sessions/{id}/answer   -- Submit answer, returns next question
+POST   /api/v1/builder/sessions/{id}/back     -- Go back to previous phase
+GET    /api/v1/builder/sessions/{id}          -- Get current state (for resume)
+GET    /api/v1/builder/sessions               -- List active drafts
+POST   /api/v1/builder/sessions/{id}/assemble -- Confirm and build
+DELETE /api/v1/builder/sessions/{id}          -- Discard draft
+```
+
+REST is better for the wizard because:
+- Each step is a discrete request/response (no streaming needed)
+- Natural HTTP semantics (POST for mutations, GET for reads)
+- Easy to implement back navigation (just POST to `/back`)
+- Client can disconnect and resume later (drafts are persisted)
+- Works with any HTTP client (no WebSocket library needed)
+
+**Forge chat bot (WebSocket at `/ws/builder/{session_id}`):**
+```rust
+// Client -> Server messages
+#[derive(Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+enum BuilderClientMessage {
+    /// Free-form chat message to Forge
+    Chat { message: String },
+    /// Select an option from a previous question
+    SelectOption { option_index: usize },
+    /// Go back to a previous phase
+    GoBack { target_phase: String },
+    /// Confirm the final summary
+    Confirm,
+    /// Reject and continue editing
+    Reject,
+    /// Keep-alive
+    Ping,
+}
+
+// Server -> Client messages
+#[derive(Serialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+enum BuilderServerMessage {
+    /// A builder turn (question, ready_to_assemble, clarify)
+    Turn { turn: BuilderTurn },
+    /// Streaming text delta from Forge (for conversational feel)
+    TextDelta { text: String },
+    /// Error occurred
+    Error { message: String },
+    /// Session complete, bot created
+    Complete { bot_slug: String, bot_id: String },
+    /// Pong response
+    Pong,
+}
+```
+
+WebSocket is better for Forge chat because:
+- Real-time conversational feel (streaming Forge's responses)
+- Bidirectional: client sends answers, server pushes follow-ups
+- Lower latency than polling REST
+
+**Both share the same `BuilderAgent` implementation.** The REST handlers and WebSocket handler both call the same `BuilderAgent::answer()` method. The difference is only in transport:
+- REST: receive answer as JSON body, return `BuilderTurn` as JSON response
+- WebSocket: receive answer as WS message, push `BuilderTurn` as WS message
+
+**Router additions:**
+```rust
+// In crates/boternity-api/src/http/router.rs
+let api_routes = Router::new()
+    // ... existing routes ...
+    // Builder (wizard REST)
+    .route("/builder/sessions", post(handlers::builder::create_session))
+    .route("/builder/sessions", get(handlers::builder::list_sessions))
+    .route("/builder/sessions/{id}", get(handlers::builder::get_session))
+    .route("/builder/sessions/{id}", delete(handlers::builder::delete_session))
+    .route("/builder/sessions/{id}/answer", post(handlers::builder::submit_answer))
+    .route("/builder/sessions/{id}/back", post(handlers::builder::go_back))
+    .route("/builder/sessions/{id}/assemble", post(handlers::builder::assemble));
+
+let mut router = Router::new()
+    .nest("/api/v1", api_routes)
+    // ... existing WebSocket ...
+    .route("/ws/events", get(handlers::ws::ws_handler))
+    // Builder WebSocket for Forge chat
+    .route("/ws/builder/{session_id}", get(handlers::builder_ws::builder_ws_handler));
+```
+
+**Confidence: MEDIUM** -- protocol design is sound based on existing patterns, but has not been tested. The REST vs WebSocket split is a design decision, not a verified pattern.
+
+---
 
 ## Standard Stack
 
@@ -98,7 +616,7 @@ The key architectural insight is the **surface adapter pattern**: the core `Buil
 
 | Library | Version | Purpose | When to Use |
 |---------|---------|---------|-------------|
-| sqlx | 0.8 (already in workspace) | Builder draft persistence via SqliteKvStore | Auto-saving builder progress; session drafts stored as JSON blobs in KV store |
+| sqlx | 0.8 (already in workspace) | Builder draft persistence (dedicated table) | Auto-saving builder progress; session drafts stored as JSON in `builder_drafts` table |
 | chrono | 0.4 (already in workspace) | Timestamps for draft sessions and builder memory | Draft created_at, last_modified, builder memory timestamps |
 | uuid | 1.20 (already in workspace) | Session IDs for builder drafts | Each builder session gets a unique ID for draft persistence and resumption |
 
@@ -108,8 +626,9 @@ The key architectural insight is the **surface adapter pattern**: the core `Buil
 |------------|-----------|----------|
 | dialoguer Select | inquire crate | inquire has richer built-in features (autocompletion, date pickers) but would add a new dependency; dialoguer is already in the workspace and sufficient for multi-choice + text input |
 | schemars JSON Schema | Hand-written JSON schema strings | schemars auto-generates schemas from Rust types and stays in sync with serde; hand-written schemas drift and are error-prone |
-| SQLite KV store for drafts | File-based JSON drafts | KV store is already available (SqliteKvStore), atomic, and supports TTL-based cleanup; file-based requires manual cleanup |
+| Dedicated builder_drafts table | Bot-scoped KvStore | KvStore requires a bot_id which doesn't exist during building; dedicated table has proper schema and indexing for builder-specific queries |
 | Claude structured output | Tool use for structured extraction | Structured output (`output_config.format`) is cleaner for this use case -- we want formatted responses, not function calls. Tool use would work but adds unnecessary complexity for what is essentially "return this JSON shape" |
+| REST wizard + WS chat | Single WebSocket for everything | REST is simpler for step-by-step wizard (discrete request/response); WebSocket only adds value for Forge's conversational streaming |
 
 **Installation (new dependencies only):**
 ```bash
@@ -125,7 +644,8 @@ All other dependencies are already in the workspace.
 ```
 crates/boternity-types/src/
   builder.rs              # BuilderState, BuilderTurn, BuilderPhase, BuilderConfig,
-                          #   PurposeCategory, SmartDefaults, BuilderDraft
+                          #   PurposeCategory, SmartDefaults, BuilderDraft,
+                          #   OutputConfig, OutputFormat (new LLM types)
 
 crates/boternity-core/src/
   builder/
@@ -134,16 +654,17 @@ crates/boternity-core/src/
     state.rs              # BuilderState accumulator -- tracks answers, phase, config-so-far
     assembler.rs          # BotAssembler -- generates SOUL.md, IDENTITY.md, USER.md from state
     defaults.rs           # SmartDefaults -- purpose-category-based default values
-    memory.rs             # BuilderMemory -- recalls past sessions for suggestions
+    memory.rs             # BuilderMemory trait -- recalls past sessions for suggestions
+    draft_store.rs        # BuilderDraftStore trait -- draft persistence
     prompt.rs             # Forge system prompt construction with builder instructions
     skill_builder.rs      # SkillBuilder -- natural language to SKILL.md + code generation
 
 crates/boternity-infra/src/
   builder/
     mod.rs                # Module re-exports
-    llm_builder.rs        # LlmBuilderAgent -- concrete implementation using AgentEngine
-    draft_store.rs        # Draft persistence via SqliteKvStore
-    memory_store.rs       # Builder memory persistence via SqliteKvStore
+    llm_builder.rs        # LlmBuilderAgent -- concrete implementation using LlmProvider
+    sqlite_draft_store.rs # SqliteBuilderDraftStore -- draft persistence in builder_drafts table
+    sqlite_memory_store.rs # SqliteBuilderMemoryStore -- memory persistence in builder_memory table
 
 crates/boternity-api/src/
   cli/
@@ -151,8 +672,8 @@ crates/boternity-api/src/
     skill_create.rs       # `bnity skill create` standalone CLI flow
   http/
     handlers/
-      builder.rs          # REST API handlers for web builder (question/answer exchange)
-      builder_ws.rs       # WebSocket handler for real-time builder chat (Forge bot)
+      builder.rs          # REST API handlers for web builder wizard
+      builder_ws.rs       # WebSocket handler for Forge chat bot
 ```
 
 ### Pattern 1: Structured Output for Builder Turns
@@ -220,10 +741,35 @@ pub struct BuilderSummary {
     pub tags: Vec<String>,
 }
 
-// Generate JSON schema for Claude's output_config
+/// Generate the JSON schema for BuilderTurn, post-processed for Claude compatibility.
 fn builder_turn_schema() -> serde_json::Value {
-    let schema = schemars::schema_for!(BuilderTurn);
-    serde_json::to_value(schema).unwrap()
+    let mut schema = serde_json::to_value(schemars::schema_for!(BuilderTurn)).unwrap();
+    // CRITICAL: Claude requires additionalProperties: false on all objects
+    add_additional_properties_false(&mut schema);
+    schema
+}
+
+/// Post-process a schemars-generated schema to add additionalProperties: false
+/// to all object types, as required by Claude's structured output.
+fn add_additional_properties_false(schema: &mut serde_json::Value) {
+    if let Some(obj) = schema.as_object_mut() {
+        if obj.get("type").and_then(|t| t.as_str()) == Some("object") {
+            obj.insert("additionalProperties".to_string(), serde_json::json!(false));
+        }
+        for key in ["properties", "items", "anyOf", "allOf", "$defs", "definitions"] {
+            if let Some(nested) = obj.get_mut(key) {
+                if let Some(arr) = nested.as_array_mut() {
+                    for item in arr {
+                        add_additional_properties_false(item);
+                    }
+                } else if let Some(obj_nested) = nested.as_object_mut() {
+                    for (_, v) in obj_nested {
+                        add_additional_properties_false(v);
+                    }
+                }
+            }
+        }
+    }
 }
 ```
 
@@ -240,7 +786,8 @@ fn builder_turn_schema() -> serde_json::Value {
 #[trait_variant::make(Send)]
 pub trait BuilderAgent {
     /// Start a new builder session. Returns the first question.
-    async fn start(&self, initial_description: &str) -> Result<BuilderTurn, BuilderError>;
+    async fn start(&self, initial_description: &str) -> Result<(String, BuilderTurn), BuilderError>;
+    //                                                          ^session_id
 
     /// Process a user's answer and return the next turn.
     /// `answer` is either an option index or free text from "Other".
@@ -290,9 +837,14 @@ pub struct BuilderState {
     pub config: PartialBotConfig,
     /// Phase history for back navigation
     pub phase_history: Vec<BuilderPhase>,
+    /// Schema version for draft forward-compatibility
+    #[serde(default = "default_schema_version")]
+    pub schema_version: u32,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub updated_at: chrono::DateTime<chrono::Utc>,
 }
+
+fn default_schema_version() -> u32 { 1 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QAPair {
@@ -338,18 +890,12 @@ use console::style;
 fn render_turn_cli(turn: &BuilderTurn) -> Result<BuilderAnswer, anyhow::Error> {
     match turn {
         BuilderTurn::AskQuestion {
-            phase_label,
-            question,
-            options,
-            allow_other,
-            config_preview,
+            phase_label, question, options, allow_other, config_preview,
         } => {
-            // Show phase label
             println!();
             println!("  {}", style(phase_label).cyan().bold());
             println!();
 
-            // Show live preview if non-empty
             if !config_preview.is_empty() {
                 println!("  {}", style("Current config:").dim());
                 for line in config_preview.lines() {
@@ -358,7 +904,6 @@ fn render_turn_cli(turn: &BuilderTurn) -> Result<BuilderAnswer, anyhow::Error> {
                 println!();
             }
 
-            // Build option labels with explanations
             let mut labels: Vec<String> = options.iter()
                 .map(|opt| format!("{} -- {}", opt.label, style(&opt.explanation).dim()))
                 .collect();
@@ -366,7 +911,6 @@ fn render_turn_cli(turn: &BuilderTurn) -> Result<BuilderAnswer, anyhow::Error> {
                 labels.push(format!("{}", style("Other (type your own)").yellow()));
             }
 
-            // Interactive select
             let selection = Select::new()
                 .with_prompt(question)
                 .items(&labels)
@@ -374,7 +918,6 @@ fn render_turn_cli(turn: &BuilderTurn) -> Result<BuilderAnswer, anyhow::Error> {
                 .interact()?;
 
             if *allow_other && selection == options.len() {
-                // "Other" was selected -- prompt for free text
                 let text = Input::<String>::new()
                     .with_prompt("Your answer")
                     .interact_text()?;
@@ -384,7 +927,6 @@ fn render_turn_cli(turn: &BuilderTurn) -> Result<BuilderAnswer, anyhow::Error> {
             }
         }
         BuilderTurn::ReadyToAssemble { summary, confirmation_message } => {
-            // Show full summary
             println!();
             println!("  {}", style("=== Bot Configuration ===").green().bold());
             println!("  Name:        {}", style(&summary.name).cyan());
@@ -425,13 +967,6 @@ fn render_turn_cli(turn: &BuilderTurn) -> Result<BuilderAnswer, anyhow::Error> {
 
 ```rust
 /// Build Forge's system prompt for builder interactions.
-///
-/// The prompt includes:
-/// 1. Forge's personality (from its SOUL.md)
-/// 2. Builder instructions with phase definitions
-/// 3. Accumulated state from previous turns
-/// 4. Smart defaults for the detected purpose category
-/// 5. Builder memory from past sessions (if available)
 fn build_forge_system_prompt(
     forge_soul: &str,
     state: &BuilderState,
@@ -440,10 +975,8 @@ fn build_forge_system_prompt(
 ) -> String {
     let mut sections = Vec::new();
 
-    // Forge's personality
     sections.push(format!("<soul>\n{}\n</soul>", forge_soul));
 
-    // Builder instructions
     sections.push(format!(
         "<builder_instructions>\n\
         You are Forge, the bot builder. Guide the user through creating a new bot.\n\
@@ -458,13 +991,15 @@ fn build_forge_system_prompt(
         - Always explain your reasoning for suggestions\n\
         - Track which phase you're in: basics, personality, model, skills, review\n\
         \n\
-        PURPOSE CATEGORIES:\n\
-        - simple_utility: 3-5 questions, heavy defaults (email assistant, timer, reminder)\n\
-        - coding: 5-7 questions, ask about language preferences, style, frameworks\n\
-        - creative: 5-7 questions, focus on tone, style, voice, audience\n\
-        - complex_analyst: 7-10 questions, deep-dive on data sources, methodology\n\
-        - research: 6-8 questions, ask about domains, citation style, depth\n\
-        - customer_service: 5-7 questions, ask about brand voice, escalation paths\n\
+        QUESTION LIMITS BY CATEGORY:\n\
+        - simple_utility: 3-5 questions, heavy defaults\n\
+        - coding: 5-7 questions\n\
+        - creative: 5-7 questions\n\
+        - complex_analyst: 7-10 questions\n\
+        - research: 6-8 questions\n\
+        - customer_service: 5-7 questions\n\
+        After the recommended number, strongly consider moving to review.\n\
+        After 3 more beyond that, you MUST proceed to review.\n\
         \n\
         SMART DEFAULTS BY CATEGORY:\n\
         - coding: temperature=0.3, formal tone, direct style\n\
@@ -476,27 +1011,26 @@ fn build_forge_system_prompt(
         </builder_instructions>"
     ));
 
-    // Current state
     sections.push(format!(
-        "<builder_state>\n{}\n</builder_state>",
+        "<builder_state>\n\
+        Questions asked so far: {}\n\
+        {}\n\
+        </builder_state>",
+        state.conversation.len(),
         serde_json::to_string_pretty(state).unwrap_or_default()
     ));
 
-    // Builder memory from past sessions
     if !builder_memories.is_empty() {
         let memory_lines: Vec<String> = builder_memories.iter()
-            .map(|m| format!("- {} ({})", m.suggestion, m.source_session))
+            .map(|m| format!("- {} bot '{}': tone={}, temp={}",
+                m.purpose_category_str(), m.bot_name, m.tone, m.temperature))
             .collect();
         sections.push(format!(
-            "<builder_memory>\n\
-            Past builder sessions you can reference:\n\
-            {}\n\
-            </builder_memory>",
+            "<builder_memory>\nPast sessions:\n{}\n</builder_memory>",
             memory_lines.join("\n")
         ));
     }
 
-    // Available skills catalog
     if !available_skills.is_empty() {
         let skill_lines: Vec<String> = available_skills.iter()
             .map(|s| format!("- {} -- {}", s.name, s.description))
@@ -522,39 +1056,52 @@ fn build_forge_system_prompt(
 async fn assemble_bot(
     state: &BuilderState,
     bot_service: &ConcreteBotService,
-    soul_service: &ConcreteSoulService,
     llm_provider: &BoxLlmProvider,
 ) -> Result<AssemblyResult, BuilderError> {
     let config = &state.config;
 
-    // Step 1: Create the bot record (generates slug, creates directory)
+    // Step 1: Map PurposeCategory to BotCategory
+    let bot_category = match state.purpose_category.as_ref() {
+        Some(PurposeCategory::Creative) => BotCategory::Creative,
+        Some(PurposeCategory::Research) => BotCategory::Research,
+        Some(PurposeCategory::SimpleUtility) => BotCategory::Utility,
+        _ => BotCategory::Assistant,
+    };
+
+    // Step 2: Create the bot record (generates slug, creates directory, writes DEFAULT files)
     let request = CreateBotRequest {
         name: config.name.clone().unwrap_or("Unnamed Bot".to_string()),
         description: config.description.clone(),
-        category: config.category.clone(),
+        category: Some(bot_category),
         tags: config.tags.clone(),
     };
     let bot = bot_service.create_bot(request).await?;
     let bot_dir = bot_service.bot_dir(&bot.slug);
 
-    // Step 2: Generate unique SOUL.md content via LLM
-    // The LLM gets the full builder state and generates Personality + Purpose + Boundaries
+    // Step 3: Generate unique SOUL.md content via LLM and OVERWRITE the default
     let soul_content = generate_soul_content(llm_provider, state).await?;
     let soul_path = bot_dir.join("SOUL.md");
-    soul_service.write_and_save_soul(&bot.id, &soul_content, &soul_path).await?;
+    // This creates version 2 (version 1 was the default from create_bot)
+    bot_service.soul_service()
+        .write_and_save_soul(&bot.id, &soul_content, &soul_path)
+        .await?;
 
-    // Step 3: Generate IDENTITY.md with smart defaults
+    // Step 4: Generate IDENTITY.md with builder-derived config and OVERWRITE the default
     let identity_content = generate_identity_content(config);
     let identity_path = bot_dir.join("IDENTITY.md");
-    soul_service.write_identity(&identity_content, &identity_path).await?;
+    bot_service.soul_service()
+        .write_identity(&identity_content, &identity_path)
+        .await?;
 
-    // Step 4: Generate USER.md seeded with context from builder conversation
+    // Step 5: Generate USER.md seeded with context from builder conversation
     let user_content = generate_user_content(state);
     let user_path = bot_dir.join("USER.md");
-    soul_service.write_user(&user_content, &user_path).await?;
+    bot_service.soul_service()
+        .write_user(&user_content, &user_path)
+        .await?;
 
-    // Step 5: Attach suggested skills (using skill system from Phase 6)
-    // ... skill attachment logic via SkillStore
+    // Step 6: Attach suggested skills
+    // ... via SkillStore (Phase 6 system)
 
     Ok(AssemblyResult {
         bot,
@@ -578,33 +1125,36 @@ async fn assemble_bot(
 
 - **Tight coupling between builder logic and surface:** The `BuilderAgent` trait must not import `dialoguer`, `axum`, or any UI-specific types. It returns `BuilderTurn` data structures. Adapters handle rendering.
 
-- **Storing builder drafts in filesystem:** Use the existing `SqliteKvStore` for draft persistence. File-based drafts lack atomicity, are harder to list/expire, and duplicate infrastructure.
+- **Using the bot-scoped KvStore for builder drafts:** The existing `KvStore` requires a `bot_id: &Uuid` for all operations. Builder drafts exist before any bot is created. Use a dedicated `builder_drafts` table instead.
 
 - **Skipping the confirmation step:** Per locked decision, the builder must show a full summary and ask "Ready to create?" before building. Never auto-create without explicit confirmation.
+
+- **Forgetting `additionalProperties: false` in the schema:** Claude's structured output REQUIRES this on all object types. Schemars does not add it by default. Post-process the schema before sending.
 
 ## Don't Hand-Roll
 
 | Problem | Don't Build | Use Instead | Why |
 |---------|-------------|-------------|-----|
-| JSON Schema from Rust types | Manual JSON schema construction | `schemars` derive macro | Schemas stay in sync with Rust types automatically; manual schemas drift when types change |
+| JSON Schema from Rust types | Manual JSON schema construction | `schemars` derive macro + `add_additional_properties_false` post-processor | Schemas stay in sync with Rust types automatically; manual schemas drift when types change |
 | CLI multi-choice prompts | Custom terminal input parsing | `dialoguer::Select` with arrow-key navigation | Handles terminal raw mode, cursor movement, color themes, cross-platform input -- already in workspace |
 | CLI progress indication | Custom spinner implementation | `indicatif::ProgressBar` with spinner style | Already used in bot creation flow; battle-tested animation and clearing |
-| Draft persistence | Custom file-based draft storage | `SqliteKvStore` (already in workspace) | Atomic operations, TTL support, namespace isolation, already wired in AppState |
-| Bot file creation | Duplicate directory/file creation | `BotService::create_bot` + `SoulService` | Handles slug uniqueness, hash computation, version tracking, directory structure |
+| Draft persistence | JSON files or bot-scoped KvStore | Dedicated `builder_drafts` SQLite table with `SqliteBuilderDraftStore` | KvStore is bot-scoped (wrong scope); files lack atomicity; dedicated table has proper schema |
+| Bot file creation | Duplicate directory/file creation | `BotService::create_bot` + `SoulService::write_and_save_soul` | Handles slug uniqueness, hash computation, version tracking, directory structure |
 | Structured LLM output parsing | Regex/string parsing of LLM text | Claude `output_config.format` with `json_schema` | Guaranteed schema compliance at token generation level; zero parse errors |
 | SOUL.md template structure | Custom markdown templating | LLM generation with structural prompt | User decided: "consistent Personality + Purpose + Boundaries sections, unique content per bot" -- the LLM ensures section consistency while writing unique content |
-| Builder memory retrieval | Custom vector search for past sessions | `SqliteKvStore` with namespace + JSON query | Builder memory is simple key-value (category -> past choices), not semantic search; KV store is sufficient |
+| Builder memory retrieval | Custom vector search | Dedicated `builder_memory` SQLite table with category index | Builder memory is simple category-based lookup, not semantic search; SQL index is fast |
+| PurposeCategory to BotCategory mapping | Ad-hoc string conversion | Explicit `From<PurposeCategory> for BotCategory` impl | BotCategory has 4 variants; PurposeCategory has 7; mapping must be explicit |
 
-**Key insight:** The builder system is primarily an LLM orchestration layer. Nearly all infrastructure (bot creation, soul management, skill attachment, KV storage, LLM providers) already exists. The new code is: (1) the Forge system prompt, (2) the structured output schema types, (3) the builder state accumulator, (4) the surface adapters, and (5) the assembly orchestration that wires existing services together.
+**Key insight:** The builder system is primarily an LLM orchestration layer. Nearly all infrastructure (bot creation, soul management, skill attachment, LLM providers) already exists. The new code is: (1) the Forge system prompt, (2) the structured output schema types + post-processor, (3) the builder state accumulator, (4) the surface adapters, (5) the assembly orchestration, (6) two new SQLite tables for drafts and memory, and (7) `OutputConfig` types wired through the LLM provider stack.
 
 ## Common Pitfalls
 
-### Pitfall 1: Structured Output Schema Complexity Explosion
+### Pitfall 1: Structured Output Schema Missing `additionalProperties: false`
 
-**What goes wrong:** Defining a schema with too many nested variants, recursive types, or complex unions causes Claude to hit schema compilation limits or produce slower responses.
-**Why it happens:** Claude's structured output compiles the JSON schema into a grammar. Complex schemas with many `anyOf` branches or deep nesting increase compilation time and may exceed limits.
-**How to avoid:** Keep the `BuilderTurn` schema flat and simple. Use string enums instead of complex nested objects where possible. Test schema compilation with a small request before building the full flow. Claude does NOT support recursive schemas in structured output.
-**Warning signs:** 400 errors mentioning "Schema is too complex" or "Too many recursive definitions".
+**What goes wrong:** The schema generated by `schemars::schema_for!()` does not include `"additionalProperties": false` on object types. Claude returns a 400 error: "additionalProperties must be set to false for objects".
+**Why it happens:** Schemars follows standard JSON Schema conventions where `additionalProperties` defaults to `true`. Claude's structured output requires the opposite.
+**How to avoid:** Always post-process the schemars output with `add_additional_properties_false()` before sending to the API. This must recursively walk all nested objects, including those inside `anyOf` branches and `$defs`.
+**Warning signs:** 400 errors from Claude containing "additionalProperties".
 
 ### Pitfall 2: Context Window Bloat Across Builder Turns
 
@@ -616,8 +1166,8 @@ async fn assemble_bot(
 ### Pitfall 3: Structured Output with Streaming
 
 **What goes wrong:** Attempting to use structured output (`output_config.format`) with streaming causes confusion because partial JSON arrives incrementally.
-**Why it happens:** Structured output still works with streaming, but you receive JSON tokens incrementally. You must buffer the full response before parsing.
-**How to avoid:** For the builder flow, use non-streaming (`execute_non_streaming`) since each turn is a discrete question. Streaming adds complexity without benefit here -- the user is waiting for the next question, not watching text appear. Reserve streaming for the actual bot chat, not the builder wizard.
+**Why it happens:** Structured output works with streaming (confirmed by Anthropic docs), but you receive JSON tokens incrementally. You must buffer the full response before parsing.
+**How to avoid:** For the builder flow, use non-streaming (`complete()`) since each turn is a discrete question. Streaming adds complexity without benefit here -- the user is waiting for the next question, not watching text appear. Reserve streaming for the actual bot chat, not the builder wizard.
 **Warning signs:** JSON parse errors from partial responses.
 
 ### Pitfall 4: Back Navigation Invalidating Subsequent Answers
@@ -638,7 +1188,7 @@ async fn assemble_bot(
 
 **What goes wrong:** Forge (the builder bot) is stored as a regular bot in `~/.boternity/bots/forge/`, and a user creates a bot named "Forge" causing a slug collision.
 **Why it happens:** Forge uses the same storage mechanism as user bots.
-**How to avoid:** Either (a) reserve the "forge" slug in `BotService::create_bot` by checking against a reserved slugs list, or (b) store Forge's identity separately (embedded in the binary or in a `.boternity/system/` directory) rather than as a user-space bot. Option (b) is cleaner -- Forge's SOUL.md can be a compiled-in constant since it never changes per user.
+**How to avoid:** Embed Forge's SOUL.md as a compile-time constant (`include_str!` or a `const`). Forge is a system component, not a user bot. This avoids slug collisions, filesystem dependency, and makes Forge available immediately without initialization. The embedded constant lives in `crates/boternity-core/src/builder/forge_soul.rs`.
 **Warning signs:** "Slug conflict" errors when users try to create bots named "Forge".
 
 ### Pitfall 7: Draft Deserialization After Schema Changes
@@ -655,84 +1205,158 @@ async fn assemble_bot(
 **How to avoid:** ALL soul content -- whether generated by the builder or imported by the user -- MUST go through `SoulService::write_and_save_soul`. This function handles hash computation and version tracking. The import path should feed the content into the same service method.
 **Warning signs:** `SoulIntegrityViolation` errors on first chat with a builder-created bot.
 
+### Pitfall 9: Assembly Creates Default Files Then Overwrites
+
+**What goes wrong:** `BotService::create_bot` writes default SOUL.md (version 1), IDENTITY.md, and USER.md. Then the builder overwrites all three with custom content. The soul gets version 2 immediately, and version 1 is a pointless default that clutters the version history.
+**Why it happens:** `create_bot` was designed for the simple flow where defaults are the final content.
+**How to avoid:** Accept this as a minor inefficiency in v1. The version history shows v1 (default) and v2 (builder-generated), which is actually useful for debugging. If this becomes a UX concern, a future refactor could add a `create_bot_skeleton` method that creates the record and directory without writing default files. For now, the double-write is correct and harmless.
+**Warning signs:** Users seeing "Version 1" in soul history that they didn't create.
+
+### Pitfall 10: Bedrock Provider Not Forwarding `output_config`
+
+**What goes wrong:** `output_config` is added to `CompletionRequest` and `AnthropicRequest` but not to `BedrockRequest`. Bedrock calls silently ignore the structured output constraint and return free-form text.
+**Why it happens:** Forgetting to wire the new field through the Bedrock request type.
+**How to avoid:** Add `output_config: Option<OutputConfig>` to `BedrockRequest` and wire it in `to_bedrock_request()`. Add a test that verifies the field appears in serialized Bedrock requests when present.
+**Warning signs:** Builder working fine with direct Anthropic but producing parse errors on Bedrock.
+
 ## Code Examples
 
 ### CompletionRequest with Structured Output
 
 ```rust
-// Source: Anthropic API docs for structured outputs (https://platform.claude.com/docs/en/build-with-claude/structured-outputs)
-// NOTE: The existing CompletionRequest type needs to be extended with output_config
+// Source: Verified against Anthropic API docs (https://platform.claude.com/docs/en/build-with-claude/structured-outputs)
 
-/// Extended completion request with structured output support.
-/// The `output_config` field tells Claude to constrain its response to a JSON schema.
-///
-/// For the builder, this ensures every LLM response is a valid BuilderTurn.
-fn build_builder_request(
-    context: &AgentContext,
-    user_message: &str,
-    schema: &serde_json::Value,
-) -> serde_json::Value {
-    // Build the raw API request with output_config.format
-    // (This bypasses the current CompletionRequest type which lacks output_config)
-    serde_json::json!({
-        "model": context.agent_config.model,
-        "max_tokens": context.agent_config.max_tokens,
-        "system": context.system_prompt,
-        "messages": context.build_messages_with_user(user_message),
-        "output_config": {
-            "format": {
-                "type": "json_schema",
-                "schema": schema
-            }
-        }
-    })
+// New types in boternity-types/src/llm.rs:
+
+/// Configuration for structured output.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OutputConfig {
+    pub format: OutputFormat,
+}
+
+/// Output format specification.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum OutputFormat {
+    /// Constrain output to a JSON schema.
+    JsonSchema {
+        schema: serde_json::Value,
+    },
+}
+
+// Updated CompletionRequest:
+pub struct CompletionRequest {
+    pub model: String,
+    pub messages: Vec<Message>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub system: Option<String>,
+    pub max_tokens: u32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub temperature: Option<f64>,
+    #[serde(default)]
+    pub stream: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stop_sequences: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub output_config: Option<OutputConfig>,  // NEW
 }
 ```
 
-### Draft Persistence via KV Store
+### LLM Builder Agent Implementation
 
 ```rust
-// Source: Existing SqliteKvStore pattern in boternity-infra
+// Source: Derived from codebase analysis of LlmProvider, AnthropicProvider, BoxLlmProvider
 
-const DRAFT_NAMESPACE: &str = "builder_draft";
-const MEMORY_NAMESPACE: &str = "builder_memory";
-
-/// Save a builder draft to the KV store.
-async fn save_draft(
-    kv_store: &SqliteKvStore,
-    session_id: &str,
-    state: &BuilderState,
-) -> anyhow::Result<()> {
-    let value = serde_json::to_string(state)?;
-    kv_store.set(DRAFT_NAMESPACE, session_id, &value).await?;
-    Ok(())
+/// Concrete implementation of BuilderAgent using an LLM provider.
+struct LlmBuilderAgent {
+    provider: BoxLlmProvider,
+    draft_store: Arc<dyn BuilderDraftStore>,
+    memory_store: Arc<dyn BuilderMemoryStore>,
+    model: String,
+    forge_soul: String, // embedded const
+    schema: serde_json::Value, // pre-computed, post-processed BuilderTurn schema
 }
 
-/// Load a builder draft from the KV store.
-async fn load_draft(
-    kv_store: &SqliteKvStore,
-    session_id: &str,
-) -> anyhow::Result<Option<BuilderState>> {
-    match kv_store.get(DRAFT_NAMESPACE, session_id).await? {
-        Some(value) => Ok(Some(serde_json::from_str(&value)?)),
-        None => Ok(None),
-    }
-}
+impl BuilderAgent for LlmBuilderAgent {
+    async fn start(&self, initial_description: &str) -> Result<(String, BuilderTurn), BuilderError> {
+        let session_id = Uuid::now_v7().to_string();
+        let state = BuilderState::new(session_id.clone(), initial_description);
 
-/// List all active builder drafts for the "Resume?" prompt.
-async fn list_drafts(
-    kv_store: &SqliteKvStore,
-) -> anyhow::Result<Vec<(String, BuilderState)>> {
-    let entries = kv_store.list(DRAFT_NAMESPACE).await?;
-    let mut drafts = Vec::new();
-    for (key, value) in entries {
-        if let Ok(state) = serde_json::from_str::<BuilderState>(&value) {
-            drafts.push((key, state));
-        }
+        // Build system prompt with empty state
+        let system = build_forge_system_prompt(&self.forge_soul, &state, &[], &[]);
+
+        // Make LLM call with structured output
+        let request = CompletionRequest {
+            model: self.model.clone(),
+            messages: vec![Message {
+                role: MessageRole::User,
+                content: initial_description.to_string(),
+            }],
+            system: Some(system),
+            max_tokens: 2048,
+            temperature: Some(0.7),
+            stream: false,
+            stop_sequences: None,
+            output_config: Some(OutputConfig {
+                format: OutputFormat::JsonSchema {
+                    schema: self.schema.clone(),
+                },
+            }),
+        };
+
+        let response = self.provider.complete(&request).await?;
+        let turn: BuilderTurn = serde_json::from_str(&response.content)?;
+
+        // Save initial draft
+        self.draft_store.save_draft(&session_id, &state).await?;
+
+        Ok((session_id, turn))
     }
-    // Sort by most recently updated
-    drafts.sort_by(|a, b| b.1.updated_at.cmp(&a.1.updated_at));
-    Ok(drafts)
+
+    async fn answer(&self, session_id: &str, answer: BuilderAnswer) -> Result<BuilderTurn, BuilderError> {
+        // Load existing state
+        let mut state = self.draft_store.load_draft(session_id).await?
+            .ok_or(BuilderError::SessionNotFound)?;
+
+        // Record the answer in state
+        state.record_answer(answer);
+
+        // Build system prompt with accumulated state
+        let memories = self.memory_store
+            .recall_by_category(state.purpose_category.as_ref().unwrap_or(&PurposeCategory::Custom), 5)
+            .await
+            .unwrap_or_default();
+        let system = build_forge_system_prompt(&self.forge_soul, &state, &memories, &[]);
+
+        // Build messages: only last 3-5 exchanges to avoid context bloat
+        let recent_messages = state.recent_messages(5);
+
+        let request = CompletionRequest {
+            model: self.model.clone(),
+            messages: recent_messages,
+            system: Some(system),
+            max_tokens: 2048,
+            temperature: Some(0.7),
+            stream: false,
+            stop_sequences: None,
+            output_config: Some(OutputConfig {
+                format: OutputFormat::JsonSchema {
+                    schema: self.schema.clone(),
+                },
+            }),
+        };
+
+        let response = self.provider.complete(&request).await?;
+        let turn: BuilderTurn = serde_json::from_str(&response.content)?;
+
+        // Update and save state
+        state.updated_at = chrono::Utc::now();
+        self.draft_store.save_draft(session_id, &state).await?;
+
+        Ok(turn)
+    }
+
+    // ... go_back, get_draft, assemble implementations
 }
 ```
 
@@ -740,9 +1364,9 @@ async fn list_drafts(
 
 ```rust
 /// Record builder choices for future session suggestions.
-/// Stored as simple JSON in the KV store, keyed by purpose category.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BuilderMemoryEntry {
+    pub id: String, // UUID
     pub purpose_category: PurposeCategory,
     pub bot_name: String,
     pub personality_traits: Vec<String>,
@@ -753,105 +1377,47 @@ pub struct BuilderMemoryEntry {
     pub created_at: chrono::DateTime<chrono::Utc>,
 }
 
-/// Save choices from a completed builder session for future reference.
-async fn record_builder_memory(
-    kv_store: &SqliteKvStore,
-    state: &BuilderState,
-) -> anyhow::Result<()> {
-    let category = state.purpose_category.clone()
-        .unwrap_or(PurposeCategory::Custom);
-    let key = format!("{}:{}", category_key(&category), state.session_id);
+// Implementation in SqliteBuilderMemoryStore:
+impl BuilderMemoryStore for SqliteBuilderMemoryStore {
+    async fn record_memory(&self, entry: &BuilderMemoryEntry) -> Result<(), BuilderError> {
+        let choices_json = serde_json::to_string(entry)?;
+        let category_str = serde_json::to_string(&entry.purpose_category)?;
+        sqlx::query(
+            "INSERT INTO builder_memory (id, purpose_category, bot_name, choices_json, created_at)
+             VALUES (?, ?, ?, ?, ?)"
+        )
+        .bind(&entry.id)
+        .bind(category_str.trim_matches('"'))
+        .bind(&entry.bot_name)
+        .bind(&choices_json)
+        .bind(entry.created_at.to_rfc3339())
+        .execute(&self.pool.writer)
+        .await?;
+        Ok(())
+    }
 
-    let entry = BuilderMemoryEntry {
-        purpose_category: category,
-        bot_name: state.config.name.clone().unwrap_or_default(),
-        personality_traits: state.config.personality_traits.clone().unwrap_or_default(),
-        tone: state.config.tone.clone().unwrap_or_default(),
-        model: state.config.model.clone().unwrap_or_default(),
-        temperature: state.config.temperature.unwrap_or(0.7),
-        skills_used: state.config.suggested_skills.clone().unwrap_or_default(),
-        created_at: chrono::Utc::now(),
-    };
+    async fn recall_by_category(
+        &self, category: &PurposeCategory, limit: usize,
+    ) -> Result<Vec<BuilderMemoryEntry>, BuilderError> {
+        let category_str = serde_json::to_string(category)?;
+        let rows = sqlx::query(
+            "SELECT choices_json FROM builder_memory
+             WHERE purpose_category = ? ORDER BY created_at DESC LIMIT ?"
+        )
+        .bind(category_str.trim_matches('"'))
+        .bind(limit as i64)
+        .fetch_all(&self.pool.reader)
+        .await?;
 
-    let value = serde_json::to_string(&entry)?;
-    kv_store.set(MEMORY_NAMESPACE, &key, &value).await?;
-    Ok(())
-}
-
-/// Recall past builder sessions for the same purpose category.
-async fn recall_builder_memories(
-    kv_store: &SqliteKvStore,
-    category: &PurposeCategory,
-) -> anyhow::Result<Vec<BuilderMemoryEntry>> {
-    let prefix = category_key(category);
-    let entries = kv_store.list_prefix(MEMORY_NAMESPACE, &prefix).await?;
-    let mut memories: Vec<BuilderMemoryEntry> = entries
-        .into_iter()
-        .filter_map(|(_, v)| serde_json::from_str(&v).ok())
-        .collect();
-    // Most recent first
-    memories.sort_by(|a, b| b.created_at.cmp(&a.created_at));
-    // Return top 5 for context window economy
-    memories.truncate(5);
-    Ok(memories)
-}
-```
-
-### Skill Builder -- Natural Language to SKILL.md
-
-```rust
-/// Generate a skill from natural language description using the builder agent.
-/// Returns the generated SKILL.md content and optionally WASM source code.
-async fn build_skill_from_description(
-    llm_provider: &BoxLlmProvider,
-    description: &str,
-    skill_type: SkillType,
-    model: &str,
-) -> Result<GeneratedSkill, BuilderError> {
-    let schema = schemars::schema_for!(GeneratedSkill);
-    let schema_json = serde_json::to_value(schema)?;
-
-    // Build the prompt for skill generation
-    let system_prompt = format!(
-        "<skill_builder_instructions>\n\
-        Generate a complete skill based on the user's description.\n\
-        \n\
-        For prompt-based skills:\n\
-        - Generate a SKILL.md with YAML frontmatter (name, description, metadata)\n\
-        - Write clear, actionable instructions in the body\n\
-        \n\
-        For tool-based (WASM) skills:\n\
-        - Generate the SKILL.md manifest\n\
-        - Generate Rust source code implementing the skill\n\
-        - Auto-suggest required capabilities (file access, network, etc.)\n\
-        \n\
-        ALWAYS follow the agentskills.io SKILL.md format.\n\
-        </skill_builder_instructions>"
-    );
-
-    // Use structured output to get parseable skill definition
-    let response = call_llm_structured(
-        llm_provider,
-        &system_prompt,
-        &format!("Create a {} skill: {}", skill_type, description),
-        model,
-        &schema_json,
-    ).await?;
-
-    let skill: GeneratedSkill = serde_json::from_str(&response.content)?;
-    Ok(skill)
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct GeneratedSkill {
-    /// The complete SKILL.md content (frontmatter + body)
-    pub skill_md_content: String,
-    /// Rust source code for tool-based skills (None for prompt-based)
-    pub source_code: Option<String>,
-    /// Suggested capabilities this skill needs
-    pub suggested_capabilities: Vec<String>,
-    /// Brief explanation of what the skill does
-    pub explanation: String,
+        let mut entries = Vec::with_capacity(rows.len());
+        for row in &rows {
+            let json: String = row.try_get("choices_json")?;
+            if let Ok(entry) = serde_json::from_str::<BuilderMemoryEntry>(&json) {
+                entries.push(entry);
+            }
+        }
+        Ok(entries)
+    }
 }
 ```
 
@@ -859,63 +1425,60 @@ pub struct GeneratedSkill {
 
 | Old Approach | Current Approach | When Changed | Impact |
 |--------------|------------------|--------------|--------|
-| Tool use for structured extraction | `output_config.format` with JSON schema | 2025-11 (GA 2026) | Guaranteed schema compliance at token level; no parse errors; simpler than tool_use for response formatting |
-| `output_format` parameter (beta) | `output_config.format` (GA) | 2026 | Old parameter deprecated; new location in API; beta headers no longer needed for Opus 4.6/Sonnet 4.5 |
+| Tool use for structured extraction | `output_config.format` with JSON schema | 2025-11 (beta), 2026 (GA) | Guaranteed schema compliance at token level; no parse errors; simpler than tool_use for response formatting |
+| `output_format` parameter (beta) | `output_config.format` (GA) | 2026 | Old parameter deprecated; new location in API; beta headers no longer needed for Opus 4.6/Sonnet 4.5/Haiku 4.5 |
 | Free-text LLM + regex parsing | Structured output with schemars-derived schemas | 2025-2026 | Zero parsing failures; type-safe response handling; schemas auto-generated from Rust types |
 | Static question wizards | LLM-adaptive question generation | 2024-2025 | Questions adapt to context; no predetermined paths; better UX for diverse bot types |
 
 **Deprecated/outdated:**
 - `output_format` top-level parameter: Deprecated, moved to `output_config.format`. Still works temporarily.
-- `anthropic-beta: structured-outputs-2025-11-13` header: No longer needed for GA models (Opus 4.6, Sonnet 4.5, Haiku 4.5).
+- `anthropic-beta: structured-outputs-2025-11-13` header: No longer needed for GA models (Opus 4.6, Sonnet 4.5, Opus 4.5, Haiku 4.5).
 - Tool use for response formatting: Still works but `output_config.format` is cleaner for "return this JSON shape" use cases. Use tool use when you need the LLM to invoke actual functions.
 
 ## Open Questions
 
-1. **CompletionRequest extension for `output_config`**
-   - What we know: The current `CompletionRequest` type in boternity-types lacks an `output_config` field. Claude's structured output requires `output_config.format.type = "json_schema"` with a schema object.
-   - What's unclear: Whether to extend the existing `CompletionRequest` or create a separate `StructuredCompletionRequest` type. The existing `LlmProvider` trait returns `CompletionResponse` which assumes `content: String` -- structured output returns JSON in the same field, so it works, but the request path needs the new field.
-   - Recommendation: Add an `output_config: Option<OutputConfig>` field to `CompletionRequest` with `#[serde(skip_serializing_if = "Option::is_none")]`. This is backward-compatible. Provider implementations (Anthropic, Bedrock) serialize it when present. This is the minimal change.
+1. **Schema caching across builder turns**
+   - What we know: Claude caches compiled grammar artifacts for 24 hours. The builder schema is identical across all turns of all sessions.
+   - What's unclear: Whether the first turn of the first session will have noticeable extra latency from grammar compilation, and whether this affects UX.
+   - Recommendation: Pre-compute the schema once at startup (`schema_for!(BuilderTurn)` + post-processing). The schema is a `serde_json::Value` stored in the `LlmBuilderAgent`. First-turn latency is expected but should be <1 second. After that, cached.
 
-2. **SqliteKvStore `list_prefix` method**
-   - What we know: Builder memory uses prefix-based listing (`coding:session1`, `creative:session2`). The existing `SqliteKvStore` may not have a `list_prefix` method.
-   - What's unclear: Whether `list_prefix` exists or needs to be added.
-   - Recommendation: Check if SqliteKvStore has prefix listing. If not, add a simple `SELECT * FROM kv WHERE namespace = ? AND key LIKE ?` query. This is a small addition.
+2. **Forge personality content**
+   - What we know: Forge needs a SOUL.md-like personality definition. It should be warm, encouraging, slightly casual.
+   - What's unclear: Exact content. This is in "Claude's Discretion."
+   - Recommendation: Write it as a const string in `crates/boternity-core/src/builder/forge_soul.rs` following the same Personality + Purpose + Boundaries structure as regular bots. ~30-50 lines. Include specific guidance like "You use casual language but never baby-talk the user."
 
-3. **Forge identity storage**
-   - What we know: Forge needs a SOUL.md personality. Options: (a) store as a regular bot, (b) embed in binary as a const, (c) store in `.boternity/system/forge/`.
-   - What's unclear: Which approach best avoids namespace collisions and deployment complexity.
-   - Recommendation: Embed Forge's SOUL.md as a compile-time constant (`include_str!` or a `const`). It is a system component, not a user bot. This avoids slug collisions, filesystem dependency, and makes Forge available immediately without initialization.
-
-4. **Web builder WebSocket protocol**
-   - What we know: The web UI needs both a Forge chat bot (real-time) and a step-by-step wizard. The chat bot needs WebSocket for streaming. The wizard could use REST.
-   - What's unclear: Whether the Forge chat bot reuses the existing `/ws/events` WebSocket or needs a dedicated `/ws/builder` endpoint.
-   - Recommendation: Create a dedicated `/ws/builder` endpoint. The existing `/ws/events` is designed for agent lifecycle events, not interactive builder flows. The builder WebSocket needs a different command set (submit answer, go back, get preview, confirm).
+3. **Web UI component integration**
+   - What we know: The wizard needs to live in the existing React SPA. Entry points are "Create Bot" button on dashboard and "Reconfigure" on bot detail.
+   - What's unclear: Exact React component architecture for the wizard overlay and Forge chat.
+   - Recommendation: This is a frontend concern for the web phase. The backend (REST + WebSocket) is ready. The React wizard renders `BuilderTurn` JSON as form components. Forge chat reuses the existing chat UI component but connects to `/ws/builder/{session_id}` instead of `/ws/events`.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- [Anthropic Structured Outputs docs](https://platform.claude.com/docs/en/build-with-claude/structured-outputs) - GA API for `output_config.format` with JSON schema; supports Opus 4.6, Sonnet 4.5, Haiku 4.5; schema compilation and caching details
-- [Schemars 1.x docs](https://docs.rs/schemars/latest/schemars/) - JSON Schema generation from Rust types; serde integration; derive macro
-- [Dialoguer docs](https://docs.rs/dialoguer/latest/dialoguer/) - Select, MultiSelect, Input, Confirm widgets; theme support; arrow-key navigation
-- Existing codebase: `BotService::create_bot`, `SoulService::write_and_save_soul`, `AgentEngine`, `SystemPromptBuilder`, `AppState`, `SqliteKvStore` -- all verified by reading source
+- [Anthropic Structured Outputs docs (GA)](https://platform.claude.com/docs/en/build-with-claude/structured-outputs) - Verified 2026-02-14: GA API for `output_config.format` with JSON schema; supports Opus 4.6, Sonnet 4.5, Opus 4.5, Haiku 4.5; `anyOf` supported; `additionalProperties: false` required; no beta header needed
+- [Schemars attributes docs](https://graham.cool/schemars/deriving/attributes/) - Confirms `#[serde(tag = "...")]` support for internally tagged enum schema generation
+- [Schemars serde integration](https://graham.cool/schemars/examples/2-serde_attrs/) - Confirms schemars checks serde attributes and adjusts schema accordingly
+- Codebase verification (2026-02-14): `KvStore` trait, `SqliteKvStore`, `CompletionRequest`, `AnthropicRequest`, `BedrockRequest`, `AnthropicProvider::to_anthropic_request`, `BedrockProvider::to_bedrock_request`, `BotService::create_bot`, `SoulService::write_and_save_soul`, `ws_handler`, `router.rs`, `AppState` -- all read and verified
 
 ### Secondary (MEDIUM confidence)
 - [Anthropic Building Effective Agents](https://www.anthropic.com/engineering/building-effective-agents) - Agent architecture patterns; orchestrator-workers; multi-turn conversation design
-- [Rust CLI prompts comparison](https://fadeevab.com/comparison-of-rust-cli-prompts/) - dialoguer vs inquire vs cliclack feature comparison
+- [Schemars GitHub issues](https://github.com/GREsau/schemars/issues/273) - Known issue with `rename_all_fields` on tagged enums (our case uses `rename_all` on the enum itself, which works)
+- [Thomas Wiegold blog on Claude structured output](https://thomas-wiegold.com/blog/claude-api-structured-output/) - Community verification of API shape and behavior
 
 ### Tertiary (LOW confidence)
-- LLM multi-turn conversation research (arxiv.org) - Academic findings on LLM underspecification handling and multi-turn degradation; informs the "question cap" and "context truncation" design decisions but is not directly actionable
-- schemars JSON Schema limitations with complex enums -- needs validation that `#[serde(tag = "action")]` tagged enums generate valid schemas for Claude's structured output parser
+- Schemars `anyOf` schema generation for internally-tagged enums -- the exact generated schema structure was inferred from library behavior and documentation rather than empirically testing `schema_for!()` output. Recommend generating and printing the schema during implementation to verify.
 
 ## Metadata
 
 **Confidence breakdown:**
 - Standard stack: HIGH -- all libraries already in workspace except schemars; schemars is the de facto JSON Schema generator in Rust
 - Architecture patterns (surface adapter, state accumulator): HIGH -- derived from codebase analysis and standard trait-based architecture
-- Structured output integration: HIGH -- verified against official Anthropic GA documentation; Claude Opus 4.6 supports it
-- Builder memory/draft persistence: MEDIUM -- using SqliteKvStore is sound but the exact query patterns (list_prefix) need verification
-- CLI interaction patterns: HIGH -- dialoguer is already used in the codebase for the same purpose
-- Skill builder code generation: MEDIUM -- LLM-generated code quality varies; validation strategy (compile-only vs runtime test) is discretionary
+- Structured output integration: HIGH -- verified against official Anthropic GA documentation; `anyOf` confirmed supported; `additionalProperties: false` requirement documented
+- Storage strategy (dedicated tables): HIGH -- KvStore bot-scoped limitation verified by reading actual trait/implementation; dedicated tables are the correct pattern per existing codebase conventions
+- Service method signatures: HIGH -- all signatures read directly from source code; assembly sequence verified
+- CompletionRequest/provider extension: HIGH -- all three request types and both providers read in full; backward-compatible approach confirmed
+- Web builder protocol: MEDIUM -- design is sound based on existing patterns but untested; REST vs WebSocket split is a design decision
+- Schemars tagged enum schema shape: MEDIUM -- inferred from documentation, not empirically tested; recommend verifying during implementation
 
-**Research date:** 2026-02-14
+**Research date:** 2026-02-14 (deep-dive update)
 **Valid until:** 2026-03-14 (structured output API is GA and stable; schemars 1.x is stable)

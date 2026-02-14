@@ -45,6 +45,9 @@ wasmtime = { workspace = true }
 wasmtime-wasi = { workspace = true }
 serde_yaml_ng = { workspace = true }
 semver = { workspace = true }
+hmac = { workspace = true }
+notify = { workspace = true }
+notify-debouncer-mini = { workspace = true }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 landlock = { workspace = true }

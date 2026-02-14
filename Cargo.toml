@@ -147,6 +147,19 @@ landlock = "0.4"
 # JSON Schema generation from Rust types (builder structured output)
 schemars = "1"
 
+# Cron scheduling for workflow triggers
+tokio-cron-scheduler = { version = "0.15", features = ["english"] }
+
+# JEXL expression evaluation for workflow `when` clauses
+jexl-eval = "0.4"
+
+# Cross-platform filesystem watching for event triggers
+notify = "8.2"
+notify-debouncer-mini = "0.5"
+
+# HMAC computation for webhook signature verification
+hmac = "0.12"
+
 # Workspace crates
 boternity-types = { path = "crates/boternity-types" }
 boternity-core = { path = "crates/boternity-core" }

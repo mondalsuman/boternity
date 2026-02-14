@@ -1,0 +1,5 @@
+[     234ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:5173/api/v1/bots?limit=5&sort=updated_at:0
+[     235ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:5173/api/v1/builder/drafts:0
+[     238ms] [WARNING] [@tanstack/router-devtools] This package has moved to @tanstack/react-router-devtools. Please switch to the new package at your earliest convenience, as this package will be dropped in the next major version release. @ http://localhost:5173/node_modules/.vite/deps/@tanstack_router-devtools.js?v=c4cee5aa:134
+[    1241ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:5173/api/v1/builder/drafts:0
+[    1241ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:5173/api/v1/bots?limit=5&sort=updated_at:0

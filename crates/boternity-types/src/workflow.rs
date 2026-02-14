@@ -400,6 +400,251 @@ pub struct WorkflowStepLog {
 }
 
 // ---------------------------------------------------------------------------
+// Builder helpers
+// ---------------------------------------------------------------------------
+
+/// Ergonomic builder for `WorkflowDefinition`.
+///
+/// # Example
+/// ```
+/// use boternity_types::workflow::*;
+///
+/// let wf = WorkflowDefinitionBuilder::new("daily-digest")
+///     .description("Gather news and summarize")
+///     .version("1.0.0")
+///     .owner_global()
+///     .concurrency(1)
+///     .timeout(600)
+///     .trigger(TriggerConfig::Manual {})
+///     .trigger(TriggerConfig::Cron {
+///         schedule: "0 9 * * *".into(),
+///         timezone: None,
+///     })
+///     .step(StepDefinition::agent("gather", "Gather News", "researcher", "Find top 5 AI news"))
+///     .step(
+///         StepDefinition::agent("analyze", "Analyze", "analyst", "Analyze trends")
+///             .depends_on(["gather"])
+///             .with_retry(RetryConfig { max_attempts: 3, strategy: RetryStrategy::LlmSelfCorrect }),
+///     )
+///     .build();
+/// ```
+pub struct WorkflowDefinitionBuilder {
+    name: String,
+    id: Uuid,
+    description: Option<String>,
+    version: String,
+    owner: WorkflowOwner,
+    concurrency: Option<u32>,
+    timeout_secs: Option<u64>,
+    triggers: Vec<TriggerConfig>,
+    steps: Vec<StepDefinition>,
+    metadata: HashMap<String, serde_json::Value>,
+}
+
+impl WorkflowDefinitionBuilder {
+    /// Create a new builder with the given workflow name.
+    pub fn new(name: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            id: Uuid::now_v7(),
+            description: None,
+            version: "1.0.0".to_string(),
+            owner: WorkflowOwner::Global,
+            concurrency: None,
+            timeout_secs: None,
+            triggers: Vec::new(),
+            steps: Vec::new(),
+            metadata: HashMap::new(),
+        }
+    }
+
+    /// Set the workflow UUID (defaults to a fresh UUIDv7).
+    pub fn id(mut self, id: Uuid) -> Self {
+        self.id = id;
+        self
+    }
+
+    /// Set the description.
+    pub fn description(mut self, desc: impl Into<String>) -> Self {
+        self.description = Some(desc.into());
+        self
+    }
+
+    /// Set the semantic version string (default "1.0.0").
+    pub fn version(mut self, v: impl Into<String>) -> Self {
+        self.version = v.into();
+        self
+    }
+
+    /// Set the owner to a specific bot.
+    pub fn owner_bot(mut self, bot_id: Uuid, slug: impl Into<String>) -> Self {
+        self.owner = WorkflowOwner::Bot {
+            bot_id,
+            slug: slug.into(),
+        };
+        self
+    }
+
+    /// Set the owner to global (cross-bot).
+    pub fn owner_global(mut self) -> Self {
+        self.owner = WorkflowOwner::Global;
+        self
+    }
+
+    /// Set maximum concurrent instances.
+    pub fn concurrency(mut self, n: u32) -> Self {
+        self.concurrency = Some(n);
+        self
+    }
+
+    /// Set per-workflow timeout in seconds.
+    pub fn timeout(mut self, secs: u64) -> Self {
+        self.timeout_secs = Some(secs);
+        self
+    }
+
+    /// Add a trigger configuration.
+    pub fn trigger(mut self, t: TriggerConfig) -> Self {
+        self.triggers.push(t);
+        self
+    }
+
+    /// Add a step definition.
+    pub fn step(mut self, s: StepDefinition) -> Self {
+        self.steps.push(s);
+        self
+    }
+
+    /// Add extensible metadata.
+    pub fn meta(mut self, key: impl Into<String>, value: serde_json::Value) -> Self {
+        self.metadata.insert(key.into(), value);
+        self
+    }
+
+    /// Consume the builder and produce a `WorkflowDefinition`.
+    pub fn build(self) -> WorkflowDefinition {
+        WorkflowDefinition {
+            id: self.id,
+            name: self.name,
+            description: self.description,
+            version: self.version,
+            owner: self.owner,
+            concurrency: self.concurrency,
+            timeout_secs: self.timeout_secs,
+            triggers: self.triggers,
+            steps: self.steps,
+            metadata: self.metadata,
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// StepDefinition convenience constructors
+// ---------------------------------------------------------------------------
+
+impl StepDefinition {
+    /// Create an agent step.
+    pub fn agent(
+        id: impl Into<String>,
+        name: impl Into<String>,
+        bot: impl Into<String>,
+        prompt: impl Into<String>,
+    ) -> Self {
+        let id = id.into();
+        Self {
+            id,
+            name: name.into(),
+            step_type: StepType::Agent,
+            depends_on: Vec::new(),
+            condition: None,
+            timeout_secs: None,
+            retry: None,
+            config: StepConfig::Agent {
+                bot: bot.into(),
+                prompt: prompt.into(),
+                model: None,
+            },
+            ui: None,
+        }
+    }
+
+    /// Create a skill step.
+    pub fn skill(
+        id: impl Into<String>,
+        name: impl Into<String>,
+        skill: impl Into<String>,
+    ) -> Self {
+        Self {
+            id: id.into(),
+            name: name.into(),
+            step_type: StepType::Skill,
+            depends_on: Vec::new(),
+            condition: None,
+            timeout_secs: None,
+            retry: None,
+            config: StepConfig::Skill {
+                skill: skill.into(),
+                input: None,
+            },
+            ui: None,
+        }
+    }
+
+    /// Create an HTTP step.
+    pub fn http(
+        id: impl Into<String>,
+        name: impl Into<String>,
+        method: impl Into<String>,
+        url: impl Into<String>,
+    ) -> Self {
+        Self {
+            id: id.into(),
+            name: name.into(),
+            step_type: StepType::Http,
+            depends_on: Vec::new(),
+            condition: None,
+            timeout_secs: None,
+            retry: None,
+            config: StepConfig::Http {
+                method: method.into(),
+                url: url.into(),
+                headers: None,
+                body: None,
+            },
+            ui: None,
+        }
+    }
+
+    /// Add dependency on other step IDs.
+    pub fn depends_on<I, S>(mut self, deps: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
+    {
+        self.depends_on = deps.into_iter().map(Into::into).collect();
+        self
+    }
+
+    /// Set step-level timeout in seconds.
+    pub fn with_timeout(mut self, secs: u64) -> Self {
+        self.timeout_secs = Some(secs);
+        self
+    }
+
+    /// Set retry configuration.
+    pub fn with_retry(mut self, retry: RetryConfig) -> Self {
+        self.retry = Some(retry);
+        self
+    }
+
+    /// Set a conditional execution expression.
+    pub fn with_condition(mut self, condition: impl Into<String>) -> Self {
+        self.condition = Some(condition.into());
+        self
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
@@ -972,6 +1217,141 @@ mod tests {
         let parsed: StepUiMetadata = serde_json::from_str(&json).unwrap();
         assert_eq!(parsed.position.unwrap().x, 100.0);
         assert_eq!(parsed.group.as_deref(), Some("analysis-group"));
+    }
+
+    // -----------------------------------------------------------------------
+    // Builder helpers
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_builder_produces_valid_workflow() {
+        let wf = WorkflowDefinitionBuilder::new("daily-digest")
+            .description("Gather news and summarize")
+            .version("2.0.0")
+            .owner_global()
+            .concurrency(1)
+            .timeout(600)
+            .trigger(TriggerConfig::Manual {})
+            .trigger(TriggerConfig::Cron {
+                schedule: "0 9 * * *".to_string(),
+                timezone: None,
+            })
+            .step(StepDefinition::agent(
+                "gather",
+                "Gather News",
+                "researcher",
+                "Find top 5 AI news",
+            ))
+            .step(
+                StepDefinition::agent("analyze", "Analyze", "analyst", "Analyze trends")
+                    .depends_on(["gather"])
+                    .with_timeout(120)
+                    .with_retry(RetryConfig {
+                        max_attempts: 3,
+                        strategy: RetryStrategy::LlmSelfCorrect,
+                    }),
+            )
+            .build();
+
+        assert_eq!(wf.name, "daily-digest");
+        assert_eq!(wf.description.as_deref(), Some("Gather news and summarize"));
+        assert_eq!(wf.version, "2.0.0");
+        assert_eq!(wf.owner, WorkflowOwner::Global);
+        assert_eq!(wf.concurrency, Some(1));
+        assert_eq!(wf.timeout_secs, Some(600));
+        assert_eq!(wf.triggers.len(), 2);
+        assert_eq!(wf.steps.len(), 2);
+        assert_eq!(wf.steps[0].id, "gather");
+        assert_eq!(wf.steps[1].depends_on, vec!["gather"]);
+        assert_eq!(wf.steps[1].timeout_secs, Some(120));
+        assert!(wf.steps[1].retry.is_some());
+    }
+
+    #[test]
+    fn test_builder_yaml_serialization() {
+        let wf = WorkflowDefinitionBuilder::new("pipeline")
+            .description("Test pipeline")
+            .trigger(TriggerConfig::Manual {})
+            .step(StepDefinition::agent("step1", "Step 1", "bot1", "Do thing"))
+            .step(
+                StepDefinition::skill("step2", "Step 2", "formatter")
+                    .depends_on(["step1"]),
+            )
+            .build();
+
+        let yaml = serde_yaml_ng::to_string(&wf).expect("serialize to YAML");
+        assert!(yaml.contains("pipeline"));
+        assert!(yaml.contains("step1"));
+        assert!(yaml.contains("step2"));
+        assert!(yaml.contains("type: agent"));
+        assert!(yaml.contains("type: skill"));
+
+        // Roundtrip
+        let parsed: WorkflowDefinition =
+            serde_yaml_ng::from_str(&yaml).expect("deserialize from YAML");
+        assert_eq!(parsed.name, "pipeline");
+        assert_eq!(parsed.steps.len(), 2);
+        assert_eq!(parsed.steps[1].depends_on, vec!["step1"]);
+    }
+
+    #[test]
+    fn test_step_convenience_constructors() {
+        let agent = StepDefinition::agent("a", "Agent Step", "bot", "prompt");
+        assert_eq!(agent.step_type, StepType::Agent);
+        assert!(matches!(agent.config, StepConfig::Agent { .. }));
+
+        let skill = StepDefinition::skill("s", "Skill Step", "formatter");
+        assert_eq!(skill.step_type, StepType::Skill);
+        assert!(matches!(skill.config, StepConfig::Skill { .. }));
+
+        let http = StepDefinition::http("h", "HTTP Step", "POST", "https://example.com");
+        assert_eq!(http.step_type, StepType::Http);
+        assert!(matches!(http.config, StepConfig::Http { .. }));
+    }
+
+    #[test]
+    fn test_step_chaining_methods() {
+        let step = StepDefinition::agent("s1", "Step", "bot", "prompt")
+            .depends_on(["s0"])
+            .with_timeout(60)
+            .with_retry(RetryConfig {
+                max_attempts: 2,
+                strategy: RetryStrategy::Simple,
+            })
+            .with_condition("context.ready == true");
+
+        assert_eq!(step.depends_on, vec!["s0"]);
+        assert_eq!(step.timeout_secs, Some(60));
+        assert!(step.retry.is_some());
+        assert_eq!(step.retry.as_ref().unwrap().max_attempts, 2);
+        assert_eq!(step.condition.as_deref(), Some("context.ready == true"));
+    }
+
+    #[test]
+    fn test_builder_owner_bot() {
+        let bot_id = Uuid::now_v7();
+        let wf = WorkflowDefinitionBuilder::new("test")
+            .owner_bot(bot_id, "my-bot")
+            .build();
+
+        match &wf.owner {
+            WorkflowOwner::Bot { bot_id: id, slug } => {
+                assert_eq!(*id, bot_id);
+                assert_eq!(slug, "my-bot");
+            }
+            _ => panic!("Expected Bot owner"),
+        }
+    }
+
+    #[test]
+    fn test_builder_metadata() {
+        let wf = WorkflowDefinitionBuilder::new("test")
+            .meta("created_by", json!("sdk"))
+            .meta("version_note", json!("initial"))
+            .build();
+
+        assert_eq!(wf.metadata.len(), 2);
+        assert_eq!(wf.metadata["created_by"], json!("sdk"));
     }
 
     // -----------------------------------------------------------------------

@@ -15,3 +15,4 @@ pub mod skill;
 pub mod sqlite;
 pub mod storage;
 pub mod vector;
+pub mod workflow;

@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-10)
 
 **Core value:** A user can create a bot with a distinct identity, give it skills through an interactive builder, and have meaningful parallel conversations with it -- all running locally with full observability.
-**Current focus:** Phase 7 (Builder System) - Complete
+**Current focus:** Phase 8 complete. Ready for Phase 9 (MCP Integration).
 
 ## Current Position
 
-Phase: 7 of 10 (Builder System) - COMPLETE
-Plan: 10 of 10 in current phase (all complete)
-Status: Complete
-Last activity: 2026-02-14 -- Phase 7 verified (4/4 must-haves passed)
+Phase: 8 of 10 (Workflows + Pipelines)
+Plan: 15 of 15 in current phase (gap closure)
+Status: Phase complete
+Last activity: 2026-02-14 -- Completed 08-15-PLAN.md
 
-Progress: [██████████████████████████████████████████████████████████████████████] 67/67 (100%)
+Progress: [████████████████████████████████████████████████████████████████████████████████████████████████████████] 82/82 (100%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 67
-- Average duration: 6m 16s
-- Total execution time: 419m 31s
+- Total plans completed: 82
+- Average duration: 6m 11s
+- Total execution time: 507m 53s
 
 **By Phase:**
 
@@ -34,10 +34,11 @@ Progress: [███████████████████████
 | 5. Agent Hierarchy + Event System | 8/8 | 28m 00s | 3m 30s |
 | 6. Skill System + WASM Sandbox | 14/14 | 79m 40s | 5m 41s |
 | 7. Builder System | 10/10 | 66m 43s | 6m 40s |
+| 8. Workflows + Pipelines | 15/15 | 96m 22s | 6m 25s |
 
 **Recent Trend:**
-- Last 5 plans: 07-06 (5m 00s), 07-07 (6m 41s), 07-08 (7m 00s), 07-09 (12m 00s), 07-10 (12m 00s)
-- Trend: Web UI plans took longer due to manual verification checkpoints
+- Last 5 plans: 08-10 (7m 33s), 08-11 (5m 03s), 08-13 (8m 26s), 08-14 (6m 00s), 08-15 (2m 19s)
+- Trend: Final gap closure plan executed well below average
 
 *Updated after each plan completion*
 
@@ -331,6 +332,67 @@ Recent decisions affecting current work:
 - [07-08]: WebSocket pre-loads existing draft on connect for transparent session resume
 - [07-08]: CreateSkill endpoint runs full pipeline (generate + validate + install) in single request
 - [07-08]: Reconfigure mode loads existing bot IDENTITY.md and SOUL.md to populate BuilderState
+- [08-01]: WorkflowOwner tagged enum (Bot/Global) for scoped vs cross-bot workflows
+- [08-01]: StepConfig internally tagged by type for clean YAML representation
+- [08-01]: 7-state WorkflowRunStatus (Pending/Running/Paused/Completed/Failed/Crashed/Cancelled)
+- [08-01]: 6-state WorkflowStepStatus (Pending/Running/Completed/Failed/Skipped/WaitingApproval)
+- [08-01]: RetryConfig defaults to max_attempts=3 via serde default function
+- [08-01]: StepUiMetadata optional with skip_serializing_if for clean YAML when no visual data
+- [08-01]: BotMessage uses serde_json::Value for flexible body (not typed enum)
+- [08-05]: Minimal WorkflowContext in expression.rs for evaluation surface (steps, trigger, variables, workflow metadata)
+- [08-05]: JavaScript-like truthiness for expression bool coercion (null/false/0/empty-string = false)
+- [08-05]: match transform uses substring match, not regex (security/simplicity trade-off)
+- [08-05]: RetryHandler is stateless (same pattern as MemoryExtractor) -- callers track attempts
+- [08-02]: WorkflowDefinition stored as full JSON blob in SQLite (schema flexibility, no per-field migration)
+- [08-02]: COALESCE unique index for nullable owner_bot_id (SQLite prohibits expressions in inline UNIQUE)
+- [08-02]: Crashed runs detected by status='running' query (simple, heartbeat can be added later)
+- [08-03]: WorkflowContext uses Uuid for run_id (not String) for type safety; to_expression_context converts to string
+- [08-03]: Oversized step outputs truncated to JSON metadata object (_truncated: true) instead of hard error
+- [08-03]: discover_workflows silently skips unparseable YAML files (logged as warnings)
+- [08-03]: Unified WorkflowContext in context.rs replaces minimal version in expression.rs (no type duplication)
+- [08-06]: MessageBus uses 256-buffer mpsc for direct mailboxes, 1024-buffer broadcast for pub/sub channels
+- [08-06]: LoopGuard rate limiting is directional (A->B and B->A tracked independently)
+- [08-06]: send_and_wait installs oneshot reply channel before sending to prevent race conditions
+- [08-06]: MessageProcessor uses RPITIT (consistent with project async trait pattern)
+- [08-12]: TypeScript types mirror Rust serde representation exactly (snake_case, discriminated unions on type field)
+- [08-12]: StepRef class for type-safe dependency tracking in TypeScript builder
+- [08-12]: DAG validation via Kahn's algorithm at build() time in both TS and Rust
+- [08-12]: Rust builder uses consuming self pattern for ergonomic chaining (not &mut self)
+- [08-04]: HTTP step resolves templates but delegates actual HTTP execution to infra layer (clean architecture)
+- [08-04]: Steps cloned into owned Vec<Vec<StepDefinition>> before spawning (build_execution_plan returns references)
+- [08-04]: Approval gates: StepError::ApprovalRequired pauses workflow, executor returns ExecutionResult with Paused status
+- [08-04]: Per-workflow concurrency control via DashMap<String, Arc<Semaphore>>
+- [08-04]: MAX_SUB_WORKFLOW_DEPTH = 5, DEFAULT_STEP_TIMEOUT_SECS = 300, DEFAULT_WORKFLOW_TIMEOUT_SECS = 1800
+- [08-07]: croner crate used directly for missed-run detection (iter_after for occurrences between last_fired and now)
+- [08-07]: notify-debouncer-mini re-exported notify types used to avoid version conflict (debouncer needs notify 7, workspace has 8)
+- [08-07]: Constant-time XOR for bearer token comparison (inline, no extra crate)
+- [08-07]: Human-readable schedules normalized at registration time (fail-fast, not fire-time)
+- [08-09]: Webhook endpoint uses WebhookRegistry auth (not API key Authenticated extractor)
+- [08-09]: Workflow routes via Router::merge pattern for clean handler-local route definitions
+- [08-09]: AppState Phase 8 fields: workflow_repo, message_repo, message_bus, webhook_registry
+- [08-09]: LoopGuard::default() for MessageBus loop prevention in AppState init
+- [08-08]: Lazy repo instantiation in CLI handlers (SqliteWorkflowRepository/SqliteMessageRepository per-command, not in AppState)
+- [08-08]: Channel auto-creation on first subscribe (no separate create-channel step)
+- [08-08]: Workflow status command accepts both workflow name and run UUID for flexibility
+- [08-10]: ConditionalNode uses dual source handles at 30%/70% bottom position for then/else branches
+- [08-10]: TypedEdge uses invisible 20px-wide path for easier hover targeting
+- [08-10]: nodeTypes/edgeTypes defined as module-level constants to avoid React re-renders
+- [08-10]: definitionToFlow auto-applies dagre layout when no UI positions exist in definition
+- [08-10]: Workflow TypeScript types in separate types/workflow.ts matching Rust serde representation exactly
+- [08-11]: Canvas-to-YAML sync is unidirectional (canvas -> YAML on toggle); bidirectional parse-back deferred
+- [08-11]: Undo/redo uses structuredClone with max 50 entries to cap memory
+- [08-11]: Node grouping uses React Flow parentId API with visual dashed-border group nodes
+- [08-11]: WorkflowCanvasHandle imperative ref for parent-to-canvas commands (autoLayout, undo, redo, group)
+- [08-13]: StepExecutionContext uses boxed futures (not RPITIT) for Arc<dyn> object safety
+- [08-13]: PlaceholderExecutionContext as default StepRunner context; real services via with_context()
+- [08-13]: WebSocket workflow subscription opt-in via SubscribeWorkflow command; non-workflow events always forwarded
+- [08-13]: Crash recovery at AppState::init() time marks Running runs as Crashed (no background heartbeat yet)
+- [08-14]: DagExecutor::with_execution_context() as separate constructor preserving PlaceholderExecutionContext default for tests
+- [08-14]: trigger_workflow/receive_webhook return "submitted" immediately; executor creates WorkflowRun internally (async job pattern)
+- [08-14]: LiveExecutionContext reuses create_single_provider auto-detection pattern for Anthropic/Bedrock keys
+- [08-15]: CronCallback clones Arc<DagExecutor> and Arc<SqliteWorkflowRepository> per fire (Fn requires reusable closures)
+- [08-15]: Event type extracted via serde_json::to_value + ["type"] field (AgentEvent has no event_type() accessor)
+- [08-15]: Event triggers re-fetched each event for dynamic trigger registration pickup without listener restart
 
 ### Pending Todos
 
@@ -345,5 +407,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Phase 7 complete -- all 10 plans executed and verified
+Stopped at: Completed 08-15-PLAN.md (Phase 8 complete)
 Resume file: None

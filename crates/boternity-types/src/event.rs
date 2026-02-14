@@ -95,6 +95,62 @@ pub enum AgentEvent {
         to_provider: String,
         reason: String,
     },
+
+    // -- Workflow lifecycle events (Phase 8) --
+
+    /// A workflow run has started.
+    WorkflowRunStarted {
+        run_id: Uuid,
+        workflow_name: String,
+        trigger_type: String,
+    },
+
+    /// A workflow step has started executing.
+    WorkflowStepStarted {
+        run_id: Uuid,
+        step_id: String,
+        step_name: String,
+        step_type: String,
+    },
+
+    /// A workflow step completed successfully.
+    WorkflowStepCompleted {
+        run_id: Uuid,
+        step_id: String,
+        step_name: String,
+        duration_ms: u64,
+    },
+
+    /// A workflow step failed.
+    WorkflowStepFailed {
+        run_id: Uuid,
+        step_id: String,
+        step_name: String,
+        error: String,
+        will_retry: bool,
+    },
+
+    /// A workflow run completed successfully.
+    WorkflowRunCompleted {
+        run_id: Uuid,
+        workflow_name: String,
+        duration_ms: u64,
+        steps_completed: u32,
+    },
+
+    /// A workflow run failed.
+    WorkflowRunFailed {
+        run_id: Uuid,
+        workflow_name: String,
+        error: String,
+    },
+
+    /// A workflow run has been paused (e.g. approval gate).
+    WorkflowRunPaused {
+        run_id: Uuid,
+        step_id: String,
+        reason: String,
+    },
 }
 
 impl AgentEvent {
@@ -115,7 +171,14 @@ impl AgentEvent {
             | AgentEvent::BudgetWarning { .. }
             | AgentEvent::BudgetExhausted { .. }
             | AgentEvent::SynthesisStarted { .. }
-            | AgentEvent::ProviderFailover { .. } => None,
+            | AgentEvent::ProviderFailover { .. }
+            | AgentEvent::WorkflowRunStarted { .. }
+            | AgentEvent::WorkflowStepStarted { .. }
+            | AgentEvent::WorkflowStepCompleted { .. }
+            | AgentEvent::WorkflowStepFailed { .. }
+            | AgentEvent::WorkflowRunCompleted { .. }
+            | AgentEvent::WorkflowRunFailed { .. }
+            | AgentEvent::WorkflowRunPaused { .. } => None,
         }
     }
 }
@@ -336,6 +399,111 @@ mod tests {
     }
 
     #[test]
+    fn test_workflow_run_started_serde_roundtrip() {
+        let event = AgentEvent::WorkflowRunStarted {
+            run_id: sample_uuid(),
+            workflow_name: "daily-report".to_string(),
+            trigger_type: "cron".to_string(),
+        };
+        let json = serde_json::to_string(&event).unwrap();
+        assert!(json.contains("\"type\":\"workflow_run_started\""));
+        let parsed: AgentEvent = serde_json::from_str(&json).unwrap();
+        assert!(matches!(parsed, AgentEvent::WorkflowRunStarted { .. }));
+    }
+
+    #[test]
+    fn test_workflow_step_started_serde_roundtrip() {
+        let event = AgentEvent::WorkflowStepStarted {
+            run_id: sample_uuid(),
+            step_id: "gather-data".to_string(),
+            step_name: "Gather Data".to_string(),
+            step_type: "agent".to_string(),
+        };
+        let json = serde_json::to_string(&event).unwrap();
+        assert!(json.contains("\"type\":\"workflow_step_started\""));
+        let parsed: AgentEvent = serde_json::from_str(&json).unwrap();
+        assert!(matches!(parsed, AgentEvent::WorkflowStepStarted { .. }));
+    }
+
+    #[test]
+    fn test_workflow_step_completed_serde_roundtrip() {
+        let event = AgentEvent::WorkflowStepCompleted {
+            run_id: sample_uuid(),
+            step_id: "gather-data".to_string(),
+            step_name: "Gather Data".to_string(),
+            duration_ms: 1500,
+        };
+        let json = serde_json::to_string(&event).unwrap();
+        assert!(json.contains("\"type\":\"workflow_step_completed\""));
+        let parsed: AgentEvent = serde_json::from_str(&json).unwrap();
+        assert!(matches!(
+            parsed,
+            AgentEvent::WorkflowStepCompleted { duration_ms: 1500, .. }
+        ));
+    }
+
+    #[test]
+    fn test_workflow_step_failed_serde_roundtrip() {
+        let event = AgentEvent::WorkflowStepFailed {
+            run_id: sample_uuid(),
+            step_id: "call-api".to_string(),
+            step_name: "Call API".to_string(),
+            error: "connection timeout".to_string(),
+            will_retry: true,
+        };
+        let json = serde_json::to_string(&event).unwrap();
+        assert!(json.contains("\"type\":\"workflow_step_failed\""));
+        let parsed: AgentEvent = serde_json::from_str(&json).unwrap();
+        assert!(matches!(
+            parsed,
+            AgentEvent::WorkflowStepFailed { will_retry: true, .. }
+        ));
+    }
+
+    #[test]
+    fn test_workflow_run_completed_serde_roundtrip() {
+        let event = AgentEvent::WorkflowRunCompleted {
+            run_id: sample_uuid(),
+            workflow_name: "daily-report".to_string(),
+            duration_ms: 12000,
+            steps_completed: 5,
+        };
+        let json = serde_json::to_string(&event).unwrap();
+        assert!(json.contains("\"type\":\"workflow_run_completed\""));
+        let parsed: AgentEvent = serde_json::from_str(&json).unwrap();
+        assert!(matches!(
+            parsed,
+            AgentEvent::WorkflowRunCompleted { steps_completed: 5, .. }
+        ));
+    }
+
+    #[test]
+    fn test_workflow_run_failed_serde_roundtrip() {
+        let event = AgentEvent::WorkflowRunFailed {
+            run_id: sample_uuid(),
+            workflow_name: "daily-report".to_string(),
+            error: "step failure".to_string(),
+        };
+        let json = serde_json::to_string(&event).unwrap();
+        assert!(json.contains("\"type\":\"workflow_run_failed\""));
+        let parsed: AgentEvent = serde_json::from_str(&json).unwrap();
+        assert!(matches!(parsed, AgentEvent::WorkflowRunFailed { .. }));
+    }
+
+    #[test]
+    fn test_workflow_run_paused_serde_roundtrip() {
+        let event = AgentEvent::WorkflowRunPaused {
+            run_id: sample_uuid(),
+            step_id: "review".to_string(),
+            reason: "approval required".to_string(),
+        };
+        let json = serde_json::to_string(&event).unwrap();
+        assert!(json.contains("\"type\":\"workflow_run_paused\""));
+        let parsed: AgentEvent = serde_json::from_str(&json).unwrap();
+        assert!(matches!(parsed, AgentEvent::WorkflowRunPaused { .. }));
+    }
+
+    #[test]
     fn test_agent_id_returns_some_for_agent_scoped_events() {
         let id = sample_uuid();
         let events_with_id = vec![
@@ -413,6 +581,46 @@ mod tests {
                 from_provider: "a".to_string(),
                 to_provider: "b".to_string(),
                 reason: "r".to_string(),
+            },
+            AgentEvent::WorkflowRunStarted {
+                run_id: sample_uuid(),
+                workflow_name: "wf".to_string(),
+                trigger_type: "manual".to_string(),
+            },
+            AgentEvent::WorkflowStepStarted {
+                run_id: sample_uuid(),
+                step_id: "s1".to_string(),
+                step_name: "Step 1".to_string(),
+                step_type: "agent".to_string(),
+            },
+            AgentEvent::WorkflowStepCompleted {
+                run_id: sample_uuid(),
+                step_id: "s1".to_string(),
+                step_name: "Step 1".to_string(),
+                duration_ms: 100,
+            },
+            AgentEvent::WorkflowStepFailed {
+                run_id: sample_uuid(),
+                step_id: "s1".to_string(),
+                step_name: "Step 1".to_string(),
+                error: "boom".to_string(),
+                will_retry: false,
+            },
+            AgentEvent::WorkflowRunCompleted {
+                run_id: sample_uuid(),
+                workflow_name: "wf".to_string(),
+                duration_ms: 5000,
+                steps_completed: 3,
+            },
+            AgentEvent::WorkflowRunFailed {
+                run_id: sample_uuid(),
+                workflow_name: "wf".to_string(),
+                error: "fatal".to_string(),
+            },
+            AgentEvent::WorkflowRunPaused {
+                run_id: sample_uuid(),
+                step_id: "s2".to_string(),
+                reason: "approval".to_string(),
             },
         ];
         for event in events_without_id {

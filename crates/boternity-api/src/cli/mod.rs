@@ -8,6 +8,7 @@ pub mod builder;
 pub mod chat;
 pub mod kv;
 pub mod memory;
+pub mod message;
 pub mod provider;
 pub mod secret;
 pub mod session;
@@ -18,6 +19,7 @@ pub mod skill_create;
 pub mod soul;
 pub mod status;
 pub mod storage;
+pub mod workflow;
 
 use clap::{Parser, Subcommand};
 use clap_complete::Shell;
@@ -199,6 +201,18 @@ pub enum Commands {
         /// Suppress sub-agent detail, showing only the final synthesized response.
         #[arg(long, short = 'q')]
         quiet: bool,
+    },
+
+    /// Manage workflows (create, trigger, list, status, logs, delete, approve, cancel).
+    Workflow {
+        #[command(subcommand)]
+        action: workflow::WorkflowCommand,
+    },
+
+    /// Bot-to-bot messaging (send, history, channels, subscribe, unsubscribe).
+    Message {
+        #[command(subcommand)]
+        action: message::MessageCommand,
     },
 
     /// Interactive bot builder wizard powered by Forge.

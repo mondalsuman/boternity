@@ -17,6 +17,7 @@ use boternity_core::llm::fallback::FallbackChain;
 use boternity_core::llm::provider::LlmProvider;
 use boternity_core::memory::box_embedder::BoxEmbedder;
 use boternity_core::memory::embedder::Embedder;
+use boternity_core::message::{LoopGuard, MessageBus};
 use boternity_core::service::bot::BotService;
 use boternity_core::service::secret::SecretService;
 use boternity_core::service::soul::SoulService;
@@ -39,6 +40,7 @@ use boternity_infra::sqlite::chat::SqliteChatRepository;
 use boternity_infra::sqlite::file_metadata::SqliteFileMetadataStore;
 use boternity_infra::sqlite::kv::SqliteKvStore;
 use boternity_infra::sqlite::memory::SqliteMemoryRepository;
+use boternity_infra::sqlite::message::SqliteMessageRepository;
 use boternity_infra::sqlite::pool::DatabasePool;
 use boternity_infra::sqlite::provider_health::SqliteProviderHealthStore;
 use boternity_infra::sqlite::secret::SqliteSecretRepository;
@@ -46,13 +48,21 @@ use boternity_infra::builder::sqlite_draft_store::SqliteBuilderDraftStore;
 use boternity_infra::builder::sqlite_memory_store::SqliteBuilderMemoryStore;
 use boternity_infra::sqlite::skill_audit::SqliteSkillAuditLog;
 use boternity_infra::sqlite::soul::SqliteSoulRepository;
+use boternity_infra::sqlite::workflow::SqliteWorkflowRepository;
 use boternity_infra::storage::filesystem::LocalFileStore;
 use boternity_infra::storage::indexer::FileIndexer;
 use boternity_infra::vector::embedder::FastEmbedEmbedder;
 use boternity_infra::vector::lance::LanceVectorStore;
 use boternity_infra::vector::memory::LanceVectorMemoryStore;
 use boternity_infra::vector::shared::LanceSharedMemoryStore;
+use boternity_infra::workflow::execution_context::LiveExecutionContext;
+use boternity_infra::workflow::webhook_handler::WebhookRegistry;
+use boternity_core::repository::workflow::WorkflowRepository;
+use boternity_core::workflow::executor::{DagExecutor, WorkflowExecutor};
+use boternity_core::workflow::scheduler::{CronCallback, CronScheduler};
+use boternity_core::workflow::trigger::TriggerManager;
 use boternity_types::llm::{FallbackChainConfig, ProviderConfig, ProviderType};
+use boternity_types::workflow::WorkflowRunStatus;
 use boternity_types::secret::SecretScope;
 
 use boternity_core::llm::box_provider::BoxLlmProvider;
@@ -86,6 +96,8 @@ pub type ConcreteFileIndexer = FileIndexer<FastEmbedEmbedder>;
 /// Phase 6 additions: skill_store, wasm_runtime, skill_audit_log.
 ///
 /// Phase 7 additions: builder_draft_store, builder_memory_store.
+///
+/// Phase 8 additions: workflow_repo, message_repo, message_bus, webhook_registry.
 #[derive(Clone)]
 pub struct AppState {
     pub bot_service: Arc<ConcreteBotService>,
@@ -140,6 +152,22 @@ pub struct AppState {
     pub builder_draft_store: Arc<SqliteBuilderDraftStore>,
     /// SQLite-backed builder memory for cross-session suggestion recall.
     pub builder_memory_store: Arc<SqliteBuilderMemoryStore>,
+
+    // --- Phase 8 services ---
+    /// SQLite-backed workflow definition and run repository.
+    pub workflow_repo: Arc<SqliteWorkflowRepository>,
+    /// SQLite-backed bot-to-bot message repository.
+    pub message_repo: Arc<SqliteMessageRepository>,
+    /// Runtime message bus for direct and pub/sub inter-bot messaging.
+    pub message_bus: Arc<MessageBus>,
+    /// DashMap-backed webhook path-to-config registry for incoming webhooks.
+    pub webhook_registry: Arc<WebhookRegistry>,
+    /// DAG executor for running workflows with real service wiring.
+    pub workflow_executor: Arc<DagExecutor<SqliteWorkflowRepository>>,
+    /// Cron scheduler for time-based workflow triggers.
+    pub cron_scheduler: Arc<CronScheduler>,
+    /// Central trigger registry for cron/webhook/event/file_watch triggers.
+    pub trigger_manager: Arc<TriggerManager>,
 }
 
 impl AppState {
@@ -283,11 +311,263 @@ impl AppState {
         // Builder memory (cross-session suggestion recall)
         let builder_memory_store = Arc::new(SqliteBuilderMemoryStore::new(db_pool.clone()));
 
+        // --- Phase 8 services ---
+
+        // Workflow repository (definitions, runs, step logs)
+        let workflow_repo = Arc::new(SqliteWorkflowRepository::new(db_pool.clone()));
+
+        // Message repository (bot-to-bot messages, channels, subscriptions)
+        let message_repo = Arc::new(SqliteMessageRepository::new(db_pool.clone()));
+
+        // Message bus with loop guard for inter-bot communication
+        let loop_guard = Arc::new(LoopGuard::default());
+        let message_bus = Arc::new(MessageBus::new(loop_guard));
+
+        // Webhook registry for incoming webhook path resolution
+        let webhook_registry = Arc::new(WebhookRegistry::new());
+
+        // Crash recovery: mark any runs left in Running status as Crashed.
+        // This handles workflows that were interrupted by a process restart.
+        match workflow_repo.list_crashed_runs().await {
+            Ok(crashed_runs) => {
+                for run in &crashed_runs {
+                    let _ = workflow_repo
+                        .update_run_status(
+                            &run.id,
+                            WorkflowRunStatus::Crashed,
+                            Some("process restarted while workflow was running"),
+                            None,
+                        )
+                        .await;
+                }
+                if !crashed_runs.is_empty() {
+                    tracing::warn!(
+                        count = crashed_runs.len(),
+                        "marked interrupted workflow runs as crashed"
+                    );
+                }
+            }
+            Err(e) => {
+                tracing::warn!(
+                    error = %e,
+                    "failed to check for crashed workflow runs"
+                );
+            }
+        }
+
+        // Workflow executor with live execution context (real Agent/Skill/HTTP)
+        let secret_service = Arc::new(secret_service);
+        let live_exec_ctx = Arc::new(LiveExecutionContext::new(
+            data_dir.clone(),
+            Arc::clone(&secret_service),
+            Arc::clone(&skill_store),
+            Arc::clone(&wasm_runtime),
+        ));
+        let executor_repo = SqliteWorkflowRepository::new(db_pool.clone());
+        let workflow_executor = Arc::new(DagExecutor::with_execution_context(
+            executor_repo,
+            event_bus.clone(),
+            data_dir.clone(),
+            live_exec_ctx,
+        ));
+
+        // Cron scheduler for time-based workflow triggers
+        let cron_scheduler = Arc::new(CronScheduler::new());
+        cron_scheduler
+            .start()
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to start cron scheduler: {e}"))?;
+
+        // Central trigger manager for all workflow trigger types
+        let trigger_manager = Arc::new(TriggerManager::new());
+
+        // Load workflow definitions and register their triggers
+        let all_defs = workflow_repo.list_definitions(None).await.unwrap_or_default();
+        for def in &all_defs {
+            let _ = trigger_manager
+                .register_workflow(def.id, &def.name, &def.triggers)
+                .await;
+
+            // Register cron triggers with the scheduler
+            for trigger in &def.triggers {
+                if let boternity_types::workflow::TriggerConfig::Cron { schedule, .. } = trigger {
+                    let executor = Arc::clone(&workflow_executor);
+                    let wf_repo_for_cron = Arc::clone(&workflow_repo);
+                    let wf_id = def.id;
+                    let sched = Arc::clone(&cron_scheduler);
+                    let cb: CronCallback = Arc::new(move |workflow_id, _fired_at| {
+                        let exec = Arc::clone(&executor);
+                        let repo = Arc::clone(&wf_repo_for_cron);
+                        let sched_inner = Arc::clone(&sched);
+                        Box::pin(async move {
+                            sched_inner.record_fire(workflow_id).await;
+                            match repo.get_definition(&workflow_id).await {
+                                Ok(Some(def)) => {
+                                    match exec.execute(&def, "cron", None).await {
+                                        Ok(result) => {
+                                            tracing::info!(
+                                                %workflow_id,
+                                                run_id = %result.run_id,
+                                                status = ?result.status,
+                                                "cron-triggered workflow completed"
+                                            );
+                                        }
+                                        Err(e) => {
+                                            tracing::error!(
+                                                %workflow_id,
+                                                error = %e,
+                                                "cron-triggered workflow failed"
+                                            );
+                                        }
+                                    }
+                                }
+                                Ok(None) => {
+                                    tracing::warn!(
+                                        %workflow_id,
+                                        "cron trigger: workflow definition not found"
+                                    );
+                                }
+                                Err(e) => {
+                                    tracing::error!(
+                                        %workflow_id,
+                                        error = %e,
+                                        "cron trigger: failed to load definition"
+                                    );
+                                }
+                            }
+                        })
+                    });
+                    if let Err(e) = cron_scheduler.schedule_workflow(wf_id, schedule, cb).await {
+                        tracing::warn!(
+                            workflow_id = %def.id,
+                            schedule = %schedule,
+                            error = %e,
+                            "failed to schedule cron trigger"
+                        );
+                    }
+                }
+            }
+        }
+
+        if !all_defs.is_empty() {
+            let cron_count = cron_scheduler.workflow_count().await;
+            tracing::info!(
+                workflows = all_defs.len(),
+                cron_triggers = cron_count,
+                "registered workflow triggers at startup"
+            );
+        }
+
+        // EventBus listener for event-driven workflow triggers
+        let event_triggers = trigger_manager.get_event_triggers().await;
+        if !event_triggers.is_empty() {
+            let mut rx = event_bus.subscribe();
+            let executor_for_events = Arc::clone(&workflow_executor);
+            let repo_for_events = Arc::clone(&workflow_repo);
+            let tm_for_events = Arc::clone(&trigger_manager);
+
+            tokio::spawn(async move {
+                loop {
+                    match rx.recv().await {
+                        Ok(event) => {
+                            let event_type = serde_json::to_value(&event)
+                                .ok()
+                                .and_then(|v| v["type"].as_str().map(|s| s.to_string()))
+                                .unwrap_or_default();
+                            let event_json = serde_json::to_value(&event).ok();
+
+                            let triggers = tm_for_events.get_event_triggers().await;
+                            for (workflow_id, _source, trigger_event_type, when_clause) in &triggers
+                            {
+                                if trigger_event_type != &event_type {
+                                    continue;
+                                }
+
+                                let trigger_ctx =
+                                    boternity_core::workflow::trigger::TriggerContext::new(
+                                        "event",
+                                        &event_type,
+                                        *workflow_id,
+                                        event_json.clone(),
+                                    );
+                                match tm_for_events
+                                    .evaluate_when_clause(when_clause.as_deref(), &trigger_ctx)
+                                {
+                                    Ok(true) => {
+                                        let exec = Arc::clone(&executor_for_events);
+                                        let repo = Arc::clone(&repo_for_events);
+                                        let wf_id = *workflow_id;
+                                        let payload = event_json.clone();
+                                        tokio::spawn(async move {
+                                            match repo.get_definition(&wf_id).await {
+                                                Ok(Some(def)) => {
+                                                    match exec
+                                                        .execute(&def, "event", payload)
+                                                        .await
+                                                    {
+                                                        Ok(result) => {
+                                                            tracing::info!(
+                                                                %wf_id,
+                                                                run_id = %result.run_id,
+                                                                "event-triggered workflow completed"
+                                                            );
+                                                        }
+                                                        Err(e) => {
+                                                            tracing::error!(
+                                                                %wf_id,
+                                                                error = %e,
+                                                                "event-triggered workflow failed"
+                                                            );
+                                                        }
+                                                    }
+                                                }
+                                                _ => {
+                                                    tracing::warn!(
+                                                        %wf_id,
+                                                        "event trigger: workflow not found"
+                                                    );
+                                                }
+                                            }
+                                        });
+                                    }
+                                    Ok(false) => {}
+                                    Err(e) => {
+                                        tracing::warn!(
+                                            %workflow_id,
+                                            error = %e,
+                                            "event trigger when-clause evaluation failed"
+                                        );
+                                    }
+                                }
+                            }
+                        }
+                        Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
+                            tracing::warn!(
+                                skipped = n,
+                                "workflow event listener lagged"
+                            );
+                        }
+                        Err(tokio::sync::broadcast::error::RecvError::Closed) => {
+                            tracing::info!(
+                                "event bus closed, workflow event listener shutting down"
+                            );
+                            break;
+                        }
+                    }
+                }
+            });
+
+            tracing::info!(
+                event_triggers = event_triggers.len(),
+                "started workflow event trigger listener"
+            );
+        }
+
         Ok(Self {
             bot_service: Arc::new(bot_service),
             soul_service: Arc::new(api_soul_service),
             chat_service: Arc::new(chat_service),
-            secret_service: Arc::new(secret_service),
+            secret_service,
             data_dir,
             db_pool,
             vector_store,
@@ -308,6 +588,13 @@ impl AppState {
             skill_audit_log,
             builder_draft_store,
             builder_memory_store,
+            workflow_repo,
+            message_repo,
+            message_bus,
+            webhook_registry,
+            workflow_executor,
+            cron_scheduler,
+            trigger_manager,
         })
     }
 

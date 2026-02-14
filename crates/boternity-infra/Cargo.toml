@@ -22,6 +22,7 @@ chrono = { workspace = true }
 serde_json = { workspace = true }
 uuid = { workspace = true }
 serde = { workspace = true }
+schemars = { workspace = true }
 
 # LLM provider HTTP + streaming
 reqwest = { workspace = true }

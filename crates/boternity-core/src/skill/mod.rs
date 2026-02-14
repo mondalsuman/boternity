@@ -4,6 +4,7 @@
 //! resolution, and inheritance composition. This module defines the "how" of
 //! skill execution policy; the domain types live in `boternity-types::skill`.
 
+pub mod chaining;
 pub mod executor;
 pub mod inheritance;
 pub mod manifest;

@@ -4,8 +4,13 @@
 //! USER.md), session memories, and long-term vector memories using XML tag
 //! boundaries for clear section delineation.
 
+use std::path::PathBuf;
+
 use boternity_types::agent::AgentConfig;
 use boternity_types::memory::{MemoryEntry, RankedMemory};
+use boternity_types::skill::SkillManifest;
+
+use crate::skill::prompt_injector;
 
 /// Builds a system prompt from bot personality files and memories.
 ///
@@ -128,6 +133,29 @@ impl SystemPromptBuilder {
     ) -> String {
         let base = Self::build(config, soul, identity, user, memories, recalled_memories);
         format!("{base}\n\n{}", Self::agent_capabilities_section())
+    }
+
+    /// Build the complete system prompt with skill sections.
+    ///
+    /// Same as [`build()`] but adds skill metadata and active skill prompts
+    /// using the prompt injector. `<available_skills>` provides Level 1
+    /// disclosure (skill names + descriptions), and `<active_skills>` provides
+    /// Level 2 disclosure (full skill bodies injected after `</identity>`).
+    ///
+    /// When both `all_skills` and `active_skills` are empty, the result is
+    /// identical to [`build()`].
+    pub fn build_with_skills(
+        config: &AgentConfig,
+        soul: &str,
+        identity: &str,
+        user: &str,
+        memories: &[MemoryEntry],
+        recalled_memories: &[RankedMemory],
+        all_skills: &[(SkillManifest, PathBuf)],
+        active_skills: &[(SkillManifest, String)],
+    ) -> String {
+        let base = Self::build(config, soul, identity, user, memories, recalled_memories);
+        prompt_injector::build_skill_enhanced_prompt(&base, all_skills, active_skills)
     }
 
     /// Build a focused system prompt for a sub-agent executing a specific task.
@@ -492,5 +520,80 @@ mod tests {
         );
 
         assert!(!prompt.contains("<agent_capabilities>"));
+    }
+
+    #[test]
+    fn test_build_with_skills_includes_available_skills() {
+        use boternity_types::skill::SkillManifest;
+        use std::path::PathBuf;
+
+        let config = test_config();
+        let all_skills = vec![(
+            SkillManifest {
+                name: "web-search".to_string(),
+                description: "Search the web".to_string(),
+                license: None,
+                compatibility: None,
+                metadata: None,
+                allowed_tools: None,
+            },
+            PathBuf::from("/skills/web-search"),
+        )];
+
+        let active_skills = vec![(
+            SkillManifest {
+                name: "greeter".to_string(),
+                description: "Greet users".to_string(),
+                license: None,
+                compatibility: None,
+                metadata: None,
+                allowed_tools: None,
+            },
+            "Always say hello!".to_string(),
+        )];
+
+        let prompt = SystemPromptBuilder::build_with_skills(
+            &config,
+            "Soul content",
+            "Identity content",
+            "User context",
+            &[],
+            &[],
+            &all_skills,
+            &active_skills,
+        );
+
+        assert!(prompt.contains("<available_skills>"));
+        assert!(prompt.contains("name=\"web-search\""));
+        assert!(prompt.contains("<active_skills>"));
+        assert!(prompt.contains("name=\"greeter\""));
+        assert!(prompt.contains("Always say hello!"));
+        // Base sections still present
+        assert!(prompt.contains("<soul>"));
+        assert!(prompt.contains("<instructions>"));
+    }
+
+    #[test]
+    fn test_build_with_skills_no_skills_equals_build() {
+        let config = test_config();
+        let soul = "I am a creative assistant.";
+        let identity = "Name: Luna";
+        let user = "Be concise.";
+        let memories = vec![test_memory("Likes cats", MemoryCategory::Preference)];
+        let recalled = vec![test_ranked_memory("Knows Rust", MemoryCategory::Fact, None)];
+
+        let base = SystemPromptBuilder::build(&config, soul, identity, user, &memories, &recalled);
+        let with_skills = SystemPromptBuilder::build_with_skills(
+            &config,
+            soul,
+            identity,
+            user,
+            &memories,
+            &recalled,
+            &[],
+            &[],
+        );
+
+        assert_eq!(base, with_skills);
     }
 }

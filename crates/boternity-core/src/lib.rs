@@ -10,6 +10,7 @@ pub mod chat;
 pub mod event;
 pub mod llm;
 pub mod memory;
+pub mod message;
 pub mod repository;
 pub mod service;
 pub mod skill;

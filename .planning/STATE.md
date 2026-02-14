@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 6 of 10 (Skill System + WASM Sandbox)
-Plan: 7 of 12 in current phase (7 complete: 06-01, 06-02, 06-03, 06-04, 06-05, 06-06, 06-09)
+Plan: 8 of 12 in current phase (8 complete: 06-01, 06-02, 06-03, 06-04, 06-05, 06-06, 06-07, 06-09)
 Status: In progress
-Last activity: 2026-02-14 -- Completed 06-09-PLAN.md (Registry discovery + skill installation)
+Last activity: 2026-02-14 -- Completed 06-07-PLAN.md (WASM sandboxed skill executor)
 
-Progress: [█████████████████████████████████████████████████████░░] 49/55 (~89%)
+Progress: [██████████████████████████████████████████████████████░] 50/55 (~91%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 49
-- Average duration: 6m 40s
-- Total execution time: 326m 31s
+- Total plans completed: 50
+- Average duration: 6m 41s
+- Total execution time: 333m 41s
 
 **By Phase:**
 
@@ -32,11 +32,11 @@ Progress: [███████████████████████
 | 3. Multi-Provider + Memory | 13/13 | 127m 31s | 9m 49s |
 | 4. Web UI Core + Fleet Dashboard | 8/8 | 40m 37s | 5m 05s |
 | 5. Agent Hierarchy + Event System | 8/8 | 28m 00s | 3m 30s |
-| 6. Skill System + WASM Sandbox | 7/12 | 53m 23s | 7m 37s |
+| 6. Skill System + WASM Sandbox | 8/12 | 60m 33s | 7m 34s |
 
 **Recent Trend:**
-- Last 5 plans: 06-03 (9m 00s), 06-04 (8m 24s), 06-02 (10m 14s), 06-06 (17m 37s), 06-09 (6m 00s)
-- Trend: 06-09 fast execution; 06-06 duration was inflated by build lock contention from parallel plans
+- Last 5 plans: 06-04 (8m 24s), 06-02 (10m 14s), 06-06 (17m 37s), 06-09 (6m 00s), 06-07 (7m 10s)
+- Trend: 06-07 clean execution; bindgen! async export config was the only deviation
 
 *Updated after each plan completion*
 
@@ -272,6 +272,11 @@ Recent decisions affecting current work:
 - [06-09]: Cache keyed by {owner}-{repo}-index.json for per-registry isolation
 - [06-09]: SkillsShClient separate from GitHubRegistryClient (different API protocols)
 - [06-09]: RPITIT on SkillRegistry trait (consistent with all project async traits)
+- [06-07]: bindgen! exports: { default: async } for async call_execute with async_support engine
+- [06-07]: Sync host imports (std::fs, std::env) -- no async I/O in host functions
+- [06-07]: Table entries capped at 1000 in ResourceLimiter
+- [06-07]: recall_memory returns empty Vec (not error) when capability missing (graceful degradation)
+- [06-07]: Fresh Store per invocation prevents state leaks between WASM skill calls
 
 ### Pending Todos
 
@@ -286,5 +291,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 06-09-PLAN.md (Registry discovery + skill installation)
+Stopped at: Completed 06-07-PLAN.md (WASM sandboxed skill executor)
 Resume file: None

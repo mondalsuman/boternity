@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 6 of 10 (Skill System + WASM Sandbox)
-Plan: 5 of 12 in current phase (5 complete: 06-01, 06-02, 06-03, 06-04, 06-05)
+Plan: 6 of 12 in current phase (6 complete: 06-01, 06-02, 06-03, 06-04, 06-05, 06-06)
 Status: In progress
-Last activity: 2026-02-14 -- Completed 06-02-PLAN.md (SKILL.md manifest parsing + filesystem skill store)
+Last activity: 2026-02-14 -- Completed 06-06-PLAN.md (Local skill execution + SkillExecutor trait)
 
-Progress: [███████████████████████████████████████████████████░░░] 47/55 (~85%)
+Progress: [████████████████████████████████████████████████████░░░] 48/55 (~87%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 47
-- Average duration: 6m 26s
-- Total execution time: 302m 54s
+- Total plans completed: 48
+- Average duration: 6m 40s
+- Total execution time: 320m 31s
 
 **By Phase:**
 
@@ -32,11 +32,11 @@ Progress: [███████████████████████
 | 3. Multi-Provider + Memory | 13/13 | 127m 31s | 9m 49s |
 | 4. Web UI Core + Fleet Dashboard | 8/8 | 40m 37s | 5m 05s |
 | 5. Agent Hierarchy + Event System | 8/8 | 28m 00s | 3m 30s |
-| 6. Skill System + WASM Sandbox | 5/12 | 29m 46s | 5m 57s |
+| 6. Skill System + WASM Sandbox | 6/12 | 47m 23s | 7m 54s |
 
 **Recent Trend:**
-- Last 5 plans: 06-01 (3m 32s), 06-05 (7m 00s), 06-03 (9m 00s), 06-04 (8m 24s), 06-02 (10m 14s)
-- Trend: 06-02 took longer due to linter/template engine generating parallel artifacts requiring conflict resolution
+- Last 5 plans: 06-05 (7m 00s), 06-03 (9m 00s), 06-04 (8m 24s), 06-02 (10m 14s), 06-06 (17m 37s)
+- Trend: 06-06 duration inflated by ~5 min build lock wait from parallel plan execution
 
 *Updated after each plan completion*
 
@@ -263,6 +263,11 @@ Recent decisions affecting current work:
 - [06-02]: SkillStore returns empty Vec on missing skills directory (graceful for fresh installs)
 - [06-02]: SkillSource::Local default when .boternity-meta.toml absent
 - [06-02]: get_bot_skills_config returns empty BotSkillsFile when skills.toml missing
+- [06-06]: SkillExecutor trait uses RPITIT (consistent with project pattern, no async_trait)
+- [06-06]: Prompt skills return body directly from LocalSkillExecutor (no process spawn needed)
+- [06-06]: XML tags <available_skills> for Level 1 and <active_skills> for Level 2 progressive disclosure
+- [06-06]: Active skill prompts inject after </identity> tag in system prompt
+- [06-06]: 60s timeout for local tier execution (generous for host-native operations)
 
 ### Pending Todos
 
@@ -277,5 +282,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 06-02-PLAN.md (SKILL.md manifest parsing + filesystem skill store)
+Stopped at: Completed 06-06-PLAN.md (Local skill execution + SkillExecutor trait)
 Resume file: None

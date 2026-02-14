@@ -146,7 +146,7 @@ Plans:
   3. Skill permission model works -- skills declare required capabilities at install time, user approves or denies, and the runtime enforces those grants (a skill cannot access capabilities it was not granted)
   4. Skill inheritance works -- a child skill extends a parent skill's features and the agent sees the combined capabilities
   5. Defense-in-depth is observable -- untrusted skills are sandboxed at WASM level, WASI capabilities are restricted, and OS-level sandboxing provides a second barrier
-**Plans**: 12 plans
+**Plans**: 14 plans
 
 Plans:
 - [ ] 06-01-PLAN.md -- Skill domain types (SkillManifest, TrustTier, Capability, permissions, audit) and Phase 6 workspace dependencies
@@ -161,6 +161,8 @@ Plans:
 - [ ] 06-10-PLAN.md -- Agent integration (SystemPromptBuilder skills, skill chaining) and AppState wiring
 - [ ] 06-11-PLAN.md -- CLI skill commands (create, install, list, inspect, browse) and ratatui TUI skill browser
 - [ ] 06-12-PLAN.md -- REST API skill handlers and web UI skill management page (Skills tab in bot detail)
+- [ ] 06-13-PLAN.md -- [Gap closure] Wire OS sandbox into WASM executor for defense-in-depth (SECU-07, SKIL-10)
+- [ ] 06-14-PLAN.md -- [Gap closure] WASM compilation step in registry install flow (SKIL-08, SKIL-02)
 
 ### Phase 7: Builder System
 **Goal**: Users can create fully-configured agents and skills through an interactive guided experience -- a universal builder agent powers both the CLI wizard and the web UI builder bot, asking adaptive questions and assembling the result.
@@ -256,7 +258,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 3. Multi-Provider + Memory | 13/13 | Complete | 2026-02-12 |
 | 4. Web UI Core + Fleet Dashboard | 8/8 | Complete | 2026-02-13 |
 | 5. Agent Hierarchy + Event System | 8/8 | Complete | 2026-02-13 |
-| 6. Skill System + WASM Sandbox | 0/12 | Not started | - |
+| 6. Skill System + WASM Sandbox | 12/14 | Gap closure | - |
 | 7. Builder System | 0/10 | Not started | - |
 | 8. Workflows + Pipelines | 0/6 | Not started | - |
 | 9. MCP Integration | 0/4 | Not started | - |

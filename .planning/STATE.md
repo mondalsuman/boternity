@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 6 of 10 (Skill System + WASM Sandbox)
-Plan: 11 of 12 in current phase (11 complete: 06-01, 06-02, 06-03, 06-04, 06-05, 06-06, 06-07, 06-08, 06-09, 06-10, 06-11)
+Plan: 13 of 14 in current phase (13 complete: 06-01, 06-02, 06-03, 06-04, 06-05, 06-06, 06-07, 06-08, 06-09, 06-10, 06-11, 06-12, 06-13)
 Status: In progress
-Last activity: 2026-02-14 -- Completed 06-11-PLAN.md (CLI skill management + TUI browser)
+Last activity: 2026-02-14 -- Completed 06-13-PLAN.md (OS sandbox wiring into WASM executor)
 
-Progress: [██████████████████████████████████████████████████████░] 53/55 (~96%)
+Progress: [██████████████████████████████████████████████████████░░░░] 55/67 (~82%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 53
-- Average duration: 6m 32s
-- Total execution time: 346m 40s
+- Total plans completed: 55
+- Average duration: 6m 22s
+- Total execution time: 349m 33s
 
 **By Phase:**
 
@@ -32,11 +32,11 @@ Progress: [███████████████████████
 | 3. Multi-Provider + Memory | 13/13 | 127m 31s | 9m 49s |
 | 4. Web UI Core + Fleet Dashboard | 8/8 | 40m 37s | 5m 05s |
 | 5. Agent Hierarchy + Event System | 8/8 | 28m 00s | 3m 30s |
-| 6. Skill System + WASM Sandbox | 11/12 | 73m 32s | 6m 41s |
+| 6. Skill System + WASM Sandbox | 13/14 | 76m 25s | 5m 53s |
 
 **Recent Trend:**
-- Last 5 plans: 06-09 (6m 00s), 06-07 (7m 10s), 06-08 (4m 08s), 06-10 (2m 50s), 06-11 (6m 01s)
-- Trend: Consistent velocity; 06-11 standard for CLI+TUI plan
+- Last 5 plans: 06-08 (4m 08s), 06-10 (2m 50s), 06-11 (6m 01s), 06-12 (0m 00s), 06-13 (2m 53s)
+- Trend: Fast velocity on gap closure plans; minimal code changes with targeted wiring
 
 *Updated after each plan completion*
 
@@ -292,6 +292,9 @@ Recent decisions affecting current work:
 - [06-11]: Clone-on-read for TUI detail panel (avoids Span borrow lifetime issues in ratatui)
 - [06-11]: Categories pane uses deduplicated list from all skill.categories fields
 - [06-11]: Update command reports current versions (full remote version check deferred)
+- [06-13]: build_config_for_skill() lives in sandbox.rs as single authority on sandbox configuration
+- [06-13]: SandboxResponse::into_execution_result() converts subprocess output inline (no intermediate type)
+- [06-13]: Duration measured from parent perspective (includes subprocess overhead)
 
 ### Pending Todos
 
@@ -306,5 +309,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 06-11-PLAN.md (CLI skill management + TUI browser)
+Stopped at: Completed 06-13-PLAN.md (OS sandbox wiring into WASM executor)
 Resume file: None

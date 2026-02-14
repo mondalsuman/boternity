@@ -8,12 +8,16 @@
  * - Dagre auto-layout (top-to-bottom)
  * - fitView on initial load
  * - onConnect creates typed edges
+ * - onDrop creates new nodes from palette drag
+ * - Node selection triggers config panel
+ * - Keyboard shortcuts: Ctrl+Z (undo), Ctrl+Y / Ctrl+Shift+Z (redo)
+ * - Node grouping via parentId
  *
  * Node/edge state managed via React Flow hooks (useNodesState, useEdgesState)
  * for optimal re-render performance.
  */
 
-import { useCallback } from "react";
+import { useCallback, useEffect, useRef, type DragEvent } from "react";
 import {
   ReactFlow,
   MiniMap,
@@ -23,6 +27,7 @@ import {
   useNodesState,
   useEdgesState,
   addEdge,
+  useReactFlow,
 } from "@xyflow/react";
 import type {
   Node,
@@ -45,7 +50,8 @@ import { ApprovalNode } from "./nodes/ApprovalNode";
 import { SubWorkflowNode } from "./nodes/SubWorkflowNode";
 import { TypedEdge } from "./edges/TypedEdge";
 
-import type { StepDefinition, WorkflowDefinition } from "@/types/workflow";
+import type { StepDefinition, StepType, WorkflowDefinition } from "@/types/workflow";
+import { useUndoRedo } from "@/hooks/use-undo-redo";
 
 // ---------------------------------------------------------------------------
 // Constant nodeTypes/edgeTypes (defined outside component to avoid re-renders)
@@ -110,6 +116,32 @@ function getLayoutedElements(
 }
 
 // ---------------------------------------------------------------------------
+// Default data for each step type (when created via palette drop)
+// ---------------------------------------------------------------------------
+
+function getDefaultNodeData(stepType: StepType): Record<string, unknown> {
+  const base = { label: `New ${stepType}` };
+  switch (stepType) {
+    case "agent":
+      return { ...base, bot: "", prompt: "" };
+    case "skill":
+      return { ...base, skill: "", input: "" };
+    case "code":
+      return { ...base, language: "type_script", source: "" };
+    case "http":
+      return { ...base, method: "GET", url: "" };
+    case "conditional":
+      return { ...base, condition: "", then_steps: [], else_steps: [] };
+    case "loop":
+      return { ...base, condition: "", max_iterations: 10, body_steps: [] };
+    case "approval":
+      return { ...base, prompt: "", timeout_secs: 3600 };
+    case "sub_workflow":
+      return { ...base, workflow_name: "", input: undefined };
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Definition <-> Flow conversion helpers
 // ---------------------------------------------------------------------------
 
@@ -128,6 +160,7 @@ export function definitionToFlow(def: WorkflowDefinition): {
       label: step.name,
       ...extractStepData(step),
     },
+    ...(step.ui?.group ? { parentId: step.ui.group } : {}),
   }));
 
   const edges: Edge[] = [];
@@ -258,6 +291,15 @@ export function flowToDefinition(
 }
 
 // ---------------------------------------------------------------------------
+// Undo/redo snapshot type
+// ---------------------------------------------------------------------------
+
+interface CanvasSnapshot {
+  nodes: Node[];
+  edges: Edge[];
+}
+
+// ---------------------------------------------------------------------------
 // WorkflowCanvas Component
 // ---------------------------------------------------------------------------
 
@@ -268,18 +310,45 @@ interface WorkflowCanvasProps {
   initialEdges: Edge[];
   /** Callback when nodes/edges change (for parent save state). */
   onChange?: (nodes: Node[], edges: Edge[]) => void;
+  /** Callback when a node is clicked/selected. */
+  onNodeSelect?: (node: Node | null) => void;
+  /** Expose auto-layout function to parent. */
+  onAutoLayout?: () => void;
+  /** Ref for imperative methods (autoLayout, undo, redo, groupSelected, ungroupSelected). */
+  canvasRef?: React.Ref<WorkflowCanvasHandle>;
+}
+
+export interface WorkflowCanvasHandle {
+  autoLayout: () => void;
+  undo: () => void;
+  redo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+  groupSelected: () => void;
+  ungroupSelected: () => void;
 }
 
 export function WorkflowCanvas({
   initialNodes,
   initialEdges,
   onChange,
+  onNodeSelect,
+  canvasRef,
 }: WorkflowCanvasProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const { screenToFlowPosition } = useReactFlow();
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const undoRedo = useUndoRedo<CanvasSnapshot>();
+
+  // Snapshot helper
+  const takeSnapshot = useCallback(() => {
+    undoRedo.takeSnapshot({ nodes, edges });
+  }, [nodes, edges, undoRedo]);
 
   const onConnect: OnConnect = useCallback(
     (connection: Connection) => {
+      takeSnapshot();
       setEdges((eds) => {
         const newEdges = addEdge(
           { ...connection, type: "typed", data: { dataType: "default" } },
@@ -288,11 +357,12 @@ export function WorkflowCanvas({
         return newEdges;
       });
     },
-    [setEdges],
+    [setEdges, takeSnapshot],
   );
 
   /** Re-layout all nodes using dagre. */
   const handleAutoLayout = useCallback(() => {
+    takeSnapshot();
     const { nodes: layouted, edges: layoutedEdges } = getLayoutedElements(
       nodes,
       edges,
@@ -300,22 +370,239 @@ export function WorkflowCanvas({
     setNodes(layouted);
     setEdges(layoutedEdges);
     onChange?.(layouted, layoutedEdges);
-  }, [nodes, edges, setNodes, setEdges, onChange]);
+  }, [nodes, edges, setNodes, setEdges, onChange, takeSnapshot]);
+
+  // -------------------------------------------------------------------------
+  // Drop handler: create new node from palette drag
+  // -------------------------------------------------------------------------
+
+  const onDragOver = useCallback((event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+  }, []);
+
+  const onDrop = useCallback(
+    (event: DragEvent<HTMLDivElement>) => {
+      event.preventDefault();
+
+      const stepType = event.dataTransfer.getData(
+        "application/boternity-step-type",
+      ) as StepType | "";
+
+      if (!stepType) return;
+
+      const position = screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
+      });
+
+      takeSnapshot();
+
+      const newNode: Node = {
+        id: `${stepType}-${Date.now()}`,
+        type: stepType,
+        position,
+        data: getDefaultNodeData(stepType),
+      };
+
+      setNodes((nds) => [...nds, newNode]);
+      onChange?.(
+        [...nodes, newNode],
+        edges,
+      );
+    },
+    [screenToFlowPosition, setNodes, nodes, edges, onChange, takeSnapshot],
+  );
+
+  // -------------------------------------------------------------------------
+  // Node selection
+  // -------------------------------------------------------------------------
+
+  const handleNodeClick = useCallback(
+    (_event: React.MouseEvent, node: Node) => {
+      onNodeSelect?.(node);
+    },
+    [onNodeSelect],
+  );
+
+  const handlePaneClick = useCallback(() => {
+    onNodeSelect?.(null);
+  }, [onNodeSelect]);
+
+  // -------------------------------------------------------------------------
+  // Undo / Redo
+  // -------------------------------------------------------------------------
+
+  const handleUndo = useCallback(() => {
+    const snapshot = undoRedo.undo({ nodes, edges });
+    if (snapshot) {
+      setNodes(snapshot.nodes);
+      setEdges(snapshot.edges);
+      onChange?.(snapshot.nodes, snapshot.edges);
+    }
+  }, [undoRedo, nodes, edges, setNodes, setEdges, onChange]);
+
+  const handleRedo = useCallback(() => {
+    const snapshot = undoRedo.redo({ nodes, edges });
+    if (snapshot) {
+      setNodes(snapshot.nodes);
+      setEdges(snapshot.edges);
+      onChange?.(snapshot.nodes, snapshot.edges);
+    }
+  }, [undoRedo, nodes, edges, setNodes, setEdges, onChange]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const isCtrlOrMeta = e.ctrlKey || e.metaKey;
+      if (!isCtrlOrMeta) return;
+
+      if (e.key === "z" && !e.shiftKey) {
+        e.preventDefault();
+        handleUndo();
+      } else if (e.key === "y" || (e.key === "z" && e.shiftKey)) {
+        e.preventDefault();
+        handleRedo();
+      }
+    };
+
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [handleUndo, handleRedo]);
+
+  // -------------------------------------------------------------------------
+  // Node grouping
+  // -------------------------------------------------------------------------
+
+  const groupSelected = useCallback(() => {
+    const selected = nodes.filter((n) => n.selected);
+    if (selected.length < 2) return;
+
+    takeSnapshot();
+
+    const groupId = `group-${Date.now()}`;
+
+    // Calculate bounding box of selected nodes
+    const minX = Math.min(...selected.map((n) => n.position.x));
+    const minY = Math.min(...selected.map((n) => n.position.y));
+    const maxX = Math.max(...selected.map((n) => n.position.x + NODE_WIDTH));
+    const maxY = Math.max(...selected.map((n) => n.position.y + NODE_HEIGHT));
+
+    const padding = 40;
+
+    // Create group node
+    const groupNode: Node = {
+      id: groupId,
+      type: "group",
+      position: { x: minX - padding, y: minY - padding },
+      data: { label: "Group" },
+      style: {
+        width: maxX - minX + padding * 2,
+        height: maxY - minY + padding * 2,
+        backgroundColor: "rgba(100, 100, 200, 0.05)",
+        borderRadius: "8px",
+        border: "2px dashed rgba(100, 100, 200, 0.3)",
+      },
+    };
+
+    // Re-parent selected nodes
+    const updatedNodes = nodes.map((n) => {
+      if (n.selected) {
+        return {
+          ...n,
+          parentId: groupId,
+          position: {
+            x: n.position.x - groupNode.position.x,
+            y: n.position.y - groupNode.position.y,
+          },
+        };
+      }
+      return n;
+    });
+
+    const allNodes = [groupNode, ...updatedNodes];
+    setNodes(allNodes);
+    onChange?.(allNodes, edges);
+  }, [nodes, edges, setNodes, onChange, takeSnapshot]);
+
+  const ungroupSelected = useCallback(() => {
+    const selectedGroups = nodes.filter(
+      (n) => n.selected && n.type === "group",
+    );
+    if (selectedGroups.length === 0) return;
+
+    takeSnapshot();
+
+    const groupIds = new Set(selectedGroups.map((g) => g.id));
+    const groupPositions = new Map(
+      selectedGroups.map((g) => [g.id, g.position]),
+    );
+
+    const updatedNodes = nodes
+      .filter((n) => !groupIds.has(n.id))
+      .map((n) => {
+        if (n.parentId && groupIds.has(n.parentId)) {
+          const parentPos = groupPositions.get(n.parentId)!;
+          return {
+            ...n,
+            parentId: undefined,
+            position: {
+              x: n.position.x + parentPos.x,
+              y: n.position.y + parentPos.y,
+            },
+          };
+        }
+        return n;
+      });
+
+    setNodes(updatedNodes);
+    onChange?.(updatedNodes, edges);
+  }, [nodes, edges, setNodes, onChange, takeSnapshot]);
+
+  // -------------------------------------------------------------------------
+  // Imperative handle
+  // -------------------------------------------------------------------------
+
+  useEffect(() => {
+    if (!canvasRef) return;
+
+    const handle: WorkflowCanvasHandle = {
+      autoLayout: handleAutoLayout,
+      undo: handleUndo,
+      redo: handleRedo,
+      canUndo: undoRedo.canUndo,
+      canRedo: undoRedo.canRedo,
+      groupSelected,
+      ungroupSelected,
+    };
+
+    if (typeof canvasRef === "function") {
+      canvasRef(handle as unknown as WorkflowCanvasHandle);
+    } else if (canvasRef && "current" in canvasRef) {
+      (canvasRef as React.MutableRefObject<WorkflowCanvasHandle | null>).current = handle;
+    }
+  }, [canvasRef, handleAutoLayout, handleUndo, handleRedo, undoRedo.canUndo, undoRedo.canRedo, groupSelected, ungroupSelected]);
 
   return (
-    <div className="w-full h-full relative">
+    <div ref={wrapperRef} className="w-full h-full relative">
       <ReactFlow
         nodes={nodes}
         edges={edges}
         onNodesChange={(changes) => {
+          takeSnapshot();
           onNodesChange(changes);
           onChange?.(nodes, edges);
         }}
         onEdgesChange={(changes) => {
+          takeSnapshot();
           onEdgesChange(changes);
           onChange?.(nodes, edges);
         }}
         onConnect={onConnect}
+        onNodeClick={handleNodeClick}
+        onPaneClick={handlePaneClick}
+        onDrop={onDrop}
+        onDragOver={onDragOver}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         fitView
@@ -332,14 +619,6 @@ export function WorkflowCanvas({
           className="!bg-card !border-border"
         />
       </ReactFlow>
-
-      {/* Auto-layout button */}
-      <button
-        onClick={handleAutoLayout}
-        className="absolute top-3 right-3 z-10 bg-card border rounded-md px-3 py-1.5 text-xs font-medium hover:bg-accent transition-colors shadow-sm"
-      >
-        Auto Layout
-      </button>
     </div>
   );
 }

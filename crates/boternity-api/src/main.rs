@@ -222,6 +222,10 @@ async fn main() -> anyhow::Result<()> {
             cli::workflow::handle_workflow_command(action, &state, cli.json).await?;
         }
 
+        Commands::Message { action } => {
+            cli::message::handle_message_command(action, &state, cli.json).await?;
+        }
+
         Commands::Serve { port, host } => {
             // Ensure an API key exists, print it if new
             let api_key = http::extractors::auth::ensure_api_key(&state).await?;

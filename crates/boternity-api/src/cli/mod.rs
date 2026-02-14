@@ -8,6 +8,7 @@ pub mod builder;
 pub mod chat;
 pub mod kv;
 pub mod memory;
+pub mod message;
 pub mod provider;
 pub mod secret;
 pub mod session;
@@ -206,6 +207,12 @@ pub enum Commands {
     Workflow {
         #[command(subcommand)]
         action: workflow::WorkflowCommand,
+    },
+
+    /// Bot-to-bot messaging (send, history, channels, subscribe, unsubscribe).
+    Message {
+        #[command(subcommand)]
+        action: message::MessageCommand,
     },
 
     /// Interactive bot builder wizard powered by Forge.

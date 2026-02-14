@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 8 of 10 (Workflows + Pipelines)
-Plan: 10 of 13 in current phase
+Plan: 11 of 13 in current phase
 Status: In progress
-Last activity: 2026-02-14 -- Completed 08-10-PLAN.md
+Last activity: 2026-02-14 -- Completed 08-11-PLAN.md
 
-Progress: [████████████████████████████████████████████████████████████████████████████████████░░░░░░░░░░░░░░░] 77/80 (96%)
+Progress: [██████████████████████████████████████████████████████████████████████████████████████░░░░░░░░░░░░░] 78/80 (98%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 77
+- Total plans completed: 78
 - Average duration: 6m 18s
-- Total execution time: 486m 05s
+- Total execution time: 491m 08s
 
 **By Phase:**
 
@@ -34,11 +34,11 @@ Progress: [███████████████████████
 | 5. Agent Hierarchy + Event System | 8/8 | 28m 00s | 3m 30s |
 | 6. Skill System + WASM Sandbox | 14/14 | 79m 40s | 5m 41s |
 | 7. Builder System | 10/10 | 66m 43s | 6m 40s |
-| 8. Workflows + Pipelines | 11/13 | 74m 34s | 6m 47s |
+| 8. Workflows + Pipelines | 12/13 | 79m 37s | 6m 38s |
 
 **Recent Trend:**
-- Last 5 plans: 08-04 (7m 00s), 08-07 (13m 11s), 08-09 (5m 58s), 08-08 (7m 00s), 08-10 (7m 33s)
-- Trend: Web UI plans with React Flow integration execute in expected time range
+- Last 5 plans: 08-07 (13m 11s), 08-09 (5m 58s), 08-08 (7m 00s), 08-10 (7m 33s), 08-11 (5m 03s)
+- Trend: Web UI builder plans execute within expected time range
 
 *Updated after each plan completion*
 
@@ -379,6 +379,10 @@ Recent decisions affecting current work:
 - [08-10]: nodeTypes/edgeTypes defined as module-level constants to avoid React re-renders
 - [08-10]: definitionToFlow auto-applies dagre layout when no UI positions exist in definition
 - [08-10]: Workflow TypeScript types in separate types/workflow.ts matching Rust serde representation exactly
+- [08-11]: Canvas-to-YAML sync is unidirectional (canvas -> YAML on toggle); bidirectional parse-back deferred
+- [08-11]: Undo/redo uses structuredClone with max 50 entries to cap memory
+- [08-11]: Node grouping uses React Flow parentId API with visual dashed-border group nodes
+- [08-11]: WorkflowCanvasHandle imperative ref for parent-to-canvas commands (autoLayout, undo, redo, group)
 
 ### Pending Todos
 
@@ -393,5 +397,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 08-10-PLAN.md
+Stopped at: Completed 08-11-PLAN.md
 Resume file: None

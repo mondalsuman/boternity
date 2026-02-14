@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 8 of 10 (Workflows + Pipelines)
-Plan: 6 of 13 in current phase
+Plan: 7 of 13 in current phase
 Status: In progress
-Last activity: 2026-02-14 -- Completed 08-06-PLAN.md
+Last activity: 2026-02-14 -- Completed 08-04-PLAN.md
 
-Progress: [██████████████████████████████████████████████████████████████████████████░░░░░░░░░░░░░░░░░░░░░░] 72/80 (90%)
+Progress: [███████████████████████████████████████████████████████████████████████████░░░░░░░░░░░░░░░░░░░░░] 73/80 (91%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 72
+- Total plans completed: 73
 - Average duration: 6m 11s
-- Total execution time: 445m 23s
+- Total execution time: 452m 23s
 
 **By Phase:**
 
@@ -34,11 +34,11 @@ Progress: [███████████████████████
 | 5. Agent Hierarchy + Event System | 8/8 | 28m 00s | 3m 30s |
 | 6. Skill System + WASM Sandbox | 14/14 | 79m 40s | 5m 41s |
 | 7. Builder System | 10/10 | 66m 43s | 6m 40s |
-| 8. Workflows + Pipelines | 6/13 | 33m 52s | 5m 39s |
+| 8. Workflows + Pipelines | 7/13 | 40m 52s | 5m 50s |
 
 **Recent Trend:**
-- Last 5 plans: 08-05 (4m 26s), 08-02 (7m 00s), 08-03 (8m 00s), 08-12 (5m 00s), 08-06 (5m 26s)
-- Trend: Messaging bus plan on-target with phase average
+- Last 5 plans: 08-02 (7m 00s), 08-03 (8m 00s), 08-12 (5m 00s), 08-06 (5m 26s), 08-04 (7m 00s)
+- Trend: Executor plan on-target, parallel execution overlap with 08-12
 
 *Updated after each plan completion*
 
@@ -358,6 +358,11 @@ Recent decisions affecting current work:
 - [08-12]: StepRef class for type-safe dependency tracking in TypeScript builder
 - [08-12]: DAG validation via Kahn's algorithm at build() time in both TS and Rust
 - [08-12]: Rust builder uses consuming self pattern for ergonomic chaining (not &mut self)
+- [08-04]: HTTP step resolves templates but delegates actual HTTP execution to infra layer (clean architecture)
+- [08-04]: Steps cloned into owned Vec<Vec<StepDefinition>> before spawning (build_execution_plan returns references)
+- [08-04]: Approval gates: StepError::ApprovalRequired pauses workflow, executor returns ExecutionResult with Paused status
+- [08-04]: Per-workflow concurrency control via DashMap<String, Arc<Semaphore>>
+- [08-04]: MAX_SUB_WORKFLOW_DEPTH = 5, DEFAULT_STEP_TIMEOUT_SECS = 300, DEFAULT_WORKFLOW_TIMEOUT_SECS = 1800
 
 ### Pending Todos
 
@@ -372,5 +377,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 08-06-PLAN.md
+Stopped at: Completed 08-04-PLAN.md
 Resume file: None

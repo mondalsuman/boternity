@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 6 of 10 (Skill System + WASM Sandbox)
-Plan: 10 of 12 in current phase (10 complete: 06-01, 06-02, 06-03, 06-04, 06-05, 06-06, 06-07, 06-08, 06-09, 06-10)
+Plan: 11 of 12 in current phase (11 complete: 06-01, 06-02, 06-03, 06-04, 06-05, 06-06, 06-07, 06-08, 06-09, 06-10, 06-11)
 Status: In progress
-Last activity: 2026-02-14 -- Completed 06-10-PLAN.md (agent engine skill integration)
+Last activity: 2026-02-14 -- Completed 06-11-PLAN.md (CLI skill management + TUI browser)
 
-Progress: [██████████████████████████████████████████████████████░] 52/55 (~95%)
+Progress: [██████████████████████████████████████████████████████░] 53/55 (~96%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 52
-- Average duration: 6m 33s
-- Total execution time: 340m 39s
+- Total plans completed: 53
+- Average duration: 6m 32s
+- Total execution time: 346m 40s
 
 **By Phase:**
 
@@ -32,11 +32,11 @@ Progress: [███████████████████████
 | 3. Multi-Provider + Memory | 13/13 | 127m 31s | 9m 49s |
 | 4. Web UI Core + Fleet Dashboard | 8/8 | 40m 37s | 5m 05s |
 | 5. Agent Hierarchy + Event System | 8/8 | 28m 00s | 3m 30s |
-| 6. Skill System + WASM Sandbox | 10/12 | 67m 31s | 6m 45s |
+| 6. Skill System + WASM Sandbox | 11/12 | 73m 32s | 6m 41s |
 
 **Recent Trend:**
-- Last 5 plans: 06-06 (17m 37s), 06-09 (6m 00s), 06-07 (7m 10s), 06-08 (4m 08s), 06-10 (2m 50s)
-- Trend: 06-10 fastest plan yet; clean delegation to existing prompt_injector
+- Last 5 plans: 06-09 (6m 00s), 06-07 (7m 10s), 06-08 (4m 08s), 06-10 (2m 50s), 06-11 (6m 01s)
+- Trend: Consistent velocity; 06-11 standard for CLI+TUI plan
 
 *Updated after each plan completion*
 
@@ -287,6 +287,11 @@ Recent decisions affecting current work:
 - [06-10]: chain_skills takes &[&InstalledSkill] for flexibility with borrowed references
 - [06-10]: SkillStore initialized with data_dir (skills_dir() is internal to SkillStore)
 - [06-10]: Skill chaining accumulates fuel as sum, memory peak takes maximum across chain
+- [06-11]: SkillCommand as top-level bnity skill subcommand (consistent with provider/storage/soul pattern)
+- [06-11]: Interactive capability approval prompt before install (Confirm dialog, defaults to deny)
+- [06-11]: Clone-on-read for TUI detail panel (avoids Span borrow lifetime issues in ratatui)
+- [06-11]: Categories pane uses deduplicated list from all skill.categories fields
+- [06-11]: Update command reports current versions (full remote version check deferred)
 
 ### Pending Todos
 
@@ -301,5 +306,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 06-10-PLAN.md (agent engine skill integration)
+Stopped at: Completed 06-11-PLAN.md (CLI skill management + TUI browser)
 Resume file: None

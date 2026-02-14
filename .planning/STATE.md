@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 7 of 10 (Builder System)
-Plan: 7 of 10 in current phase (7 complete: 07-01, 07-02, 07-03, 07-04, 07-05, 07-06, 07-07)
+Plan: 8 of 10 in current phase (8 complete: 07-01, 07-02, 07-03, 07-04, 07-05, 07-06, 07-07, 07-08)
 Status: In progress
-Last activity: 2026-02-14 -- Completed 07-07-PLAN.md (CLI builder wizard + standalone skill create)
+Last activity: 2026-02-14 -- Completed 07-08-PLAN.md (REST API + WebSocket builder handlers)
 
-Progress: [████████████████████████████████████████████████████████████████░░░] 63/67 (~94%)
+Progress: [█████████████████████████████████████████████████████████████████░░] 64/67 (~96%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 63
+- Total plans completed: 64
 - Average duration: 6m 10s
-- Total execution time: 388m 31s
+- Total execution time: 395m 31s
 
 **By Phase:**
 
@@ -33,11 +33,11 @@ Progress: [███████████████████████
 | 4. Web UI Core + Fleet Dashboard | 8/8 | 40m 37s | 5m 05s |
 | 5. Agent Hierarchy + Event System | 8/8 | 28m 00s | 3m 30s |
 | 6. Skill System + WASM Sandbox | 14/14 | 79m 40s | 5m 41s |
-| 7. Builder System | 7/10 | 35m 43s | 5m 06s |
+| 7. Builder System | 8/10 | 42m 43s | 5m 20s |
 
 **Recent Trend:**
-- Last 5 plans: 07-03 (7m 00s), 07-04 (2m 50s), 07-05 (5m 00s), 07-06 (5m 00s), 07-07 (6m 41s)
-- Trend: Steady pace -- CLI builder wizard and skill creation
+- Last 5 plans: 07-04 (2m 50s), 07-05 (5m 00s), 07-06 (5m 00s), 07-07 (6m 41s), 07-08 (7m 00s)
+- Trend: Steady pace -- builder API surfaces (REST + WebSocket)
 
 *Updated after each plan completion*
 
@@ -327,6 +327,10 @@ Recent decisions affecting current work:
 - [07-07]: Generate as SkillCommand variant (bnity skill generate) alongside existing Create for LLM-powered wizard
 - [07-07]: SqliteBuilderMemoryStore gets Clone derive (DatabasePool is Clone, needed for LlmBuilderAgent construction)
 - [07-07]: PurposeCategory serialized via serde_json::to_string for builder memory (consistent with 07-03)
+- [07-08]: LlmBuilderAgent constructed per-request in handlers (stateless pattern, agent state in draft store)
+- [07-08]: WebSocket pre-loads existing draft on connect for transparent session resume
+- [07-08]: CreateSkill endpoint runs full pipeline (generate + validate + install) in single request
+- [07-08]: Reconfigure mode loads existing bot IDENTITY.md and SOUL.md to populate BuilderState
 
 ### Pending Todos
 
@@ -341,5 +345,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 07-07-PLAN.md (CLI builder wizard + standalone skill create)
+Stopped at: Completed 07-08-PLAN.md (REST API + WebSocket builder handlers)
 Resume file: None

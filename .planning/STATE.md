@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 7 of 10 (Builder System)
-Plan: 4 of 10 in current phase (4 complete: 07-01, 07-02, 07-03, 07-04)
+Plan: 5 of 10 in current phase (5 complete: 07-01, 07-02, 07-03, 07-04, 07-05)
 Status: In progress
-Last activity: 2026-02-14 -- Completed 07-04-PLAN.md (smart defaults + BotAssembler)
+Last activity: 2026-02-14 -- Completed 07-05-PLAN.md (LLM builder agent + output_config wiring)
 
-Progress: [█████████████████████████████████████████████████████████████░░░░░] 60/67 (~90%)
+Progress: [██████████████████████████████████████████████████████████████░░░░] 61/67 (~91%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 60
-- Average duration: 6m 12s
-- Total execution time: 371m 50s
+- Total plans completed: 61
+- Average duration: 6m 11s
+- Total execution time: 376m 50s
 
 **By Phase:**
 
@@ -33,11 +33,11 @@ Progress: [███████████████████████
 | 4. Web UI Core + Fleet Dashboard | 8/8 | 40m 37s | 5m 05s |
 | 5. Agent Hierarchy + Event System | 8/8 | 28m 00s | 3m 30s |
 | 6. Skill System + WASM Sandbox | 14/14 | 79m 40s | 5m 41s |
-| 7. Builder System | 4/10 | 19m 02s | 4m 46s |
+| 7. Builder System | 5/10 | 24m 02s | 4m 48s |
 
 **Recent Trend:**
-- Last 5 plans: 06-14 (3m 15s), 07-01 (5m 12s), 07-02 (4m 00s), 07-03 (7m 00s), 07-04 (2m 50s)
-- Trend: Fast plan -- pure Rust modules with no migration or infra dependencies
+- Last 5 plans: 07-01 (5m 12s), 07-02 (4m 00s), 07-03 (7m 00s), 07-04 (2m 50s), 07-05 (5m 00s)
+- Trend: Steady pace -- builder agent with structured output and provider wiring
 
 *Updated after each plan completion*
 
@@ -313,6 +313,10 @@ Recent decisions affecting current work:
 - [07-04]: classify_purpose first-match-wins priority; Creative before Coding means 'write code' classifies as Creative
 - [07-04]: Assembly overwrites default files from create_bot (write-then-overwrite acceptable per research pitfall 9)
 - [07-04]: Skill attachment deferred to Plan 07-06 (skills_attached returns empty Vec)
+- [07-05]: output_config forces stream=false in Anthropic provider (structured output incompatible with streaming)
+- [07-05]: LlmBuilderAgent generic over M: BuilderMemoryStore for test flexibility (NullMemoryStore in tests)
+- [07-05]: Memory queried per-method call rather than cached on struct (BuilderAgent trait methods take &self not &mut self)
+- [07-05]: MockLlmProvider pattern for testing builder agent without real LLM calls
 
 ### Pending Todos
 
@@ -327,5 +331,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 07-04-PLAN.md (smart defaults + BotAssembler)
+Stopped at: Completed 07-05-PLAN.md (LLM builder agent + output_config wiring)
 Resume file: None

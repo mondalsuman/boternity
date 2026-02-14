@@ -58,7 +58,9 @@ use boternity_infra::vector::shared::LanceSharedMemoryStore;
 use boternity_infra::workflow::execution_context::LiveExecutionContext;
 use boternity_infra::workflow::webhook_handler::WebhookRegistry;
 use boternity_core::repository::workflow::WorkflowRepository;
-use boternity_core::workflow::executor::DagExecutor;
+use boternity_core::workflow::executor::{DagExecutor, WorkflowExecutor};
+use boternity_core::workflow::scheduler::{CronCallback, CronScheduler};
+use boternity_core::workflow::trigger::TriggerManager;
 use boternity_types::llm::{FallbackChainConfig, ProviderConfig, ProviderType};
 use boternity_types::workflow::WorkflowRunStatus;
 use boternity_types::secret::SecretScope;
@@ -162,6 +164,10 @@ pub struct AppState {
     pub webhook_registry: Arc<WebhookRegistry>,
     /// DAG executor for running workflows with real service wiring.
     pub workflow_executor: Arc<DagExecutor<SqliteWorkflowRepository>>,
+    /// Cron scheduler for time-based workflow triggers.
+    pub cron_scheduler: Arc<CronScheduler>,
+    /// Central trigger registry for cron/webhook/event/file_watch triggers.
+    pub trigger_manager: Arc<TriggerManager>,
 }
 
 impl AppState {
@@ -365,6 +371,93 @@ impl AppState {
             live_exec_ctx,
         ));
 
+        // Cron scheduler for time-based workflow triggers
+        let cron_scheduler = Arc::new(CronScheduler::new());
+        cron_scheduler
+            .start()
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to start cron scheduler: {e}"))?;
+
+        // Central trigger manager for all workflow trigger types
+        let trigger_manager = Arc::new(TriggerManager::new());
+
+        // Load workflow definitions and register their triggers
+        let all_defs = workflow_repo.list_definitions(None).await.unwrap_or_default();
+        for def in &all_defs {
+            let _ = trigger_manager
+                .register_workflow(def.id, &def.name, &def.triggers)
+                .await;
+
+            // Register cron triggers with the scheduler
+            for trigger in &def.triggers {
+                if let boternity_types::workflow::TriggerConfig::Cron { schedule, .. } = trigger {
+                    let executor = Arc::clone(&workflow_executor);
+                    let wf_repo_for_cron = Arc::clone(&workflow_repo);
+                    let wf_id = def.id;
+                    let sched = Arc::clone(&cron_scheduler);
+                    let cb: CronCallback = Arc::new(move |workflow_id, _fired_at| {
+                        let exec = Arc::clone(&executor);
+                        let repo = Arc::clone(&wf_repo_for_cron);
+                        let sched_inner = Arc::clone(&sched);
+                        Box::pin(async move {
+                            sched_inner.record_fire(workflow_id).await;
+                            match repo.get_definition(&workflow_id).await {
+                                Ok(Some(def)) => {
+                                    match exec.execute(&def, "cron", None).await {
+                                        Ok(result) => {
+                                            tracing::info!(
+                                                %workflow_id,
+                                                run_id = %result.run_id,
+                                                status = ?result.status,
+                                                "cron-triggered workflow completed"
+                                            );
+                                        }
+                                        Err(e) => {
+                                            tracing::error!(
+                                                %workflow_id,
+                                                error = %e,
+                                                "cron-triggered workflow failed"
+                                            );
+                                        }
+                                    }
+                                }
+                                Ok(None) => {
+                                    tracing::warn!(
+                                        %workflow_id,
+                                        "cron trigger: workflow definition not found"
+                                    );
+                                }
+                                Err(e) => {
+                                    tracing::error!(
+                                        %workflow_id,
+                                        error = %e,
+                                        "cron trigger: failed to load definition"
+                                    );
+                                }
+                            }
+                        })
+                    });
+                    if let Err(e) = cron_scheduler.schedule_workflow(wf_id, schedule, cb).await {
+                        tracing::warn!(
+                            workflow_id = %def.id,
+                            schedule = %schedule,
+                            error = %e,
+                            "failed to schedule cron trigger"
+                        );
+                    }
+                }
+            }
+        }
+
+        if !all_defs.is_empty() {
+            let cron_count = cron_scheduler.workflow_count().await;
+            tracing::info!(
+                workflows = all_defs.len(),
+                cron_triggers = cron_count,
+                "registered workflow triggers at startup"
+            );
+        }
+
         Ok(Self {
             bot_service: Arc::new(bot_service),
             soul_service: Arc::new(api_soul_service),
@@ -395,6 +488,8 @@ impl AppState {
             message_bus,
             webhook_registry,
             workflow_executor,
+            cron_scheduler,
+            trigger_manager,
         })
     }
 

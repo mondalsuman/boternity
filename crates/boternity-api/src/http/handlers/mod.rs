@@ -2,6 +2,7 @@
 
 pub mod bot;
 pub mod builder;
+pub mod builder_ws;
 pub mod chat;
 pub mod identity;
 pub mod secret;

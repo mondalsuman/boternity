@@ -153,6 +153,8 @@ pub fn build_router(state: AppState) -> Router {
         // WebSocket for real-time agent events and bidirectional commands.
         // Outside /api/v1 since WebSocket is not a REST endpoint.
         .route("/ws/events", get(handlers::ws::ws_handler))
+        // WebSocket for builder Forge chat (bot + skill creation).
+        .route("/ws/builder/{session_id}", get(handlers::builder_ws::builder_ws_handler))
         .layer(cors)
         .layer(TraceLayer::new_for_http())
         .with_state(state);

@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 8 of 10 (Workflows + Pipelines)
-Plan: 9 of 13 in current phase
+Plan: 10 of 13 in current phase
 Status: In progress
-Last activity: 2026-02-14 -- Completed 08-08-PLAN.md
+Last activity: 2026-02-14 -- Completed 08-10-PLAN.md
 
-Progress: [████████████████████████████████████████████████████████████████████████████████░░░░░░░░░░░░░░░░░░] 76/80 (95%)
+Progress: [████████████████████████████████████████████████████████████████████████████████████░░░░░░░░░░░░░░░] 77/80 (96%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 76
-- Average duration: 6m 17s
-- Total execution time: 478m 32s
+- Total plans completed: 77
+- Average duration: 6m 18s
+- Total execution time: 486m 05s
 
 **By Phase:**
 
@@ -34,11 +34,11 @@ Progress: [███████████████████████
 | 5. Agent Hierarchy + Event System | 8/8 | 28m 00s | 3m 30s |
 | 6. Skill System + WASM Sandbox | 14/14 | 79m 40s | 5m 41s |
 | 7. Builder System | 10/10 | 66m 43s | 6m 40s |
-| 8. Workflows + Pipelines | 10/13 | 67m 01s | 6m 42s |
+| 8. Workflows + Pipelines | 11/13 | 74m 34s | 6m 47s |
 
 **Recent Trend:**
-- Last 5 plans: 08-06 (5m 26s), 08-04 (7m 00s), 08-07 (13m 11s), 08-09 (5m 58s), 08-08 (7m 00s)
-- Trend: CLI command plans execute quickly due to established patterns
+- Last 5 plans: 08-04 (7m 00s), 08-07 (13m 11s), 08-09 (5m 58s), 08-08 (7m 00s), 08-10 (7m 33s)
+- Trend: Web UI plans with React Flow integration execute in expected time range
 
 *Updated after each plan completion*
 
@@ -374,6 +374,11 @@ Recent decisions affecting current work:
 - [08-08]: Lazy repo instantiation in CLI handlers (SqliteWorkflowRepository/SqliteMessageRepository per-command, not in AppState)
 - [08-08]: Channel auto-creation on first subscribe (no separate create-channel step)
 - [08-08]: Workflow status command accepts both workflow name and run UUID for flexibility
+- [08-10]: ConditionalNode uses dual source handles at 30%/70% bottom position for then/else branches
+- [08-10]: TypedEdge uses invisible 20px-wide path for easier hover targeting
+- [08-10]: nodeTypes/edgeTypes defined as module-level constants to avoid React re-renders
+- [08-10]: definitionToFlow auto-applies dagre layout when no UI positions exist in definition
+- [08-10]: Workflow TypeScript types in separate types/workflow.ts matching Rust serde representation exactly
 
 ### Pending Todos
 
@@ -388,5 +393,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 08-08-PLAN.md
+Stopped at: Completed 08-10-PLAN.md
 Resume file: None

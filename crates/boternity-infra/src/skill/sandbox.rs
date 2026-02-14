@@ -14,8 +14,9 @@
 //! OS restrictions before running the WASM component. Communication happens
 //! via stdin/stdout JSON.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
+use boternity_core::skill::executor::SkillExecutionResult;
 use boternity_types::skill::{ResourceLimits, TrustTier};
 use serde::{Deserialize, Serialize};
 
@@ -60,6 +61,66 @@ pub struct SandboxResponse {
     pub error: Option<String>,
     pub fuel_consumed: Option<u64>,
     pub duration_ms: Option<u64>,
+}
+
+impl SandboxResponse {
+    /// Convert a sandbox subprocess response into a [`SkillExecutionResult`].
+    ///
+    /// On success, maps the JSON output and fuel tracking. On failure, returns
+    /// the error message from the subprocess as an `anyhow` error.
+    pub fn into_execution_result(
+        self,
+        elapsed: std::time::Duration,
+    ) -> anyhow::Result<SkillExecutionResult> {
+        if self.success {
+            Ok(SkillExecutionResult {
+                output: self.output.unwrap_or_default(),
+                fuel_consumed: self.fuel_consumed,
+                memory_peak_bytes: None,
+                duration: elapsed,
+            })
+        } else {
+            anyhow::bail!(
+                "sandboxed execution failed: {}",
+                self.error
+                    .unwrap_or_else(|| "unknown error".to_string())
+            )
+        }
+    }
+}
+
+/// Build a [`SandboxConfig`] from skill execution parameters.
+///
+/// Centralizes sandbox configuration construction so that callers only need
+/// to provide the skill's WASM path, input, trust tier, and resource limits.
+/// The helper sets restrictive defaults:
+/// - Readable paths: only the skill's install directory (parent of wasm_path)
+/// - Writable paths: none
+/// - Network access: denied
+/// - Temp dir: `boternity-sandbox` under the system temp directory
+pub fn build_config_for_skill(
+    wasm_path: &Path,
+    input: &str,
+    trust_tier: &TrustTier,
+    resource_limits: &ResourceLimits,
+) -> SandboxConfig {
+    // The skill install directory (parent of the .wasm file) must be readable
+    // so the subprocess can access the binary.
+    let readable_paths = wasm_path
+        .parent()
+        .map(|p| vec![p.to_path_buf()])
+        .unwrap_or_default();
+
+    SandboxConfig {
+        wasm_path: wasm_path.to_path_buf(),
+        input: input.to_string(),
+        readable_paths,
+        writable_paths: Vec::new(),
+        allow_network: false,
+        temp_dir: std::env::temp_dir().join("boternity-sandbox"),
+        trust_tier: trust_tier.clone(),
+        resource_limits: resource_limits.clone(),
+    }
 }
 
 /// Run a WASM skill inside an OS-level sandbox subprocess.
@@ -213,5 +274,123 @@ mod tests {
 
         assert!(!resp.success);
         assert_eq!(resp.error.as_deref(), Some("timeout"));
+    }
+
+    #[test]
+    fn build_config_for_skill_untrusted() {
+        let wasm_path = PathBuf::from("/home/user/.boternity/skills/my-skill/plugin.wasm");
+        let input = r#"{"query": "hello"}"#;
+        let trust_tier = TrustTier::Untrusted;
+        let resource_limits = ResourceLimits::default();
+
+        let config = build_config_for_skill(
+            &wasm_path,
+            input,
+            &trust_tier,
+            &resource_limits,
+        );
+
+        assert_eq!(config.wasm_path, wasm_path);
+        assert_eq!(config.input, input);
+        assert_eq!(config.trust_tier, TrustTier::Untrusted);
+        // Parent dir is readable
+        assert_eq!(config.readable_paths.len(), 1);
+        assert_eq!(
+            config.readable_paths[0],
+            PathBuf::from("/home/user/.boternity/skills/my-skill")
+        );
+        // No write access for untrusted
+        assert!(config.writable_paths.is_empty());
+        // No network access
+        assert!(!config.allow_network);
+        // Temp dir under system temp
+        assert!(config.temp_dir.ends_with("boternity-sandbox"));
+        // Resource limits forwarded
+        assert_eq!(config.resource_limits.max_memory_bytes, resource_limits.max_memory_bytes);
+        assert_eq!(config.resource_limits.max_fuel, resource_limits.max_fuel);
+    }
+
+    #[test]
+    fn sandbox_response_into_result_success() {
+        let resp = SandboxResponse {
+            success: true,
+            output: Some("skill output".to_string()),
+            error: None,
+            fuel_consumed: Some(12345),
+            duration_ms: Some(50),
+        };
+
+        let elapsed = std::time::Duration::from_millis(55);
+        let result = resp.into_execution_result(elapsed);
+        assert!(result.is_ok(), "success response should convert to Ok");
+
+        let exec_result = result.unwrap();
+        assert_eq!(exec_result.output, "skill output");
+        assert_eq!(exec_result.fuel_consumed, Some(12345));
+        assert!(exec_result.memory_peak_bytes.is_none());
+        assert_eq!(exec_result.duration, elapsed);
+    }
+
+    #[test]
+    fn sandbox_response_into_result_success_no_output() {
+        let resp = SandboxResponse {
+            success: true,
+            output: None,
+            error: None,
+            fuel_consumed: None,
+            duration_ms: None,
+        };
+
+        let elapsed = std::time::Duration::from_millis(10);
+        let result = resp.into_execution_result(elapsed).unwrap();
+        assert_eq!(result.output, "", "None output should become empty string");
+        assert!(result.fuel_consumed.is_none());
+    }
+
+    #[test]
+    fn sandbox_response_into_result_failure() {
+        let resp = SandboxResponse {
+            success: false,
+            output: None,
+            error: Some("out of fuel".to_string()),
+            fuel_consumed: Some(500_000),
+            duration_ms: Some(10_000),
+        };
+
+        let elapsed = std::time::Duration::from_secs(10);
+        let result = resp.into_execution_result(elapsed);
+        assert!(result.is_err(), "failure response should convert to Err");
+        let err_msg = result.unwrap_err().to_string();
+        assert!(
+            err_msg.contains("sandboxed execution failed"),
+            "error should contain prefix: {}",
+            err_msg
+        );
+        assert!(
+            err_msg.contains("out of fuel"),
+            "error should contain subprocess message: {}",
+            err_msg
+        );
+    }
+
+    #[test]
+    fn sandbox_response_into_result_failure_unknown_error() {
+        let resp = SandboxResponse {
+            success: false,
+            output: None,
+            error: None,
+            fuel_consumed: None,
+            duration_ms: None,
+        };
+
+        let elapsed = std::time::Duration::from_secs(1);
+        let result = resp.into_execution_result(elapsed);
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().to_string();
+        assert!(
+            err_msg.contains("unknown error"),
+            "missing error field should produce 'unknown error': {}",
+            err_msg
+        );
     }
 }

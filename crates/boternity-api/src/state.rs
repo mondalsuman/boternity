@@ -17,6 +17,7 @@ use boternity_core::llm::fallback::FallbackChain;
 use boternity_core::llm::provider::LlmProvider;
 use boternity_core::memory::box_embedder::BoxEmbedder;
 use boternity_core::memory::embedder::Embedder;
+use boternity_core::message::{LoopGuard, MessageBus};
 use boternity_core::service::bot::BotService;
 use boternity_core::service::secret::SecretService;
 use boternity_core::service::soul::SoulService;
@@ -39,6 +40,7 @@ use boternity_infra::sqlite::chat::SqliteChatRepository;
 use boternity_infra::sqlite::file_metadata::SqliteFileMetadataStore;
 use boternity_infra::sqlite::kv::SqliteKvStore;
 use boternity_infra::sqlite::memory::SqliteMemoryRepository;
+use boternity_infra::sqlite::message::SqliteMessageRepository;
 use boternity_infra::sqlite::pool::DatabasePool;
 use boternity_infra::sqlite::provider_health::SqliteProviderHealthStore;
 use boternity_infra::sqlite::secret::SqliteSecretRepository;
@@ -46,12 +48,14 @@ use boternity_infra::builder::sqlite_draft_store::SqliteBuilderDraftStore;
 use boternity_infra::builder::sqlite_memory_store::SqliteBuilderMemoryStore;
 use boternity_infra::sqlite::skill_audit::SqliteSkillAuditLog;
 use boternity_infra::sqlite::soul::SqliteSoulRepository;
+use boternity_infra::sqlite::workflow::SqliteWorkflowRepository;
 use boternity_infra::storage::filesystem::LocalFileStore;
 use boternity_infra::storage::indexer::FileIndexer;
 use boternity_infra::vector::embedder::FastEmbedEmbedder;
 use boternity_infra::vector::lance::LanceVectorStore;
 use boternity_infra::vector::memory::LanceVectorMemoryStore;
 use boternity_infra::vector::shared::LanceSharedMemoryStore;
+use boternity_infra::workflow::webhook_handler::WebhookRegistry;
 use boternity_types::llm::{FallbackChainConfig, ProviderConfig, ProviderType};
 use boternity_types::secret::SecretScope;
 
@@ -86,6 +90,8 @@ pub type ConcreteFileIndexer = FileIndexer<FastEmbedEmbedder>;
 /// Phase 6 additions: skill_store, wasm_runtime, skill_audit_log.
 ///
 /// Phase 7 additions: builder_draft_store, builder_memory_store.
+///
+/// Phase 8 additions: workflow_repo, message_repo, message_bus, webhook_registry.
 #[derive(Clone)]
 pub struct AppState {
     pub bot_service: Arc<ConcreteBotService>,
@@ -140,6 +146,16 @@ pub struct AppState {
     pub builder_draft_store: Arc<SqliteBuilderDraftStore>,
     /// SQLite-backed builder memory for cross-session suggestion recall.
     pub builder_memory_store: Arc<SqliteBuilderMemoryStore>,
+
+    // --- Phase 8 services ---
+    /// SQLite-backed workflow definition and run repository.
+    pub workflow_repo: Arc<SqliteWorkflowRepository>,
+    /// SQLite-backed bot-to-bot message repository.
+    pub message_repo: Arc<SqliteMessageRepository>,
+    /// Runtime message bus for direct and pub/sub inter-bot messaging.
+    pub message_bus: Arc<MessageBus>,
+    /// DashMap-backed webhook path-to-config registry for incoming webhooks.
+    pub webhook_registry: Arc<WebhookRegistry>,
 }
 
 impl AppState {
@@ -283,6 +299,21 @@ impl AppState {
         // Builder memory (cross-session suggestion recall)
         let builder_memory_store = Arc::new(SqliteBuilderMemoryStore::new(db_pool.clone()));
 
+        // --- Phase 8 services ---
+
+        // Workflow repository (definitions, runs, step logs)
+        let workflow_repo = Arc::new(SqliteWorkflowRepository::new(db_pool.clone()));
+
+        // Message repository (bot-to-bot messages, channels, subscriptions)
+        let message_repo = Arc::new(SqliteMessageRepository::new(db_pool.clone()));
+
+        // Message bus with loop guard for inter-bot communication
+        let loop_guard = Arc::new(LoopGuard::default());
+        let message_bus = Arc::new(MessageBus::new(loop_guard));
+
+        // Webhook registry for incoming webhook path resolution
+        let webhook_registry = Arc::new(WebhookRegistry::new());
+
         Ok(Self {
             bot_service: Arc::new(bot_service),
             soul_service: Arc::new(api_soul_service),
@@ -308,6 +339,10 @@ impl AppState {
             skill_audit_log,
             builder_draft_store,
             builder_memory_store,
+            workflow_repo,
+            message_repo,
+            message_bus,
+            webhook_registry,
         })
     }
 

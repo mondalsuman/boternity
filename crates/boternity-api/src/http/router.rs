@@ -145,6 +145,32 @@ pub fn build_router(state: AppState) -> Router {
         .route(
             "/builder/drafts",
             get(handlers::builder::list_drafts),
+        )
+        // Workflow CRUD, trigger, and run management (Phase 8)
+        .merge(handlers::workflow::workflow_routes())
+        // Bot-to-bot messaging (Phase 8)
+        .route("/messages/send", post(handlers::message::send_message))
+        .route(
+            "/messages/history/{bot_a}/{bot_b}",
+            get(handlers::message::get_message_history),
+        )
+        .route("/channels", get(handlers::message::list_channels))
+        .route(
+            "/channels/{name}/subscribe",
+            post(handlers::message::subscribe_to_channel),
+        )
+        .route(
+            "/channels/{name}/subscribe/{bot_id}",
+            delete(handlers::message::unsubscribe_from_channel),
+        )
+        .route(
+            "/channels/{name}/messages",
+            get(handlers::message::get_channel_messages),
+        )
+        // Webhook receiver (Phase 8) -- no API key auth (uses its own auth)
+        .route(
+            "/webhooks/{path}",
+            post(handlers::webhook::receive_webhook),
         );
 
     let mut router = Router::new()

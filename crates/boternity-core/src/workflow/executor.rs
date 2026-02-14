@@ -18,6 +18,7 @@ use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Duration;
 
+use boternity_types::event::AgentEvent;
 use boternity_types::workflow::{
     WorkflowDefinition, WorkflowRun, WorkflowRunStatus, StepDefinition,
 };
@@ -235,11 +236,21 @@ impl<R: WorkflowRepository + 'static> DagExecutor<R> {
                         step.timeout_secs.unwrap_or(DEFAULT_STEP_TIMEOUT_SECS),
                     );
                     let token = cancel_token.clone();
+                    let event_bus = self.event_bus.clone();
 
                     join_set.spawn(async move {
                         if token.is_cancelled() {
                             return Err(ExecutorError::Cancelled);
                         }
+
+                        // Publish step started event
+                        let step_type_str = format!("{:?}", step.step_type).to_lowercase();
+                        event_bus.publish(AgentEvent::WorkflowStepStarted {
+                            run_id,
+                            step_id: step.id.clone(),
+                            step_name: step.name.clone(),
+                            step_type: step_type_str,
+                        });
 
                         // Checkpoint: step start
                         let log_id = checkpoint
@@ -247,12 +258,16 @@ impl<R: WorkflowRepository + 'static> DagExecutor<R> {
                             .await
                             .map_err(ExecutorError::Checkpoint)?;
 
+                        let start_instant = std::time::Instant::now();
+
                         // Execute with timeout
                         let result = tokio::time::timeout(
                             step_timeout,
                             runner.run(&step, &step_ctx),
                         )
                         .await;
+
+                        let elapsed_ms = start_instant.elapsed().as_millis() as u64;
 
                         match result {
                             Ok(Ok(output)) => {
@@ -262,6 +277,14 @@ impl<R: WorkflowRepository + 'static> DagExecutor<R> {
                                     .checkpoint_step_complete(log_id, Some(&output_value))
                                     .await
                                     .map_err(ExecutorError::Checkpoint)?;
+
+                                // Publish step completed event
+                                event_bus.publish(AgentEvent::WorkflowStepCompleted {
+                                    run_id,
+                                    step_id: step.id.clone(),
+                                    step_name: step.name.clone(),
+                                    duration_ms: elapsed_ms,
+                                });
 
                                 Ok((step.id.clone(), output))
                             }
@@ -285,6 +308,15 @@ impl<R: WorkflowRepository + 'static> DagExecutor<R> {
                                     .await
                                     .map_err(ExecutorError::Checkpoint)?;
 
+                                // Publish step failed event
+                                event_bus.publish(AgentEvent::WorkflowStepFailed {
+                                    run_id,
+                                    step_id: step.id.clone(),
+                                    step_name: step.name.clone(),
+                                    error: err_msg.clone(),
+                                    will_retry: false,
+                                });
+
                                 Err(ExecutorError::StepFailed {
                                     step_id: step.id.clone(),
                                     error: err_msg,
@@ -296,6 +328,15 @@ impl<R: WorkflowRepository + 'static> DagExecutor<R> {
                                     .checkpoint_step_failed(log_id, "step timed out")
                                     .await
                                     .map_err(ExecutorError::Checkpoint)?;
+
+                                // Publish step failed event
+                                event_bus.publish(AgentEvent::WorkflowStepFailed {
+                                    run_id,
+                                    step_id: step.id.clone(),
+                                    step_name: step.name.clone(),
+                                    error: "step timed out".to_string(),
+                                    will_retry: false,
+                                });
 
                                 Err(ExecutorError::StepTimeout {
                                     step_id: step.id.clone(),
@@ -402,12 +443,20 @@ impl<R: WorkflowRepository + 'static> WorkflowExecutor for DagExecutor<R> {
                 ExecutorError::Workflow(WorkflowError::ExecutionError(e.to_string()))
             })?;
 
+        // Publish run started event
+        self.event_bus.publish(AgentEvent::WorkflowRunStarted {
+            run_id,
+            workflow_name: definition.name.clone(),
+            trigger_type: trigger_type.to_string(),
+        });
+
         tracing::info!(
             run_id = %run_id,
             workflow = definition.name.as_str(),
             "starting workflow execution"
         );
 
+        let run_start = std::time::Instant::now();
         let completed_steps = HashSet::new();
         let result = self
             .execute_waves(definition, run_id, &mut ctx, &completed_steps, &cancel_token)
@@ -429,6 +478,14 @@ impl<R: WorkflowRepository + 'static> WorkflowExecutor for DagExecutor<R> {
                     .await
                     .unwrap_or_default();
 
+                // Publish run completed event
+                self.event_bus.publish(AgentEvent::WorkflowRunCompleted {
+                    run_id,
+                    workflow_name: definition.name.clone(),
+                    duration_ms: run_start.elapsed().as_millis() as u64,
+                    steps_completed: completed.len() as u32,
+                });
+
                 Ok(ExecutionResult {
                     run_id,
                     status,
@@ -444,6 +501,13 @@ impl<R: WorkflowRepository + 'static> WorkflowExecutor for DagExecutor<R> {
                     .get_completed_steps(run_id)
                     .await
                     .unwrap_or_default();
+
+                // Publish run paused event
+                self.event_bus.publish(AgentEvent::WorkflowRunPaused {
+                    run_id,
+                    step_id: step_id.clone(),
+                    reason: prompt.clone(),
+                });
 
                 Ok(ExecutionResult {
                     run_id,
@@ -467,6 +531,13 @@ impl<R: WorkflowRepository + 'static> WorkflowExecutor for DagExecutor<R> {
                         Some(&ctx.to_json()),
                     )
                     .await;
+
+                // Publish run failed event
+                self.event_bus.publish(AgentEvent::WorkflowRunFailed {
+                    run_id,
+                    workflow_name: definition.name.clone(),
+                    error: err_msg,
+                });
 
                 Err(e)
             }

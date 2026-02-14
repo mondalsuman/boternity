@@ -56,7 +56,9 @@ use boternity_infra::vector::lance::LanceVectorStore;
 use boternity_infra::vector::memory::LanceVectorMemoryStore;
 use boternity_infra::vector::shared::LanceSharedMemoryStore;
 use boternity_infra::workflow::webhook_handler::WebhookRegistry;
+use boternity_core::repository::workflow::WorkflowRepository;
 use boternity_types::llm::{FallbackChainConfig, ProviderConfig, ProviderType};
+use boternity_types::workflow::WorkflowRunStatus;
 use boternity_types::secret::SecretScope;
 
 use boternity_core::llm::box_provider::BoxLlmProvider;
@@ -313,6 +315,35 @@ impl AppState {
 
         // Webhook registry for incoming webhook path resolution
         let webhook_registry = Arc::new(WebhookRegistry::new());
+
+        // Crash recovery: mark any runs left in Running status as Crashed.
+        // This handles workflows that were interrupted by a process restart.
+        match workflow_repo.list_crashed_runs().await {
+            Ok(crashed_runs) => {
+                for run in &crashed_runs {
+                    let _ = workflow_repo
+                        .update_run_status(
+                            &run.id,
+                            WorkflowRunStatus::Crashed,
+                            Some("process restarted while workflow was running"),
+                            None,
+                        )
+                        .await;
+                }
+                if !crashed_runs.is_empty() {
+                    tracing::warn!(
+                        count = crashed_runs.len(),
+                        "marked interrupted workflow runs as crashed"
+                    );
+                }
+            }
+            Err(e) => {
+                tracing::warn!(
+                    error = %e,
+                    "failed to check for crashed workflow runs"
+                );
+            }
+        }
 
         Ok(Self {
             bot_service: Arc::new(bot_service),

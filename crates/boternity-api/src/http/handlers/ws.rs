@@ -15,9 +15,12 @@
 //! must explicitly send a `CancelAgent` command. This allows reconnection
 //! without disrupting in-flight work.
 
+use std::collections::HashSet;
+
 use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
 use axum::extract::State;
 use axum::response::IntoResponse;
+use boternity_types::event::AgentEvent;
 use futures_util::{SinkExt, StreamExt};
 use tokio::sync::broadcast;
 use uuid::Uuid;
@@ -39,6 +42,11 @@ enum WsCommand {
     BudgetStop { request_id: String },
     /// Keep-alive ping. Server responds with `{"type":"pong"}`.
     Ping,
+    /// Subscribe to workflow run events for a specific run_id.
+    /// The client sends this to indicate which workflow run events it wants to receive.
+    SubscribeWorkflow { run_id: String },
+    /// Unsubscribe from workflow run events.
+    UnsubscribeWorkflow { run_id: String },
 }
 
 /// Upgrade an HTTP request to a WebSocket connection for agent events.
@@ -66,21 +74,28 @@ async fn handle_ws_connection(socket: WebSocket, state: AppState) {
     let budget_responses = state.budget_responses.clone();
     let agent_cancellations = state.agent_cancellations.clone();
 
+    // Workflow run subscriptions: when non-empty, only forward workflow events
+    // matching these run_ids. Agent events are always forwarded.
+    let mut workflow_subscriptions: HashSet<Uuid> = HashSet::new();
+
     loop {
         tokio::select! {
             // --- Branch 1: Forward EventBus events to WebSocket client ---
             event_result = event_rx.recv() => {
                 match event_result {
                     Ok(event) => {
-                        match serde_json::to_string(&event) {
-                            Ok(json) => {
-                                if ws_sender.send(Message::Text(json.into())).await.is_err() {
-                                    // Client disconnected
-                                    break;
+                        // Filter workflow events by subscription
+                        if should_forward_event(&event, &workflow_subscriptions) {
+                            match serde_json::to_string(&event) {
+                                Ok(json) => {
+                                    if ws_sender.send(Message::Text(json.into())).await.is_err() {
+                                        // Client disconnected
+                                        break;
+                                    }
                                 }
-                            }
-                            Err(err) => {
-                                tracing::warn!("Failed to serialize AgentEvent: {err}");
+                                Err(err) => {
+                                    tracing::warn!("Failed to serialize AgentEvent: {err}");
+                                }
                             }
                         }
                     }
@@ -108,6 +123,7 @@ async fn handle_ws_connection(socket: WebSocket, state: AppState) {
                             &mut ws_sender,
                             &budget_responses,
                             &agent_cancellations,
+                            &mut workflow_subscriptions,
                         ).await;
                     }
                     Some(Ok(Message::Close(_))) | None => {
@@ -128,12 +144,39 @@ async fn handle_ws_connection(socket: WebSocket, state: AppState) {
     tracing::debug!("WebSocket connection closed");
 }
 
+/// Determine if an event should be forwarded to the WebSocket client.
+///
+/// Non-workflow events (agent, budget, etc.) are always forwarded.
+/// Workflow events are forwarded only if the client has subscribed to
+/// that run_id, or if the client has no workflow subscriptions (forward all).
+fn should_forward_event(event: &AgentEvent, subscriptions: &HashSet<Uuid>) -> bool {
+    // If no workflow subscriptions, forward everything
+    if subscriptions.is_empty() {
+        return true;
+    }
+
+    // Extract workflow run_id from event; non-workflow events always pass through
+    let run_id = match event {
+        AgentEvent::WorkflowRunStarted { run_id, .. }
+        | AgentEvent::WorkflowStepStarted { run_id, .. }
+        | AgentEvent::WorkflowStepCompleted { run_id, .. }
+        | AgentEvent::WorkflowStepFailed { run_id, .. }
+        | AgentEvent::WorkflowRunCompleted { run_id, .. }
+        | AgentEvent::WorkflowRunFailed { run_id, .. }
+        | AgentEvent::WorkflowRunPaused { run_id, .. } => run_id,
+        _ => return true, // Non-workflow events always forwarded
+    };
+
+    subscriptions.contains(run_id)
+}
+
 /// Parse and process a single command from the WebSocket client.
 async fn process_command(
     text: &str,
     ws_sender: &mut (impl SinkExt<Message, Error = axum::Error> + Unpin),
     budget_responses: &dashmap::DashMap<Uuid, tokio::sync::oneshot::Sender<bool>>,
     agent_cancellations: &dashmap::DashMap<Uuid, tokio_util::sync::CancellationToken>,
+    workflow_subscriptions: &mut HashSet<Uuid>,
 ) {
     let cmd: WsCommand = match serde_json::from_str(text) {
         Ok(cmd) => cmd,
@@ -197,6 +240,30 @@ async fn process_command(
             let pong = r#"{"type":"pong"}"#;
             if ws_sender.send(Message::Text(pong.into())).await.is_err() {
                 tracing::debug!("Failed to send pong (client disconnecting)");
+            }
+        }
+        WsCommand::SubscribeWorkflow { run_id } => {
+            match Uuid::parse_str(&run_id) {
+                Ok(id) => {
+                    workflow_subscriptions.insert(id);
+                    tracing::debug!(%run_id, "subscribed to workflow run events");
+                    let ack = format!(r#"{{"type":"workflow_subscribed","run_id":"{run_id}"}}"#);
+                    let _ = ws_sender.send(Message::Text(ack.into())).await;
+                }
+                Err(err) => {
+                    tracing::warn!(%run_id, error = %err, "SubscribeWorkflow: invalid UUID");
+                }
+            }
+        }
+        WsCommand::UnsubscribeWorkflow { run_id } => {
+            match Uuid::parse_str(&run_id) {
+                Ok(id) => {
+                    workflow_subscriptions.remove(&id);
+                    tracing::debug!(%run_id, "unsubscribed from workflow run events");
+                }
+                Err(err) => {
+                    tracing::warn!(%run_id, error = %err, "UnsubscribeWorkflow: invalid UUID");
+                }
             }
         }
     }

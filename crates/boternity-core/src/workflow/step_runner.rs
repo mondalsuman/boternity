@@ -7,11 +7,118 @@
 //! Step types: Agent, Skill, Code, Http, Conditional, Loop, Approval, SubWorkflow.
 
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use boternity_types::workflow::{StepConfig, StepDefinition};
 use serde_json::{json, Value};
 
 use super::context::WorkflowContext;
+
+// ---------------------------------------------------------------------------
+// StepExecutionContext trait
+// ---------------------------------------------------------------------------
+
+/// Object-safe trait defining the service interfaces needed by step runners
+/// to execute real operations (agent chat, skill invocation, HTTP calls).
+///
+/// The infra layer provides the concrete implementation wiring these to
+/// actual services (LLM providers, WASM runtime, reqwest HTTP client).
+/// During testing or when services are unavailable, the `PlaceholderExecutionContext`
+/// returns descriptive output without executing real operations.
+///
+/// Uses boxed futures for object safety (enables `Arc<dyn StepExecutionContext>`).
+pub trait StepExecutionContext: Send + Sync {
+    /// Execute an agent chat step: send a prompt to a bot and return the response.
+    fn execute_agent(
+        &self,
+        bot: &str,
+        prompt: &str,
+        model: Option<&str>,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Value, StepError>> + Send + '_>>;
+
+    /// Execute a skill step: invoke a WASM skill with the given input.
+    fn execute_skill(
+        &self,
+        skill: &str,
+        input: Option<&str>,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Value, StepError>> + Send + '_>>;
+
+    /// Execute an HTTP request step: make the HTTP call and return response.
+    fn execute_http(
+        &self,
+        method: &str,
+        url: &str,
+        headers: Option<&std::collections::HashMap<String, String>>,
+        body: Option<&str>,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Value, StepError>> + Send + '_>>;
+}
+
+/// Placeholder implementation that returns descriptive output without real execution.
+/// Used when real services are not yet wired or during dry-run testing.
+pub struct PlaceholderExecutionContext;
+
+impl StepExecutionContext for PlaceholderExecutionContext {
+    fn execute_agent(
+        &self,
+        bot: &str,
+        prompt: &str,
+        model: Option<&str>,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Value, StepError>> + Send + '_>> {
+        let bot = bot.to_string();
+        let prompt = prompt.to_string();
+        let model = model.map(|s| s.to_string());
+        Box::pin(async move {
+            Ok(json!({
+                "type": "agent",
+                "bot": bot,
+                "prompt": prompt,
+                "model": model.as_deref().unwrap_or("default"),
+                "output": format!("[placeholder] agent '{}' response", bot),
+            }))
+        })
+    }
+
+    fn execute_skill(
+        &self,
+        skill: &str,
+        input: Option<&str>,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Value, StepError>> + Send + '_>> {
+        let skill = skill.to_string();
+        let input = input.map(|s| s.to_string());
+        Box::pin(async move {
+            Ok(json!({
+                "type": "skill",
+                "skill": skill,
+                "input": input,
+                "output": format!("[placeholder] skill '{}' result", skill),
+            }))
+        })
+    }
+
+    fn execute_http(
+        &self,
+        method: &str,
+        url: &str,
+        headers: Option<&std::collections::HashMap<String, String>>,
+        body: Option<&str>,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Value, StepError>> + Send + '_>> {
+        let method = method.to_string();
+        let url = url.to_string();
+        let headers = headers.cloned();
+        let body = body.map(|s| s.to_string());
+        Box::pin(async move {
+            Ok(json!({
+                "type": "http",
+                "method": method,
+                "url": url,
+                "headers": headers,
+                "body": body,
+                "status": "pending_execution",
+                "note": "HTTP execution delegated to infra layer",
+            }))
+        })
+    }
+}
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -117,14 +224,26 @@ impl StepError {
 // ---------------------------------------------------------------------------
 
 /// Executes individual workflow steps by dispatching to type-specific handlers.
+///
+/// Holds an optional `StepExecutionContext` for wiring to real services.
+/// When `exec_ctx` is `None`, uses placeholder implementations.
 pub struct StepRunner {
     data_dir: PathBuf,
+    exec_ctx: Arc<dyn StepExecutionContext>,
 }
 
 impl StepRunner {
-    /// Create a new step runner.
+    /// Create a new step runner with placeholder execution context.
     pub fn new(data_dir: PathBuf) -> Self {
-        Self { data_dir }
+        Self {
+            data_dir,
+            exec_ctx: Arc::new(PlaceholderExecutionContext),
+        }
+    }
+
+    /// Create a new step runner with a custom execution context for real service wiring.
+    pub fn with_context(data_dir: PathBuf, exec_ctx: Arc<dyn StepExecutionContext>) -> Self {
+        Self { data_dir, exec_ctx }
     }
 
     /// Run a step and return its output.
@@ -179,7 +298,7 @@ impl StepRunner {
         }
     }
 
-    // -- Placeholder: will be wired to LLM in Plan 09 --
+    // -- Agent step: delegates to StepExecutionContext --
 
     async fn run_agent(
         &self,
@@ -192,18 +311,16 @@ impl StepRunner {
         tracing::debug!(
             bot,
             model = model.unwrap_or("default"),
-            "running agent step (placeholder)"
+            "running agent step"
         );
-        Ok(StepOutput::Value(json!({
-            "type": "agent",
-            "bot": bot,
-            "prompt": resolved_prompt,
-            "model": model.unwrap_or("default"),
-            "output": format!("[placeholder] agent '{}' response to: {}", bot, resolved_prompt),
-        })))
+        let value = self
+            .exec_ctx
+            .execute_agent(bot, &resolved_prompt, model)
+            .await?;
+        Ok(StepOutput::Value(value))
     }
 
-    // -- Placeholder: will be wired to skill system --
+    // -- Skill step: delegates to StepExecutionContext --
 
     async fn run_skill(
         &self,
@@ -212,16 +329,15 @@ impl StepRunner {
         ctx: &WorkflowContext,
     ) -> Result<StepOutput, StepError> {
         let resolved_input = input.map(|i| ctx.resolve_template(i));
-        tracing::debug!(skill, "running skill step (placeholder)");
-        Ok(StepOutput::Value(json!({
-            "type": "skill",
-            "skill": skill,
-            "input": resolved_input,
-            "output": format!("[placeholder] skill '{}' result", skill),
-        })))
+        tracing::debug!(skill, "running skill step");
+        let value = self
+            .exec_ctx
+            .execute_skill(skill, resolved_input.as_deref())
+            .await?;
+        Ok(StepOutput::Value(value))
     }
 
-    // -- Placeholder: will be wired to WASM/TS runtime --
+    // -- Code step: placeholder until WASM/TS runtime is wired --
 
     async fn run_code(
         &self,
@@ -238,8 +354,7 @@ impl StepRunner {
         })))
     }
 
-    // -- HTTP step: resolves templates, builds request descriptor --
-    // Actual HTTP execution is delegated to infra layer (clean architecture)
+    // -- HTTP step: resolves templates, delegates to StepExecutionContext --
 
     async fn run_http(
         &self,
@@ -264,17 +379,16 @@ impl StepRunner {
             "running HTTP step (template resolved)"
         );
 
-        // Return the resolved request descriptor. The infra layer's HttpStepExecutor
-        // will perform the actual HTTP call when wired in.
-        Ok(StepOutput::Value(json!({
-            "type": "http",
-            "method": method,
-            "url": resolved_url,
-            "headers": resolved_headers,
-            "body": resolved_body,
-            "status": "pending_execution",
-            "note": "HTTP execution delegated to infra layer",
-        })))
+        let value = self
+            .exec_ctx
+            .execute_http(
+                method,
+                &resolved_url,
+                resolved_headers.as_ref(),
+                resolved_body.as_deref(),
+            )
+            .await?;
+        Ok(StepOutput::Value(value))
     }
 
     // -- Conditional: evaluates JEXL condition, returns branch selection --

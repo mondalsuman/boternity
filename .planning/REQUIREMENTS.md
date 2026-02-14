@@ -43,16 +43,16 @@
 
 ### Skill System
 
-- [ ] **SKIL-01**: Agents are powered by one or more skills
-- [ ] **SKIL-02**: Local skill creation following agentskills.io specification (via skill-creator skill)
-- [ ] **SKIL-03**: Skill inheritance hierarchy — child skill inherits parent features plus additions
-- [ ] **SKIL-04**: Discover and install skills from skills.sh registry (via find-skills skill or CLI)
-- [ ] **SKIL-05**: Discover skills from ComposioHQ/awesome-claude-skills
+- [x] **SKIL-01**: Agents are powered by one or more skills
+- [x] **SKIL-02**: Local skill creation following agentskills.io specification (via skill-creator skill)
+- [x] **SKIL-03**: Skill inheritance hierarchy — child skill inherits parent features plus additions
+- [x] **SKIL-04**: Discover and install skills from skills.sh registry (via find-skills skill or CLI)
+- [x] **SKIL-05**: Discover skills from ComposioHQ/awesome-claude-skills
 - [ ] **SKIL-06**: Universal builder agent creates skills using same mechanism for all paths
-- [ ] **SKIL-07**: Permission model — skills declare required capabilities, user approves on install
-- [ ] **SKIL-08**: WASM sandbox for untrusted registry skills (Wasmtime with WASI component model)
-- [ ] **SKIL-09**: Trust tiers — local skills run with permissions, registry skills run sandboxed
-- [ ] **SKIL-10**: Defense-in-depth — WASM + OS-level sandboxing + capability-based WASI
+- [x] **SKIL-07**: Permission model — skills declare required capabilities, user approves on install
+- [x] **SKIL-08**: WASM sandbox for untrusted registry skills (Wasmtime with WASI component model)
+- [x] **SKIL-09**: Trust tiers — local skills run with permissions, registry skills run sandboxed
+- [x] **SKIL-10**: Defense-in-depth — WASM + OS-level sandboxing + capability-based WASI
 
 ### Workflows & Pipelines
 
@@ -110,7 +110,7 @@
 ### CLI
 
 - [ ] **CLII-01**: Full bot lifecycle management (create, configure, list, start, stop, delete)
-- [ ] **CLII-02**: Skill management (create, install from registry, list, remove)
+- [x] **CLII-02**: Skill management (create, install from registry, list, remove)
 - [ ] **CLII-03**: Interactive chat with bots from terminal with streaming
 - [ ] **CLII-04**: Scriptable commands — pipe input/output for automation
 - [ ] **CLII-05**: Workflow management (create, trigger, list, status)
@@ -129,8 +129,8 @@
 - [ ] **SECU-03**: Environment variable fallback for secrets
 - [ ] **SECU-04**: SOUL.md immutable at runtime — prevents persistent prompt injection (CVE-2026-25253 mitigation)
 - [ ] **SECU-05**: SOUL.md hash verification at startup
-- [ ] **SECU-06**: Skill permission model with capability grants
-- [ ] **SECU-07**: WASM sandbox with defense-in-depth for untrusted skills
+- [x] **SECU-06**: Skill permission model with capability grants
+- [x] **SECU-07**: WASM sandbox with defense-in-depth for untrusted skills
 
 ### Web UI
 

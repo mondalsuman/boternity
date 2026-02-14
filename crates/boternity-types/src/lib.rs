@@ -15,5 +15,6 @@ pub mod identity;
 pub mod llm;
 pub mod memory;
 pub mod secret;
+pub mod skill;
 pub mod soul;
 pub mod storage;

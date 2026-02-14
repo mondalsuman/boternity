@@ -40,6 +40,13 @@ text-splitter = { workspace = true }
 arrow-schema = { workspace = true }
 arrow-array = { workspace = true }
 toml = { workspace = true }
+wasmtime = { workspace = true }
+wasmtime-wasi = { workspace = true }
+serde_yaml_ng = { workspace = true }
+semver = { workspace = true }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+landlock = { workspace = true }
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["full"] }

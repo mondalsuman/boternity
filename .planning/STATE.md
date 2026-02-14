@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-10)
 
 **Core value:** A user can create a bot with a distinct identity, give it skills through an interactive builder, and have meaningful parallel conversations with it -- all running locally with full observability.
-**Current focus:** Phase 5 (Agent Hierarchy + Event System) - Complete
+**Current focus:** Phase 7 (Builder System) - Ready to start
 
 ## Current Position
 
-Phase: 5 of 10 (Agent Hierarchy + Event System)
-Plan: 8 of 8 in current phase
+Phase: 6 of 10 (Skill System + WASM Sandbox)
+Plan: 14 of 14 in current phase (14 complete: 06-01, 06-02, 06-03, 06-04, 06-05, 06-06, 06-07, 06-08, 06-09, 06-10, 06-11, 06-12, 06-13, 06-14)
 Status: Phase complete
-Last activity: 2026-02-13 -- Completed 05-08-PLAN.md (Web UI agent hierarchy)
+Last activity: 2026-02-14 -- Completed 06-14-PLAN.md (WASM compilation gap closure)
 
-Progress: [██████████████████████████████████████████████░░░░░░░] 42/53 (~79%)
+Progress: [██████████████████████████████████████████████████████████░░░░░░░░] 56/67 (~84%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 42
-- Average duration: 6m 30s
-- Total execution time: 273m 08s
+- Total plans completed: 56
+- Average duration: 6m 18s
+- Total execution time: 352m 48s
 
 **By Phase:**
 
@@ -32,10 +32,11 @@ Progress: [███████████████████████
 | 3. Multi-Provider + Memory | 13/13 | 127m 31s | 9m 49s |
 | 4. Web UI Core + Fleet Dashboard | 8/8 | 40m 37s | 5m 05s |
 | 5. Agent Hierarchy + Event System | 8/8 | 28m 00s | 3m 30s |
+| 6. Skill System + WASM Sandbox | 14/14 | 79m 40s | 5m 41s |
 
 **Recent Trend:**
-- Last 5 plans: 05-04 (4m 00s), 05-05 (4m 00s), 05-06 (3m 00s), 05-07 (4m 00s), 05-08 (4m 00s)
-- Trend: Phase 5 complete, all plans executed efficiently (~3-4m)
+- Last 5 plans: 06-10 (2m 50s), 06-11 (6m 01s), 06-12 (0m 00s), 06-13 (2m 53s), 06-14 (3m 15s)
+- Trend: Phase 6 complete; consistent fast velocity on gap closure plans
 
 *Updated after each plan completion*
 
@@ -238,6 +239,65 @@ Recent decisions affecting current work:
 - [05-08]: AgentBlock auto-collapses on completion, auto-expands on running (useEffect on status)
 - [05-08]: Recursive TreeNode component with depth-based paddingLeft for tree indentation
 - [05-08]: Blended $9/1M cost estimate for budget indicator (rough hint, not exact billing)
+- [06-01]: TrustTier::Untrusted as Default (secure by default)
+- [06-01]: Capability enum with 8 variants matching CONTEXT.md fine-grained operations
+- [06-01]: SkillMeta uses semver::Version for version field (strong typing)
+- [06-01]: SkillSource tagged enum with type=local or type=registry
+- [06-01]: ResourceLimits defaults: 64MB memory, 1M fuel, 30s duration
+- [06-01]: landlock declared in workspace but NOT wired to any crate (Plan 08 will add with cfg gates)
+- [06-05]: wasmtime v40 bindgen! has no top-level async option; async governed by Engine Config::async_support(true)
+- [06-05]: Must disable wasm_relaxed_simd(false) before wasm_simd(false) in wasmtime v40 (relaxed depends on SIMD)
+- [06-05]: Untrusted tier: 16MB memory, 500K fuel, 10s duration; Verified: 64MB, 1M fuel, 30s
+- [06-05]: Separate Engine per trust tier (anti-pattern to share); engine_for_tier panics on Local
+- [06-03]: CapabilityEnforcer::new returns Err(NoGrants) for empty grants (fail-closed design)
+- [06-03]: Child grants take precedence over parent in merge_inherited_grants
+- [06-03]: skill_audit_log.bot_id is TEXT not FK (audit persists after bot deletion)
+- [06-03]: Capabilities stored as JSON array in SQLite TEXT column
+- [06-04]: resolve_inheritance takes mutable visited HashSet param for cycle detection across recursive calls
+- [06-04]: Version conflicts parsed from dep_name@version_req format in dependency strings
+- [06-04]: version_ranges_compatible tests representative versions for intersection (not algebraic)
+- [06-04]: Inheritance removes current skill from visited after resolution (allows diamond parent graphs)
+- [06-04]: MAX_INHERITANCE_DEPTH = 3 (depth 0 = skill, depth 3 = great-grandparent triggers error)
+- [06-02]: anyhow for manifest parsing errors (utility functions, not repository traits)
+- [06-02]: Slug validation: lowercase alphanumeric + hyphens, no leading/trailing hyphens
+- [06-02]: SkillStore returns empty Vec on missing skills directory (graceful for fresh installs)
+- [06-02]: SkillSource::Local default when .boternity-meta.toml absent
+- [06-02]: get_bot_skills_config returns empty BotSkillsFile when skills.toml missing
+- [06-06]: SkillExecutor trait uses RPITIT (consistent with project pattern, no async_trait)
+- [06-06]: Prompt skills return body directly from LocalSkillExecutor (no process spawn needed)
+- [06-06]: XML tags <available_skills> for Level 1 and <active_skills> for Level 2 progressive disclosure
+- [06-06]: Active skill prompts inject after </identity> tag in system prompt
+- [06-06]: 60s timeout for local tier execution (generous for host-native operations)
+- [06-09]: GitHub Trees API with recursive=1 for single-call full repo tree scanning
+- [06-09]: Cache keyed by {owner}-{repo}-index.json for per-registry isolation
+- [06-09]: SkillsShClient separate from GitHubRegistryClient (different API protocols)
+- [06-09]: RPITIT on SkillRegistry trait (consistent with all project async traits)
+- [06-07]: bindgen! exports: { default: async } for async call_execute with async_support engine
+- [06-07]: Sync host imports (std::fs, std::env) -- no async I/O in host functions
+- [06-07]: Table entries capped at 1000 in ResourceLimiter
+- [06-07]: recall_memory returns empty Vec (not error) when capability missing (graceful degradation)
+- [06-07]: Fresh Store per invocation prevents state leaks between WASM skill calls
+- [06-08]: Subprocess model: self --wasm-sandbox-exec spawns child that applies OS restrictions then runs WASM
+- [06-08]: should_use_os_sandbox: only Untrusted tier triggers OS sandbox (Verified/Local skip)
+- [06-08]: JSON IPC: SandboxRequest/SandboxResponse via stdin/stdout between parent and child process
+- [06-08]: Seatbelt deny-default with selective allow for system libs, WASM binary, configured paths
+- [06-08]: Landlock ABI v3 with best-effort fallback (partially enforced on older kernels)
+- [06-08]: landlock wired to boternity-infra under cfg(target_os = "linux") dependencies
+- [06-10]: build_with_skills delegates to existing build() + prompt_injector (no code duplication)
+- [06-10]: chain_skills takes &[&InstalledSkill] for flexibility with borrowed references
+- [06-10]: SkillStore initialized with data_dir (skills_dir() is internal to SkillStore)
+- [06-10]: Skill chaining accumulates fuel as sum, memory peak takes maximum across chain
+- [06-11]: SkillCommand as top-level bnity skill subcommand (consistent with provider/storage/soul pattern)
+- [06-11]: Interactive capability approval prompt before install (Confirm dialog, defaults to deny)
+- [06-11]: Clone-on-read for TUI detail panel (avoids Span borrow lifetime issues in ratatui)
+- [06-11]: Categories pane uses deduplicated list from all skill.categories fields
+- [06-11]: Update command reports current versions (full remote version check deferred)
+- [06-13]: build_config_for_skill() lives in sandbox.rs as single authority on sandbox configuration
+- [06-13]: SandboxResponse::into_execution_result() converts subprocess output inline (no intermediate type)
+- [06-13]: Duration measured from parent perspective (includes subprocess overhead)
+- [06-14]: JSON stub marker instead of real WASM binary for registry Tool skills without pre-compiled binaries
+- [06-14]: Stub detection in WasmSkillExecutor returns body as output with zero fuel consumed
+- [06-14]: WASM compilation wired into both CLI and HTTP install handlers
 
 ### Pending Todos
 
@@ -251,6 +311,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-13
-Stopped at: Completed 05-08-PLAN.md (Web UI agent hierarchy) - Phase 5 complete
+Last session: 2026-02-14
+Stopped at: Completed 06-14-PLAN.md (WASM compilation gap closure) -- Phase 6 complete
 Resume file: None

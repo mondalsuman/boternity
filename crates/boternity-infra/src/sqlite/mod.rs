@@ -12,4 +12,5 @@ pub mod memory;
 pub mod pool;
 pub mod provider_health;
 pub mod secret;
+pub mod skill_audit;
 pub mod soul;

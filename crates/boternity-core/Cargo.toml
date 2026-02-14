@@ -13,11 +13,16 @@ futures-util = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
-tokio = { version = "1", features = ["time"] }
+tokio = { version = "1", features = ["time", "rt", "macros"] }
 tracing = { workspace = true }
 uuid = { workspace = true }
 tokio-util = { workspace = true }
 dashmap = { workspace = true }
+petgraph = { workspace = true }
+semver = { workspace = true }
+serde_yaml_ng = { workspace = true }
+anyhow = { workspace = true }
+toml = { workspace = true }
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["full"] }

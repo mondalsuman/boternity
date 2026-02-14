@@ -551,10 +551,10 @@ impl AgentOrchestrator {
             let duration_ms = start.elapsed().as_millis() as u64;
 
             match result {
-                Ok((response, tokens_used)) => {
+                Ok((ref response, tokens_used)) => {
                     event_bus.publish(AgentEvent::AgentCompleted {
                         agent_id,
-                        result_summary: truncate_summary(&response, 200),
+                        result_summary: truncate_summary(response, 200),
                         tokens_used,
                         duration_ms,
                     });
@@ -562,13 +562,13 @@ impl AgentOrchestrator {
                         agent_id,
                         task: task.to_string(),
                         status: AgentStatus::Completed,
-                        response: Some(response),
+                        response: Some(response.to_string()),
                         error: None,
                         tokens_used,
                         duration_ms,
                     };
                 }
-                Err(e) => {
+                Err(ref e) => {
                     let will_retry = attempt == 0;
                     event_bus.publish(AgentEvent::AgentFailed {
                         agent_id,

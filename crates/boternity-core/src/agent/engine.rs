@@ -162,6 +162,7 @@ impl AgentEngine {
             temperature: Some(context.agent_config.temperature),
             stream: true, // Default to streaming; overridden by complete()
             stop_sequences: None,
+            output_config: None,
         }
     }
 }

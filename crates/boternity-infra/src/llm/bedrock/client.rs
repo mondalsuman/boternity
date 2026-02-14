@@ -440,6 +440,7 @@ mod tests {
             temperature: Some(0.7),
             stream: false,
             stop_sequences: None,
+            output_config: None,
         };
 
         let bedrock_req = provider.to_bedrock_request(&request);
@@ -461,6 +462,7 @@ mod tests {
             temperature: None,
             stream: false,
             stop_sequences: None,
+            output_config: None,
         };
 
         let bedrock_req = provider.to_bedrock_request(&request);
@@ -497,6 +499,7 @@ mod tests {
             temperature: None,
             stream: false,
             stop_sequences: None,
+            output_config: None,
         };
 
         let count = provider.count_tokens(&request).await.unwrap();

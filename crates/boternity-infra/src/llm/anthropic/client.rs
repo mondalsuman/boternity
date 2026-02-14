@@ -333,6 +333,7 @@ mod tests {
             temperature: Some(0.7),
             stream: false,
             stop_sequences: None,
+            output_config: None,
         };
 
         let anthropic_req = provider.to_anthropic_request(&request, true);
@@ -363,6 +364,7 @@ mod tests {
             temperature: None,
             stream: false,
             stop_sequences: None,
+            output_config: None,
         };
 
         let count = provider.count_tokens(&request).await.unwrap();

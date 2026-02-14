@@ -452,6 +452,7 @@ mod tests {
             temperature: Some(0.7),
             stream: false,
             stop_sequences: None,
+            output_config: None,
         };
 
         let oai_req = provider.build_request(&request, false).unwrap();
@@ -477,6 +478,7 @@ mod tests {
             temperature: None,
             stream: true,
             stop_sequences: None,
+            output_config: None,
         };
 
         let oai_req = provider.build_request(&request, true).unwrap();
@@ -497,6 +499,7 @@ mod tests {
             temperature: None,
             stream: false,
             stop_sequences: None,
+            output_config: None,
         };
 
         let oai_req = provider.build_request(&request, false).unwrap();
@@ -514,6 +517,7 @@ mod tests {
             temperature: None,
             stream: false,
             stop_sequences: Some(vec!["STOP".to_string(), "END".to_string()]),
+            output_config: None,
         };
 
         let oai_req = provider.build_request(&request, false).unwrap();
@@ -534,6 +538,7 @@ mod tests {
             temperature: None,
             stream: false,
             stop_sequences: None,
+            output_config: None,
         };
 
         let count = provider.count_tokens(&request).await.unwrap();

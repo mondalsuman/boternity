@@ -283,7 +283,43 @@ impl SkillExecutor for WasmSkillExecutor {
 
         let resource_limits = WasmRuntime::default_resource_limits(&trust_tier);
 
-        // 1. Get engine for trust tier
+        // Defense-in-depth: Untrusted skills run inside OS sandbox subprocess.
+        // This adds a second isolation layer (OS-level restrictions) around
+        // the WASM sandbox, ensuring that even if Wasmtime has a vulnerability,
+        // the skill cannot escape the OS-level restrictions.
+        if super::sandbox::should_use_os_sandbox(&trust_tier) {
+            let config = super::sandbox::build_config_for_skill(
+                wasm_path,
+                input,
+                &trust_tier,
+                &resource_limits,
+            );
+
+            tracing::info!(
+                skill = %skill.manifest.name,
+                trust_tier = %trust_tier,
+                "Executing skill in OS sandbox subprocess"
+            );
+
+            let sandbox_output = super::sandbox::run_sandboxed(&config)
+                .await
+                .with_context(|| {
+                    format!(
+                        "OS sandbox execution failed for skill '{}'",
+                        skill.manifest.name
+                    )
+                })?;
+
+            // Parse the subprocess JSON response.
+            let response: super::sandbox::SandboxResponse =
+                serde_json::from_str(&sandbox_output).with_context(|| {
+                    "Failed to parse sandbox subprocess response"
+                })?;
+
+            return response.into_execution_result(start.elapsed());
+        }
+
+        // 1. Get engine for trust tier (Verified path -- no OS sandbox)
         let engine = self.runtime.engine_for_tier(&trust_tier);
 
         // 2. Load component from bytes
@@ -696,6 +732,27 @@ mod tests {
             err.contains("failed to read"),
             "should contain file error: {}",
             err
+        );
+    }
+
+    #[test]
+    fn wasm_executor_should_use_sandbox_for_untrusted() {
+        // Confirms the branch logic: should_use_os_sandbox returns true only
+        // for Untrusted, ensuring the execute() method routes through
+        // sandbox::run_sandboxed() for Untrusted skills.
+        use super::super::sandbox::should_use_os_sandbox;
+
+        assert!(
+            should_use_os_sandbox(&TrustTier::Untrusted),
+            "Untrusted tier must route through OS sandbox"
+        );
+        assert!(
+            !should_use_os_sandbox(&TrustTier::Verified),
+            "Verified tier must NOT route through OS sandbox"
+        );
+        assert!(
+            !should_use_os_sandbox(&TrustTier::Local),
+            "Local tier must NOT route through OS sandbox"
         );
     }
 }

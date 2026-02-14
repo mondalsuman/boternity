@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 7 of 10 (Builder System)
-Plan: 5 of 10 in current phase (5 complete: 07-01, 07-02, 07-03, 07-04, 07-05)
+Plan: 6 of 10 in current phase (6 complete: 07-01, 07-02, 07-03, 07-04, 07-05, 07-06)
 Status: In progress
-Last activity: 2026-02-14 -- Completed 07-05-PLAN.md (LLM builder agent + output_config wiring)
+Last activity: 2026-02-14 -- Completed 07-06-PLAN.md (SkillBuilder + BotAssembler skill attachment)
 
-Progress: [██████████████████████████████████████████████████████████████░░░░] 61/67 (~91%)
+Progress: [███████████████████████████████████████████████████████████████░░░░] 62/67 (~93%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 61
-- Average duration: 6m 11s
-- Total execution time: 376m 50s
+- Total plans completed: 62
+- Average duration: 6m 10s
+- Total execution time: 381m 50s
 
 **By Phase:**
 
@@ -33,11 +33,11 @@ Progress: [███████████████████████
 | 4. Web UI Core + Fleet Dashboard | 8/8 | 40m 37s | 5m 05s |
 | 5. Agent Hierarchy + Event System | 8/8 | 28m 00s | 3m 30s |
 | 6. Skill System + WASM Sandbox | 14/14 | 79m 40s | 5m 41s |
-| 7. Builder System | 5/10 | 24m 02s | 4m 48s |
+| 7. Builder System | 6/10 | 29m 02s | 4m 50s |
 
 **Recent Trend:**
-- Last 5 plans: 07-01 (5m 12s), 07-02 (4m 00s), 07-03 (7m 00s), 07-04 (2m 50s), 07-05 (5m 00s)
-- Trend: Steady pace -- builder agent with structured output and provider wiring
+- Last 5 plans: 07-02 (4m 00s), 07-03 (7m 00s), 07-04 (2m 50s), 07-05 (5m 00s), 07-06 (5m 00s)
+- Trend: Steady pace -- skill builder and assembler integration
 
 *Updated after each plan completion*
 
@@ -317,6 +317,12 @@ Recent decisions affecting current work:
 - [07-05]: LlmBuilderAgent generic over M: BuilderMemoryStore for test flexibility (NullMemoryStore in tests)
 - [07-05]: Memory queried per-method call rather than cached on struct (BuilderAgent trait methods take &self not &mut self)
 - [07-05]: MockLlmProvider pattern for testing builder agent without real LLM calls
+- [07-06]: SkillBuilder follows stateless utility pattern (no fields, provider passed per-call) consistent with 02-06
+- [07-06]: suggest_capabilities uses keyword heuristics for 8 capability types without LLM call
+- [07-06]: validate_skill does structural validation only (parse + manifest + heuristic warnings); provider param reserved for future semantic validation
+- [07-06]: attach_skills writes SKILL.md + optional src/lib.rs + skills.toml with builder-created origin tag
+- [07-06]: skill_request_to_build_result converts SkillRequest to SkillBuildResult without LLM (lightweight fallback)
+- [07-06]: All builder-created skills default to TrustTier::Local
 
 ### Pending Todos
 
@@ -331,5 +337,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 07-05-PLAN.md (LLM builder agent + output_config wiring)
+Stopped at: Completed 07-06-PLAN.md (SkillBuilder + BotAssembler skill attachment)
 Resume file: None

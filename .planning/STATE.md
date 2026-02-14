@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-10)
 
 **Core value:** A user can create a bot with a distinct identity, give it skills through an interactive builder, and have meaningful parallel conversations with it -- all running locally with full observability.
-**Current focus:** Phase 7 (Builder System) - Ready to start
+**Current focus:** Phase 7 (Builder System) - In progress
 
 ## Current Position
 
-Phase: 6 of 10 (Skill System + WASM Sandbox)
-Plan: 14 of 14 in current phase (14 complete: 06-01, 06-02, 06-03, 06-04, 06-05, 06-06, 06-07, 06-08, 06-09, 06-10, 06-11, 06-12, 06-13, 06-14)
-Status: Phase complete
-Last activity: 2026-02-14 -- Completed 06-14-PLAN.md (WASM compilation gap closure)
+Phase: 7 of 10 (Builder System)
+Plan: 1 of 10 in current phase (1 complete: 07-01)
+Status: In progress
+Last activity: 2026-02-14 -- Completed 07-01-PLAN.md (builder domain types + structured output)
 
-Progress: [██████████████████████████████████████████████████████████░░░░░░░░] 56/67 (~84%)
+Progress: [██████████████████████████████████████████████████████████░░░░░░░░] 57/67 (~85%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 56
-- Average duration: 6m 18s
-- Total execution time: 352m 48s
+- Total plans completed: 57
+- Average duration: 6m 17s
+- Total execution time: 358m 00s
 
 **By Phase:**
 
@@ -33,10 +33,11 @@ Progress: [███████████████████████
 | 4. Web UI Core + Fleet Dashboard | 8/8 | 40m 37s | 5m 05s |
 | 5. Agent Hierarchy + Event System | 8/8 | 28m 00s | 3m 30s |
 | 6. Skill System + WASM Sandbox | 14/14 | 79m 40s | 5m 41s |
+| 7. Builder System | 1/10 | 5m 12s | 5m 12s |
 
 **Recent Trend:**
-- Last 5 plans: 06-10 (2m 50s), 06-11 (6m 01s), 06-12 (0m 00s), 06-13 (2m 53s), 06-14 (3m 15s)
-- Trend: Phase 6 complete; consistent fast velocity on gap closure plans
+- Last 5 plans: 06-11 (6m 01s), 06-12 (0m 00s), 06-13 (2m 53s), 06-14 (3m 15s), 07-01 (5m 12s)
+- Trend: Phase 7 started; type foundation plan executed cleanly
 
 *Updated after each plan completion*
 
@@ -298,6 +299,9 @@ Recent decisions affecting current work:
 - [06-14]: JSON stub marker instead of real WASM binary for registry Tool skills without pre-compiled binaries
 - [06-14]: Stub detection in WasmSkillExecutor returns body as output with zero fuel consumed
 - [06-14]: WASM compilation wired into both CLI and HTTP install handlers
+- [07-01]: OutputFormat as flat struct with serde rename (not tagged enum) to match Claude API shape exactly
+- [07-01]: add_additional_properties_false checks for 'properties' key (not 'type: object') for robustness with anyOf schemas
+- [07-01]: schemars v1 (not 0.8) for latest JSON Schema draft support and serde attribute compatibility
 
 ### Pending Todos
 
@@ -312,5 +316,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 06-14-PLAN.md (WASM compilation gap closure) -- Phase 6 complete
+Stopped at: Completed 07-01-PLAN.md (builder domain types + structured output)
 Resume file: None

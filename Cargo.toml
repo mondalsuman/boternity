@@ -160,6 +160,9 @@ notify-debouncer-mini = "0.5"
 # HMAC computation for webhook signature verification
 hmac = "0.12"
 
+# Cron expression parsing (transitive from tokio-cron-scheduler, used directly for missed-run detection)
+croner = "3"
+
 # Workspace crates
 boternity-types = { path = "crates/boternity-types" }
 boternity-core = { path = "crates/boternity-core" }

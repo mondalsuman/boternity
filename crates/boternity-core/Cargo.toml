@@ -27,6 +27,7 @@ tokio-cron-scheduler = { workspace = true }
 jexl-eval = { workspace = true }
 notify = { workspace = true }
 notify-debouncer-mini = { workspace = true }
+croner = { workspace = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }

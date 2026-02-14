@@ -9,6 +9,8 @@
 //! - `checkpoint` -- Durable checkpoint manager for crash recovery
 //! - `executor` -- Wave-based parallel DAG executor
 //! - `step_runner` -- Step type dispatchers for all 8 step types
+//! - `scheduler` -- Cron scheduler with human-readable schedules and missed-run catch-up
+//! - `trigger` -- TriggerManager coordinating cron, webhook, event, and file triggers
 
 pub mod checkpoint;
 pub mod context;
@@ -17,4 +19,6 @@ pub mod definition;
 pub mod executor;
 pub mod expression;
 pub mod retry;
+pub mod scheduler;
 pub mod step_runner;
+pub mod trigger;

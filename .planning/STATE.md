@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 7 of 10 (Builder System)
-Plan: 2 of 10 in current phase (2 complete: 07-01, 07-02)
+Plan: 3 of 10 in current phase (3 complete: 07-01, 07-02, 07-03)
 Status: In progress
-Last activity: 2026-02-14 -- Completed 07-02-PLAN.md (core builder agent trait, state accumulator, Forge prompt)
+Last activity: 2026-02-14 -- Completed 07-03-PLAN.md (builder draft persistence + memory stores)
 
-Progress: [███████████████████████████████████████████████████████████░░░░░░░] 58/67 (~87%)
+Progress: [████████████████████████████████████████████████████████████░░░░░░] 59/67 (~88%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 58
-- Average duration: 6m 14s
-- Total execution time: 362m 00s
+- Total plans completed: 59
+- Average duration: 6m 15s
+- Total execution time: 369m 00s
 
 **By Phase:**
 
@@ -33,11 +33,11 @@ Progress: [███████████████████████
 | 4. Web UI Core + Fleet Dashboard | 8/8 | 40m 37s | 5m 05s |
 | 5. Agent Hierarchy + Event System | 8/8 | 28m 00s | 3m 30s |
 | 6. Skill System + WASM Sandbox | 14/14 | 79m 40s | 5m 41s |
-| 7. Builder System | 2/10 | 9m 12s | 4m 36s |
+| 7. Builder System | 3/10 | 16m 12s | 5m 24s |
 
 **Recent Trend:**
-- Last 5 plans: 06-12 (0m 00s), 06-13 (2m 53s), 06-14 (3m 15s), 07-01 (5m 12s), 07-02 (4m 00s)
-- Trend: Phase 7 core layer plans running under average
+- Last 5 plans: 06-13 (2m 53s), 06-14 (3m 15s), 07-01 (5m 12s), 07-02 (4m 00s), 07-03 (7m 00s)
+- Trend: Phase 7 persistence plan slightly higher due to migration conflict fix
 
 *Updated after each plan completion*
 
@@ -305,6 +305,10 @@ Recent decisions affecting current work:
 - [07-02]: BuilderStateExt extension trait (not inherent impl) because BuilderState defined in boternity-types, methods needed in boternity-core
 - [07-02]: new_builder_state() free function constructor (extension traits can't have idiomatic constructors)
 - [07-02]: build_forge_system_prompt takes &BuilderMode (no need to consume owned value)
+- [07-03]: INSERT OR REPLACE for draft upsert (session_id is natural PK)
+- [07-03]: Draft list extracts initial_description and phase from state_json via serde_json::Value (no full BuilderState deserialization)
+- [07-03]: PurposeCategory serialized via serde_json::to_string for SQL WHERE matching
+- [07-03]: Migration date prefix 20260215 to avoid sqlx version conflict with 20260214_004
 
 ### Pending Todos
 
@@ -319,5 +323,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 07-02-PLAN.md (core builder agent trait, state accumulator, Forge prompt)
+Stopped at: Completed 07-03-PLAN.md (builder draft persistence + memory stores)
 Resume file: None

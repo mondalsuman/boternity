@@ -31,6 +31,8 @@ use boternity_infra::filesystem::{resolve_data_dir, LocalFileSystem};
 use boternity_infra::llm::openai_compat::config::default_cost_table;
 use boternity_infra::secret::chain::build_secret_chain;
 use boternity_infra::secret::VaultSecretProvider;
+use boternity_infra::skill::skill_store::SkillStore;
+use boternity_infra::skill::wasm_runtime::WasmRuntime;
 use boternity_infra::sqlite::audit::SqliteAuditLog;
 use boternity_infra::sqlite::bot::SqliteBotRepository;
 use boternity_infra::sqlite::chat::SqliteChatRepository;
@@ -40,6 +42,7 @@ use boternity_infra::sqlite::memory::SqliteMemoryRepository;
 use boternity_infra::sqlite::pool::DatabasePool;
 use boternity_infra::sqlite::provider_health::SqliteProviderHealthStore;
 use boternity_infra::sqlite::secret::SqliteSecretRepository;
+use boternity_infra::sqlite::skill_audit::SqliteSkillAuditLog;
 use boternity_infra::sqlite::soul::SqliteSoulRepository;
 use boternity_infra::storage::filesystem::LocalFileStore;
 use boternity_infra::storage::indexer::FileIndexer;
@@ -77,6 +80,8 @@ pub type ConcreteFileIndexer = FileIndexer<FastEmbedEmbedder>;
 ///
 /// Phase 3 additions: vector_store, embedder, vector_memory, shared_memory,
 /// file_store, file_indexer, kv_store, audit_log, provider_health_store.
+///
+/// Phase 6 additions: skill_store, wasm_runtime, skill_audit_log.
 #[derive(Clone)]
 pub struct AppState {
     pub bot_service: Arc<ConcreteBotService>,
@@ -117,6 +122,14 @@ pub struct AppState {
     /// Budget pause channels, keyed by request_id.
     /// Orchestrator inserts sender; WebSocket/CLI sends continue/stop decision.
     pub budget_responses: Arc<DashMap<Uuid, oneshot::Sender<bool>>>,
+
+    // --- Phase 6 services ---
+    /// Filesystem-based skill store managing installed skills.
+    pub skill_store: Arc<SkillStore>,
+    /// Wasmtime WASM runtime with per-trust-tier engine configurations.
+    pub wasm_runtime: Arc<WasmRuntime>,
+    /// SQLite-backed audit log for skill invocations.
+    pub skill_audit_log: Arc<SqliteSkillAuditLog>,
 }
 
 impl AppState {
@@ -237,6 +250,21 @@ impl AppState {
         let agent_cancellations = Arc::new(DashMap::new());
         let budget_responses = Arc::new(DashMap::new());
 
+        // --- Phase 6 services ---
+
+        // Ensure skills directory exists
+        let skills_dir = data_dir.join("skills");
+        tokio::fs::create_dir_all(&skills_dir).await?;
+
+        // Filesystem-based skill store
+        let skill_store = Arc::new(SkillStore::new(data_dir.clone()));
+
+        // WASM runtime with per-tier engines
+        let wasm_runtime = Arc::new(WasmRuntime::new()?);
+
+        // Skill audit log (SQLite)
+        let skill_audit_log = Arc::new(SqliteSkillAuditLog::new(db_pool.clone()));
+
         Ok(Self {
             bot_service: Arc::new(bot_service),
             soul_service: Arc::new(api_soul_service),
@@ -257,6 +285,9 @@ impl AppState {
             global_config,
             agent_cancellations,
             budget_responses,
+            skill_store,
+            wasm_runtime,
+            skill_audit_log,
         })
     }
 
@@ -421,5 +452,10 @@ impl AppState {
             let anthropic = AnthropicProvider::new(api_key, model.to_string());
             Ok(BoxLlmProvider::new(anthropic))
         }
+    }
+
+    /// Return the path to the skills directory (`{data_dir}/skills`).
+    pub fn skills_dir(&self) -> PathBuf {
+        self.data_dir.join("skills")
     }
 }

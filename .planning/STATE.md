@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 6 of 10 (Skill System + WASM Sandbox)
-Plan: 6 of 12 in current phase (6 complete: 06-01, 06-02, 06-03, 06-04, 06-05, 06-06)
+Plan: 7 of 12 in current phase (7 complete: 06-01, 06-02, 06-03, 06-04, 06-05, 06-06, 06-09)
 Status: In progress
-Last activity: 2026-02-14 -- Completed 06-06-PLAN.md (Local skill execution + SkillExecutor trait)
+Last activity: 2026-02-14 -- Completed 06-09-PLAN.md (Registry discovery + skill installation)
 
-Progress: [████████████████████████████████████████████████████░░░] 48/55 (~87%)
+Progress: [█████████████████████████████████████████████████████░░] 49/55 (~89%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 48
+- Total plans completed: 49
 - Average duration: 6m 40s
-- Total execution time: 320m 31s
+- Total execution time: 326m 31s
 
 **By Phase:**
 
@@ -32,11 +32,11 @@ Progress: [███████████████████████
 | 3. Multi-Provider + Memory | 13/13 | 127m 31s | 9m 49s |
 | 4. Web UI Core + Fleet Dashboard | 8/8 | 40m 37s | 5m 05s |
 | 5. Agent Hierarchy + Event System | 8/8 | 28m 00s | 3m 30s |
-| 6. Skill System + WASM Sandbox | 6/12 | 47m 23s | 7m 54s |
+| 6. Skill System + WASM Sandbox | 7/12 | 53m 23s | 7m 37s |
 
 **Recent Trend:**
-- Last 5 plans: 06-05 (7m 00s), 06-03 (9m 00s), 06-04 (8m 24s), 06-02 (10m 14s), 06-06 (17m 37s)
-- Trend: 06-06 duration inflated by ~5 min build lock wait from parallel plan execution
+- Last 5 plans: 06-03 (9m 00s), 06-04 (8m 24s), 06-02 (10m 14s), 06-06 (17m 37s), 06-09 (6m 00s)
+- Trend: 06-09 fast execution; 06-06 duration was inflated by build lock contention from parallel plans
 
 *Updated after each plan completion*
 
@@ -268,6 +268,10 @@ Recent decisions affecting current work:
 - [06-06]: XML tags <available_skills> for Level 1 and <active_skills> for Level 2 progressive disclosure
 - [06-06]: Active skill prompts inject after </identity> tag in system prompt
 - [06-06]: 60s timeout for local tier execution (generous for host-native operations)
+- [06-09]: GitHub Trees API with recursive=1 for single-call full repo tree scanning
+- [06-09]: Cache keyed by {owner}-{repo}-index.json for per-registry isolation
+- [06-09]: SkillsShClient separate from GitHubRegistryClient (different API protocols)
+- [06-09]: RPITIT on SkillRegistry trait (consistent with all project async traits)
 
 ### Pending Todos
 
@@ -282,5 +286,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 06-06-PLAN.md (Local skill execution + SkillExecutor trait)
+Stopped at: Completed 06-09-PLAN.md (Registry discovery + skill installation)
 Resume file: None

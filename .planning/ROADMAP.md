@@ -224,13 +224,22 @@ Plans:
   3. User can create and manage bots via the MCP server interface -- an external MCP client can perform bot CRUD operations
   4. MCP tool descriptions are sanitized before reaching the LLM context -- injection attempts in tool descriptions are neutralized
   5. Both MCP consumption and exposure require authentication -- unauthenticated MCP connections are rejected
-**Plans**: TBD
+**Plans**: 13 plans
 
 Plans:
-- [ ] 09-01: MCP client (consume external tools)
-- [ ] 09-02: MCP server (expose bots as tools)
-- [ ] 09-03: MCP bot management interface
-- [ ] 09-04: MCP security (sanitization + authentication)
+- [ ] 09-01-PLAN.md -- MCP domain types (config, connection, audit, permissions) and Phase 9 workspace dependencies (rmcp, governor)
+- [ ] 09-02-PLAN.md -- Core MCP traits (McpClientManager, McpServerExposer, McpConfigManager, McpAuditLogger, McpRateLimiter) and DefaultToolSanitizer
+- [ ] 09-03-PLAN.md -- SQLite MCP persistence (connections + audit tables), JSON config store, MCP keystore, server presets
+- [ ] 09-04-PLAN.md -- MCP client connection pool (RmcpClientManager), transport factory (stdio + HTTP), sampling handler
+- [ ] 09-05-PLAN.md -- MCP server handler (BoternityMcpServer), dynamic tool registry from bot capabilities
+- [ ] 09-06-PLAN.md -- MCP server transports (Streamable HTTP + stdio), bearer token auth middleware, governor rate limiter
+- [ ] 09-07-PLAN.md -- Agent engine MCP integration: tool injection into system prompt, tool use loop, result sanitization
+- [ ] 09-08-PLAN.md -- MCP prompt registry: bot skills and use cases as MCP prompt templates
+- [ ] 09-09-PLAN.md -- CLI MCP commands (add/remove/list/status/connect/disconnect/serve/test-tool/set-credential/presets)
+- [ ] 09-10-PLAN.md -- REST API MCP handlers and route wiring for web UI MCP tab
+- [ ] 09-11-PLAN.md -- AppState Phase 9 wiring, health ping background task, chat handler MCP integration
+- [ ] 09-12-PLAN.md -- Web UI MCP tab: server list, tool inventory, audit log components
+- [ ] 09-13-PLAN.md -- Collapsible tool call blocks in chat (web UI + CLI) with syntax-highlighted JSON
 
 ### Phase 10: Observability + Cost + Polish
 **Goal**: The platform provides full visibility into what every agent is doing and why, with cost tracking and budget controls, plus the remaining polish features that complete the v1 experience.
@@ -268,5 +277,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 6. Skill System + WASM Sandbox | 14/14 | Complete | 2026-02-14 |
 | 7. Builder System | 10/10 | Complete | 2026-02-14 |
 | 8. Workflows + Pipelines | 0/13 | Not started | - |
-| 9. MCP Integration | 0/4 | Not started | - |
+| 9. MCP Integration | 0/13 | Not started | - |
 | 10. Observability + Cost + Polish | 0/7 | Not started | - |

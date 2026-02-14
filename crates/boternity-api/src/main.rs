@@ -283,6 +283,16 @@ async fn main() -> anyhow::Result<()> {
 
         Commands::Completions { .. } => unreachable!("handled above"),
 
+        Commands::Build { resume, reconfigure } => {
+            if resume {
+                cli::builder::run_builder_resume(&state).await?;
+            } else if let Some(slug) = reconfigure {
+                cli::builder::run_builder_reconfigure(&state, &slug).await?;
+            } else {
+                cli::builder::run_builder_wizard(&state).await?;
+            }
+        }
+
         Commands::NewBot { name, description } => {
             // Alias for `create bot`
             cli::bot::create_bot(&state, name, description, None, cli.json).await?;

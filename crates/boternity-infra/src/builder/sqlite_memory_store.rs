@@ -15,6 +15,7 @@ use uuid::Uuid;
 use crate::sqlite::pool::DatabasePool;
 
 /// SQLite-backed builder memory persistence.
+#[derive(Clone)]
 pub struct SqliteBuilderMemoryStore {
     pool: DatabasePool,
 }

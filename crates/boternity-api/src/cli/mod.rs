@@ -4,6 +4,7 @@
 //! pattern (e.g., `bnity create bot`, `bnity list bots`).
 
 pub mod bot;
+pub mod builder;
 pub mod chat;
 pub mod kv;
 pub mod memory;
@@ -13,6 +14,7 @@ pub mod session;
 pub mod shared_memory;
 pub mod skill;
 pub mod skill_browser;
+pub mod skill_create;
 pub mod soul;
 pub mod status;
 pub mod storage;
@@ -197,6 +199,18 @@ pub enum Commands {
         /// Suppress sub-agent detail, showing only the final synthesized response.
         #[arg(long, short = 'q')]
         quiet: bool,
+    },
+
+    /// Interactive bot builder wizard powered by Forge.
+    #[command(alias = "create-wizard")]
+    Build {
+        /// Resume a previously saved builder session.
+        #[arg(long)]
+        resume: bool,
+
+        /// Reconfigure an existing bot by slug.
+        #[arg(long)]
+        reconfigure: Option<String>,
     },
 
     // --- Short aliases ---

@@ -14,3 +14,4 @@ pub mod repository;
 pub mod service;
 pub mod skill;
 pub mod storage;
+pub mod workflow;

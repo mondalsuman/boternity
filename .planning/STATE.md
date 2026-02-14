@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 7 of 10 (Builder System)
-Plan: 3 of 10 in current phase (3 complete: 07-01, 07-02, 07-03)
+Plan: 4 of 10 in current phase (4 complete: 07-01, 07-02, 07-03, 07-04)
 Status: In progress
-Last activity: 2026-02-14 -- Completed 07-03-PLAN.md (builder draft persistence + memory stores)
+Last activity: 2026-02-14 -- Completed 07-04-PLAN.md (smart defaults + BotAssembler)
 
-Progress: [████████████████████████████████████████████████████████████░░░░░░] 59/67 (~88%)
+Progress: [█████████████████████████████████████████████████████████████░░░░░] 60/67 (~90%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 59
-- Average duration: 6m 15s
-- Total execution time: 369m 00s
+- Total plans completed: 60
+- Average duration: 6m 12s
+- Total execution time: 371m 50s
 
 **By Phase:**
 
@@ -33,11 +33,11 @@ Progress: [███████████████████████
 | 4. Web UI Core + Fleet Dashboard | 8/8 | 40m 37s | 5m 05s |
 | 5. Agent Hierarchy + Event System | 8/8 | 28m 00s | 3m 30s |
 | 6. Skill System + WASM Sandbox | 14/14 | 79m 40s | 5m 41s |
-| 7. Builder System | 3/10 | 16m 12s | 5m 24s |
+| 7. Builder System | 4/10 | 19m 02s | 4m 46s |
 
 **Recent Trend:**
-- Last 5 plans: 06-13 (2m 53s), 06-14 (3m 15s), 07-01 (5m 12s), 07-02 (4m 00s), 07-03 (7m 00s)
-- Trend: Phase 7 persistence plan slightly higher due to migration conflict fix
+- Last 5 plans: 06-14 (3m 15s), 07-01 (5m 12s), 07-02 (4m 00s), 07-03 (7m 00s), 07-04 (2m 50s)
+- Trend: Fast plan -- pure Rust modules with no migration or infra dependencies
 
 *Updated after each plan completion*
 
@@ -309,6 +309,10 @@ Recent decisions affecting current work:
 - [07-03]: Draft list extracts initial_description and phase from state_json via serde_json::Value (no full BuilderState deserialization)
 - [07-03]: PurposeCategory serialized via serde_json::to_string for SQL WHERE matching
 - [07-03]: Migration date prefix 20260215 to avoid sqlx version conflict with 20260214_004
+- [07-04]: All purpose categories default to claude-sonnet-4-20250514 model (temperature differentiates)
+- [07-04]: classify_purpose first-match-wins priority; Creative before Coding means 'write code' classifies as Creative
+- [07-04]: Assembly overwrites default files from create_bot (write-then-overwrite acceptable per research pitfall 9)
+- [07-04]: Skill attachment deferred to Plan 07-06 (skills_attached returns empty Vec)
 
 ### Pending Todos
 
@@ -323,5 +327,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 07-03-PLAN.md (builder draft persistence + memory stores)
+Stopped at: Completed 07-04-PLAN.md (smart defaults + BotAssembler)
 Resume file: None

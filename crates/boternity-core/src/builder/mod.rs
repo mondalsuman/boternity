@@ -6,6 +6,7 @@
 //! and builder memory (past session recall).
 
 pub mod agent;
+pub mod defaults;
 pub mod draft_store;
 pub mod memory;
 pub mod prompt;

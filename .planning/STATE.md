@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 8 of 10 (Workflows + Pipelines)
-Plan: 4 of 13 in current phase
+Plan: 5 of 13 in current phase
 Status: In progress
-Last activity: 2026-02-14 -- Completed 08-03-PLAN.md
+Last activity: 2026-02-14 -- Completed 08-12-PLAN.md
 
-Progress: [███████████████████████████████████████████████████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░] 70/80 (88%)
+Progress: [█████████████████████████████████████████████████████████████████████████░░░░░░░░░░░░░░░░░░░░░░░] 71/80 (89%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 70
-- Average duration: 6m 13s
-- Total execution time: 434m 57s
+- Total plans completed: 71
+- Average duration: 6m 12s
+- Total execution time: 439m 57s
 
 **By Phase:**
 
@@ -34,11 +34,11 @@ Progress: [███████████████████████
 | 5. Agent Hierarchy + Event System | 8/8 | 28m 00s | 3m 30s |
 | 6. Skill System + WASM Sandbox | 14/14 | 79m 40s | 5m 41s |
 | 7. Builder System | 10/10 | 66m 43s | 6m 40s |
-| 8. Workflows + Pipelines | 4/13 | 23m 26s | 5m 52s |
+| 8. Workflows + Pipelines | 5/13 | 28m 26s | 5m 41s |
 
 **Recent Trend:**
-- Last 5 plans: 08-01 (4m 00s), 08-05 (4m 26s), 08-02 (7m 00s), 08-03 (8m 00s)
-- Trend: Core module plans slightly longer due to parallel plan conflict resolution
+- Last 5 plans: 08-05 (4m 26s), 08-02 (7m 00s), 08-03 (8m 00s), 08-12 (5m 00s)
+- Trend: SDK plans slightly faster than core module plans
 
 *Updated after each plan completion*
 
@@ -350,6 +350,10 @@ Recent decisions affecting current work:
 - [08-03]: Oversized step outputs truncated to JSON metadata object (_truncated: true) instead of hard error
 - [08-03]: discover_workflows silently skips unparseable YAML files (logged as warnings)
 - [08-03]: Unified WorkflowContext in context.rs replaces minimal version in expression.rs (no type duplication)
+- [08-12]: TypeScript types mirror Rust serde representation exactly (snake_case, discriminated unions on type field)
+- [08-12]: StepRef class for type-safe dependency tracking in TypeScript builder
+- [08-12]: DAG validation via Kahn's algorithm at build() time in both TS and Rust
+- [08-12]: Rust builder uses consuming self pattern for ergonomic chaining (not &mut self)
 
 ### Pending Todos
 
@@ -364,5 +368,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 08-03-PLAN.md
+Stopped at: Completed 08-12-PLAN.md
 Resume file: None

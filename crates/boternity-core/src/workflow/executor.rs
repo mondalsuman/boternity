@@ -118,7 +118,7 @@ pub struct DagExecutor<R: WorkflowRepository> {
 }
 
 impl<R: WorkflowRepository + 'static> DagExecutor<R> {
-    /// Create a new DAG executor.
+    /// Create a new DAG executor with placeholder execution context.
     pub fn new(
         repo: R,
         event_bus: EventBus,
@@ -129,6 +129,26 @@ impl<R: WorkflowRepository + 'static> DagExecutor<R> {
             event_bus,
             evaluator: WorkflowEvaluator::new(),
             step_runner: Arc::new(StepRunner::new(data_dir)),
+            concurrency_semaphores: DashMap::new(),
+            cancellation_tokens: DashMap::new(),
+        }
+    }
+
+    /// Create a new DAG executor with a real execution context for live service wiring.
+    ///
+    /// The execution context provides concrete implementations for agent chat,
+    /// skill invocation, and HTTP request execution instead of placeholders.
+    pub fn with_execution_context(
+        repo: R,
+        event_bus: EventBus,
+        data_dir: std::path::PathBuf,
+        exec_ctx: Arc<dyn super::step_runner::StepExecutionContext>,
+    ) -> Self {
+        Self {
+            checkpoint: Arc::new(CheckpointManager::new(repo)),
+            event_bus,
+            evaluator: WorkflowEvaluator::new(),
+            step_runner: Arc::new(StepRunner::with_context(data_dir, exec_ctx)),
             concurrency_semaphores: DashMap::new(),
             cancellation_tokens: DashMap::new(),
         }

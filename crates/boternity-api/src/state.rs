@@ -55,8 +55,10 @@ use boternity_infra::vector::embedder::FastEmbedEmbedder;
 use boternity_infra::vector::lance::LanceVectorStore;
 use boternity_infra::vector::memory::LanceVectorMemoryStore;
 use boternity_infra::vector::shared::LanceSharedMemoryStore;
+use boternity_infra::workflow::execution_context::LiveExecutionContext;
 use boternity_infra::workflow::webhook_handler::WebhookRegistry;
 use boternity_core::repository::workflow::WorkflowRepository;
+use boternity_core::workflow::executor::DagExecutor;
 use boternity_types::llm::{FallbackChainConfig, ProviderConfig, ProviderType};
 use boternity_types::workflow::WorkflowRunStatus;
 use boternity_types::secret::SecretScope;
@@ -158,6 +160,8 @@ pub struct AppState {
     pub message_bus: Arc<MessageBus>,
     /// DashMap-backed webhook path-to-config registry for incoming webhooks.
     pub webhook_registry: Arc<WebhookRegistry>,
+    /// DAG executor for running workflows with real service wiring.
+    pub workflow_executor: Arc<DagExecutor<SqliteWorkflowRepository>>,
 }
 
 impl AppState {
@@ -345,11 +349,27 @@ impl AppState {
             }
         }
 
+        // Workflow executor with live execution context (real Agent/Skill/HTTP)
+        let secret_service = Arc::new(secret_service);
+        let live_exec_ctx = Arc::new(LiveExecutionContext::new(
+            data_dir.clone(),
+            Arc::clone(&secret_service),
+            Arc::clone(&skill_store),
+            Arc::clone(&wasm_runtime),
+        ));
+        let executor_repo = SqliteWorkflowRepository::new(db_pool.clone());
+        let workflow_executor = Arc::new(DagExecutor::with_execution_context(
+            executor_repo,
+            event_bus.clone(),
+            data_dir.clone(),
+            live_exec_ctx,
+        ));
+
         Ok(Self {
             bot_service: Arc::new(bot_service),
             soul_service: Arc::new(api_soul_service),
             chat_service: Arc::new(chat_service),
-            secret_service: Arc::new(secret_service),
+            secret_service,
             data_dir,
             db_pool,
             vector_store,
@@ -374,6 +394,7 @@ impl AppState {
             message_repo,
             message_bus,
             webhook_registry,
+            workflow_executor,
         })
     }
 

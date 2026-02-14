@@ -19,7 +19,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 5: Agent Hierarchy + Event System** - Sub-agent spawning (sequential + parallel), depth cap enforcement, message passing, event bus, WebSocket live updates, budget enforcement
 - [x] **Phase 6: Skill System + WASM Sandbox** - Skill definition and execution, local skills, WASM sandbox for untrusted skills, registry discovery, permission model, trust tiers
 - [x] **Phase 7: Builder System** - Universal builder agent, CLI wizard, web builder bot, adaptive question flow, skill creation and attachment via builder
-- [ ] **Phase 8: Workflows + Pipelines** - YAML workflow engine, visual builder, SDK, triggers (manual/cron/event), bot-to-bot communication, workflow composition
+- [x] **Phase 8: Workflows + Pipelines** - YAML workflow engine, visual builder, SDK, triggers (manual/cron/event), bot-to-bot communication, workflow composition
 - [ ] **Phase 9: MCP Integration** - MCP tool consumption, bot-as-MCP-server exposure, MCP bot management interface, tool sanitization, MCP authentication
 - [ ] **Phase 10: Observability + Cost + Polish** - Visual trace explorer, cost dashboards, budget alerts, gRPC + protocol multiplexing, memory browser, config export, bot templates, scriptable CLI, responsive PWA
 
@@ -200,21 +200,21 @@ Plans:
 **Plans**: 15 plans
 
 Plans:
-- [ ] 08-01-PLAN.md -- Domain types (workflow, message, triggers, steps) and Phase 8 workspace dependencies
-- [ ] 08-02-PLAN.md -- SQLite workflow + message persistence (migrations, repository traits, implementations)
-- [ ] 08-03-PLAN.md -- Workflow definition parser, DAG validator, topological wave computation, context model
-- [ ] 08-04-PLAN.md -- Workflow executor with durable checkpointing, step runners for all 8 step types
-- [ ] 08-05-PLAN.md -- JEXL expression evaluator with standard transforms and LLM self-correction retry handler
-- [ ] 08-06-PLAN.md -- Bot-to-bot message bus (direct + pub/sub), loop guard, message handler pipeline
-- [ ] 08-07-PLAN.md -- Trigger system (cron scheduler, webhook handler, EventBus listener, file watcher)
-- [ ] 08-08-PLAN.md -- CLI workflow management + bot-to-bot message commands
-- [ ] 08-09-PLAN.md -- REST API workflow/webhook/message handlers and AppState Phase 8 wiring
-- [ ] 08-10-PLAN.md -- Web UI workflow list/detail pages, React Flow canvas, 8 custom node types, typed edges
-- [ ] 08-11-PLAN.md -- Web UI step config panel, node palette, YAML editor toggle, undo/redo, templates, grouping
-- [ ] 08-12-PLAN.md -- TypeScript SDK package (@boternity/workflow-sdk) and Rust builder helpers
-- [ ] 08-13-PLAN.md -- Live execution visualization, workflow events, service wiring, crash recovery
-- [ ] 08-14-PLAN.md -- [Gap closure] Wire DagExecutor to AppState with real StepExecutionContext, spawn execution from triggers
-- [ ] 08-15-PLAN.md -- [Gap closure] Wire CronScheduler and EventBus listener to call DagExecutor for cron/event triggers
+- [x] 08-01-PLAN.md -- Domain types (workflow, message, triggers, steps) and Phase 8 workspace dependencies
+- [x] 08-02-PLAN.md -- SQLite workflow + message persistence (migrations, repository traits, implementations)
+- [x] 08-03-PLAN.md -- Workflow definition parser, DAG validator, topological wave computation, context model
+- [x] 08-04-PLAN.md -- Workflow executor with durable checkpointing, step runners for all 8 step types
+- [x] 08-05-PLAN.md -- JEXL expression evaluator with standard transforms and LLM self-correction retry handler
+- [x] 08-06-PLAN.md -- Bot-to-bot message bus (direct + pub/sub), loop guard, message handler pipeline
+- [x] 08-07-PLAN.md -- Trigger system (cron scheduler, webhook handler, EventBus listener, file watcher)
+- [x] 08-08-PLAN.md -- CLI workflow management + bot-to-bot message commands
+- [x] 08-09-PLAN.md -- REST API workflow/webhook/message handlers and AppState Phase 8 wiring
+- [x] 08-10-PLAN.md -- Web UI workflow list/detail pages, React Flow canvas, 8 custom node types, typed edges
+- [x] 08-11-PLAN.md -- Web UI step config panel, node palette, YAML editor toggle, undo/redo, templates, grouping
+- [x] 08-12-PLAN.md -- TypeScript SDK package (@boternity/workflow-sdk) and Rust builder helpers
+- [x] 08-13-PLAN.md -- Live execution visualization, workflow events, service wiring, crash recovery
+- [x] 08-14-PLAN.md -- [Gap closure] Wire DagExecutor to AppState with real StepExecutionContext, spawn execution from triggers
+- [x] 08-15-PLAN.md -- [Gap closure] Wire CronScheduler and EventBus listener to call DagExecutor for cron/event triggers
 
 ### Phase 9: MCP Integration
 **Goal**: Bots participate in the MCP ecosystem bidirectionally -- they consume external MCP tools to extend their capabilities and expose themselves as MCP servers so external tools (like Claude Code) can use bots as tools.
@@ -278,6 +278,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 5. Agent Hierarchy + Event System | 8/8 | Complete | 2026-02-13 |
 | 6. Skill System + WASM Sandbox | 14/14 | Complete | 2026-02-14 |
 | 7. Builder System | 10/10 | Complete | 2026-02-14 |
-| 8. Workflows + Pipelines | 13/15 | Gap closure | - |
+| 8. Workflows + Pipelines | 15/15 | Complete | 2026-02-14 |
 | 9. MCP Integration | 0/13 | Not started | - |
 | 10. Observability + Cost + Polish | 0/7 | Not started | - |

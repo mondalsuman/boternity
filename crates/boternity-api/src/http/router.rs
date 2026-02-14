@@ -95,7 +95,28 @@ pub fn build_router(state: AppState) -> Router {
         // Secrets
         .route("/secrets", get(handlers::secret::list_secrets))
         .route("/secrets/{key}", put(handlers::secret::set_secret))
-        .route("/secrets/{key}", delete(handlers::secret::delete_secret));
+        .route("/secrets/{key}", delete(handlers::secret::delete_secret))
+        // Skills (global library)
+        .route("/skills", get(handlers::skill::list_skills))
+        .route("/skills/{name}", get(handlers::skill::get_skill))
+        .route(
+            "/skills/install",
+            post(handlers::skill::install_skill),
+        )
+        // Skills (bot-scoped)
+        .route(
+            "/bots/{id}/skills",
+            get(handlers::skill::list_bot_skills).post(handlers::skill::attach_skill),
+        )
+        .route(
+            "/bots/{id}/skills/{name}",
+            delete(handlers::skill::detach_skill).patch(handlers::skill::update_skill_config),
+        )
+        // Registry
+        .route(
+            "/registry/search",
+            get(handlers::skill::search_registry),
+        );
 
     let mut router = Router::new()
         .nest("/api/v1", api_routes)

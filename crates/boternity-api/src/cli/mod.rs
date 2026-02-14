@@ -11,6 +11,8 @@ pub mod provider;
 pub mod secret;
 pub mod session;
 pub mod shared_memory;
+pub mod skill;
+pub mod skill_browser;
 pub mod soul;
 pub mod status;
 pub mod storage;
@@ -108,6 +110,12 @@ pub enum Commands {
     SharedMemory {
         #[command(subcommand)]
         action: shared_memory::SharedMemoryCommand,
+    },
+
+    /// Manage skills (create, install, remove, list, inspect, browse).
+    Skill {
+        #[command(subcommand)]
+        action: skill::SkillCommand,
     },
 
     /// System health check for a bot.

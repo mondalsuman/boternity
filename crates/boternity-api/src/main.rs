@@ -214,6 +214,10 @@ async fn main() -> anyhow::Result<()> {
             .await?;
         }
 
+        Commands::Skill { action } => {
+            cli::skill::handle_skill_command(action, &state, cli.json).await?;
+        }
+
         Commands::Serve { port, host } => {
             // Ensure an API key exists, print it if new
             let api_key = http::extractors::auth::ensure_api_key(&state).await?;

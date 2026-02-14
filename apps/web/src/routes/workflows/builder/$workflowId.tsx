@@ -24,14 +24,20 @@ import {
   Ungroup,
   LayoutTemplate,
   Play,
+  Square,
   FlaskConical,
   AlignVerticalSpaceAround,
+  CheckCircle2,
+  XCircle,
+  Clock,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Node, Edge } from "@xyflow/react";
 import { ReactFlowProvider } from "@xyflow/react";
 
-import { fetchWorkflow, updateWorkflow } from "@/lib/api/workflows";
+import { fetchWorkflow, updateWorkflow, triggerWorkflow, cancelRun } from "@/lib/api/workflows";
+import { useAgentWebSocket } from "@/hooks/use-websocket";
+import { useWorkflowEvents } from "@/hooks/use-workflow-events";
 import {
   WorkflowCanvas,
   definitionToFlow,
@@ -161,6 +167,14 @@ function WorkflowBuilderPage() {
   // Canvas imperative handle
   const canvasHandleRef = useRef<WorkflowCanvasHandle | null>(null);
 
+  // WebSocket for live execution events
+  const wsUrl = `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/ws/events`;
+  const ws = useAgentWebSocket(wsUrl);
+  const execution = useWorkflowEvents({
+    onEvent: ws.onEvent,
+    sendCommand: ws.sendCommand,
+  });
+
   const {
     data: workflow,
     isLoading,
@@ -182,6 +196,49 @@ function WorkflowBuilderPage() {
       toast.error(`Failed to save: ${err.message}`);
     },
   });
+
+  // Run workflow mutation
+  const runMutation = useMutation({
+    mutationFn: () => triggerWorkflow(workflowId),
+    onSuccess: (data) => {
+      execution.startTracking(data.run_id);
+      toast.success("Workflow started");
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to run: ${err.message}`);
+    },
+  });
+
+  const handleRunWorkflow = useCallback(() => {
+    if (execution.isRunning) return;
+    runMutation.mutate();
+  }, [runMutation, execution.isRunning]);
+
+  const handleCancelRun = useCallback(() => {
+    if (execution.runId) {
+      cancelRun(execution.runId)
+        .then(() => {
+          execution.stopTracking();
+          toast.success("Workflow cancelled");
+        })
+        .catch((err: Error) => {
+          toast.error(`Failed to cancel: ${err.message}`);
+        });
+    }
+  }, [execution]);
+
+  const handleDismissExecution = useCallback(() => {
+    execution.reset();
+  }, [execution]);
+
+  // Test step: dry run a single selected step
+  const handleTestStep = useCallback(() => {
+    if (!selectedNode) {
+      toast.error("Select a step to test");
+      return;
+    }
+    toast.info(`Test step "${selectedNode.data?.label}" - dry run not yet wired to backend`);
+  }, [selectedNode]);
 
   const handleCanvasChange = useCallback(
     (nodes: Node[], edges: Edge[]) => {
@@ -398,17 +455,28 @@ function WorkflowBuilderPage() {
 
         <div className="w-px h-6 bg-border mx-1" />
 
-        {/* Placeholder action buttons */}
+        {/* Execution actions */}
         <ToolbarButton
           icon={FlaskConical}
           label="Test Step"
-          disabled
+          onClick={handleTestStep}
+          disabled={!selectedNode || execution.isRunning}
         />
-        <ToolbarButton
-          icon={Play}
-          label="Run"
-          disabled
-        />
+        {execution.isRunning ? (
+          <ToolbarButton
+            icon={Square}
+            label="Cancel"
+            onClick={handleCancelRun}
+            variant="outline"
+          />
+        ) : (
+          <ToolbarButton
+            icon={Play}
+            label="Run"
+            onClick={handleRunWorkflow}
+            disabled={runMutation.isPending}
+          />
+        )}
 
         <div className="w-px h-6 bg-border mx-1" />
 
@@ -429,6 +497,20 @@ function WorkflowBuilderPage() {
         </Button>
       </div>
 
+      {/* Execution status bar */}
+      {execution.runStatus && (
+        <ExecutionStatusBar
+          runStatus={execution.runStatus}
+          runId={execution.runId}
+          stepStatuses={execution.stepStatuses}
+          totalDuration={execution.totalDuration}
+          totalStepsCompleted={execution.totalStepsCompleted}
+          runError={execution.runError}
+          isRunning={execution.isRunning}
+          onDismiss={handleDismissExecution}
+        />
+      )}
+
       {/* Main content area */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left sidebar: Node palette (canvas mode only) */}
@@ -444,6 +526,7 @@ function WorkflowBuilderPage() {
                 onChange={handleCanvasChange}
                 onNodeSelect={handleNodeSelect}
                 canvasRef={canvasHandleRef}
+                stepStatuses={execution.stepStatuses}
               />
             </ReactFlowProvider>
           ) : (
@@ -470,6 +553,116 @@ function WorkflowBuilderPage() {
         onOpenChange={setTemplatesOpen}
         onSelect={handleTemplateSelect}
       />
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Execution status bar component
+// ---------------------------------------------------------------------------
+
+function ExecutionStatusBar({
+  runStatus,
+  runId,
+  stepStatuses,
+  totalDuration,
+  totalStepsCompleted,
+  runError,
+  isRunning,
+  onDismiss,
+}: {
+  runStatus: string;
+  runId: string | null;
+  stepStatuses: Map<string, { status: string }>;
+  totalDuration: number | null;
+  totalStepsCompleted: number | null;
+  runError: string | null;
+  isRunning: boolean;
+  onDismiss: () => void;
+}) {
+  const completedCount = [...stepStatuses.values()].filter(
+    (s) => s.status === "completed",
+  ).length;
+  const failedCount = [...stepStatuses.values()].filter(
+    (s) => s.status === "failed",
+  ).length;
+  const runningCount = [...stepStatuses.values()].filter(
+    (s) => s.status === "running",
+  ).length;
+
+  const bgClass =
+    runStatus === "completed"
+      ? "bg-green-500/10 border-green-500/30"
+      : runStatus === "failed"
+        ? "bg-red-500/10 border-red-500/30"
+        : runStatus === "paused"
+          ? "bg-yellow-500/10 border-yellow-500/30"
+          : "bg-blue-500/10 border-blue-500/30";
+
+  const StatusIcon =
+    runStatus === "completed"
+      ? CheckCircle2
+      : runStatus === "failed"
+        ? XCircle
+        : runStatus === "paused"
+          ? Clock
+          : Loader2;
+
+  const iconClass =
+    runStatus === "completed"
+      ? "text-green-500"
+      : runStatus === "failed"
+        ? "text-red-500"
+        : runStatus === "paused"
+          ? "text-yellow-500"
+          : "text-blue-500 animate-spin";
+
+  return (
+    <div
+      className={`flex items-center gap-3 px-3 py-1.5 border-b text-xs shrink-0 ${bgClass}`}
+    >
+      <StatusIcon className={`size-4 ${iconClass}`} />
+
+      <span className="font-medium capitalize">{runStatus}</span>
+
+      {isRunning && (
+        <span className="text-muted-foreground">
+          {runningCount > 0 && `${runningCount} running`}
+          {completedCount > 0 && ` / ${completedCount} completed`}
+        </span>
+      )}
+
+      {!isRunning && runStatus === "completed" && (
+        <span className="text-muted-foreground">
+          {totalStepsCompleted} steps in{" "}
+          {totalDuration != null ? `${(totalDuration / 1000).toFixed(1)}s` : "?"}
+        </span>
+      )}
+
+      {!isRunning && runStatus === "failed" && runError && (
+        <span className="text-red-600 dark:text-red-400 truncate max-w-md" title={runError}>
+          {runError}
+        </span>
+      )}
+
+      {failedCount > 0 && (
+        <span className="text-red-500">{failedCount} failed</span>
+      )}
+
+      {runId && (
+        <span className="text-muted-foreground/60 ml-auto font-mono">
+          {runId.slice(0, 8)}
+        </span>
+      )}
+
+      {!isRunning && (
+        <button
+          onClick={onDismiss}
+          className="ml-1 text-muted-foreground hover:text-foreground transition-colors"
+        >
+          Dismiss
+        </button>
+      )}
     </div>
   );
 }

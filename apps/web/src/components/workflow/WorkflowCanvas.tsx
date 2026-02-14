@@ -50,7 +50,8 @@ import { ApprovalNode } from "./nodes/ApprovalNode";
 import { SubWorkflowNode } from "./nodes/SubWorkflowNode";
 import { TypedEdge } from "./edges/TypedEdge";
 
-import type { StepDefinition, StepType, WorkflowDefinition } from "@/types/workflow";
+import type { StepDefinition, StepType, WorkflowDefinition, WorkflowStepStatus } from "@/types/workflow";
+import type { StepExecutionInfo } from "@/hooks/use-workflow-events";
 import { useUndoRedo } from "@/hooks/use-undo-redo";
 
 // ---------------------------------------------------------------------------
@@ -316,6 +317,8 @@ interface WorkflowCanvasProps {
   onAutoLayout?: () => void;
   /** Ref for imperative methods (autoLayout, undo, redo, groupSelected, ungroupSelected). */
   canvasRef?: React.Ref<WorkflowCanvasHandle>;
+  /** Live execution step statuses from workflow events. */
+  stepStatuses?: Map<string, StepExecutionInfo>;
 }
 
 export interface WorkflowCanvasHandle {
@@ -334,12 +337,33 @@ export function WorkflowCanvas({
   onChange,
   onNodeSelect,
   canvasRef,
+  stepStatuses,
 }: WorkflowCanvasProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const { screenToFlowPosition } = useReactFlow();
   const wrapperRef = useRef<HTMLDivElement>(null);
   const undoRedo = useUndoRedo<CanvasSnapshot>();
+
+  // Apply live execution statuses to node data when stepStatuses changes.
+  // This updates the `status` field on each node's data, which custom nodes
+  // use to render status-colored borders via nodeStatusClass().
+  useEffect(() => {
+    if (!stepStatuses || stepStatuses.size === 0) return;
+
+    setNodes((currentNodes) =>
+      currentNodes.map((node) => {
+        const info = stepStatuses.get(node.id);
+        if (info && node.data?.status !== info.status) {
+          return {
+            ...node,
+            data: { ...node.data, status: info.status },
+          };
+        }
+        return node;
+      }),
+    );
+  }, [stepStatuses, setNodes]);
 
   // Snapshot helper
   const takeSnapshot = useCallback(() => {
@@ -582,6 +606,47 @@ export function WorkflowCanvas({
       (canvasRef as React.MutableRefObject<WorkflowCanvasHandle | null>).current = handle;
     }
   }, [canvasRef, handleAutoLayout, handleUndo, handleRedo, undoRedo.canUndo, undoRedo.canRedo, groupSelected, ungroupSelected]);
+
+  // Apply animated edge styles when source step is completed and target is running.
+  // This creates the visual "data flowing" effect between connected steps.
+  useEffect(() => {
+    if (!stepStatuses || stepStatuses.size === 0) return;
+
+    setEdges((currentEdges) =>
+      currentEdges.map((edge) => {
+        const sourceInfo = stepStatuses.get(edge.source);
+        const targetInfo = stepStatuses.get(edge.target);
+
+        const isFlowing =
+          sourceInfo?.status === "completed" &&
+          targetInfo?.status === "running";
+
+        if (isFlowing && !edge.animated) {
+          return {
+            ...edge,
+            animated: true,
+            style: { stroke: "#22c55e", strokeWidth: 2.5 },
+          };
+        }
+
+        if (!isFlowing && edge.animated) {
+          // Completed connections get a subtle green tint
+          const bothDone =
+            sourceInfo?.status === "completed" &&
+            targetInfo?.status === "completed";
+          return {
+            ...edge,
+            animated: false,
+            style: bothDone
+              ? { stroke: "#22c55e80", strokeWidth: 1.5 }
+              : undefined,
+          };
+        }
+
+        return edge;
+      }),
+    );
+  }, [stepStatuses, setEdges]);
 
   return (
     <div ref={wrapperRef} className="w-full h-full relative">

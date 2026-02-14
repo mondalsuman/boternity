@@ -2,8 +2,9 @@
 //!
 //! Receives incoming webhook requests, verifies authentication
 //! (HMAC-SHA256 or bearer token) via the `WebhookRegistry`, and
-//! creates a workflow run for the matched webhook.
+//! spawns a background workflow execution via `DagExecutor`.
 
+use std::sync::Arc;
 use std::time::Instant;
 
 use axum::body::Bytes;
@@ -13,7 +14,7 @@ use axum::Json;
 use uuid::Uuid;
 
 use boternity_core::repository::workflow::WorkflowRepository;
-use boternity_types::workflow::WorkflowRunStatus;
+use boternity_core::workflow::executor::WorkflowExecutor;
 
 use crate::http::error::AppError;
 use crate::http::response::ApiResponse;
@@ -22,8 +23,8 @@ use crate::state::AppState;
 /// POST /api/v1/webhooks/:path - Receive an incoming webhook.
 ///
 /// Looks up the webhook path in the `WebhookRegistry`, verifies the
-/// request authentication, then creates a new workflow run with the
-/// webhook payload as the trigger payload.
+/// request authentication, then spawns a background workflow execution
+/// via `DagExecutor`. The executor creates its own `WorkflowRun` record.
 ///
 /// Authentication is determined by the webhook registration:
 /// - **HMAC-SHA256**: Reads `X-Hub-Signature-256` header
@@ -81,48 +82,54 @@ pub async fn receive_webhook(
             ))
         })?;
 
-    // Create a new run
-    let run_id = Uuid::now_v7();
-    let run = boternity_types::workflow::WorkflowRun {
-        id: run_id,
-        workflow_id: def.id,
-        workflow_name: def.name.clone(),
-        status: WorkflowRunStatus::Pending,
-        trigger_type: "webhook".to_string(),
-        trigger_payload: if payload.is_null() { None } else { Some(payload) },
-        context: serde_json::json!({"steps": {}}),
-        started_at: chrono::Utc::now(),
-        completed_at: None,
-        error: None,
-        concurrency_key: Some(def.name.clone()),
-    };
-
-    state
-        .workflow_repo
-        .create_run(&run)
-        .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+    // Prepare trigger payload
+    let trigger_payload = if payload.is_null() { None } else { Some(payload) };
 
     tracing::info!(
         webhook_path = %webhook_path,
         workflow_id = %def.id,
-        run_id = %run_id,
-        "Webhook triggered workflow run"
+        "Webhook triggering workflow execution"
     );
+
+    // Spawn background execution task -- the executor creates its own run record
+    let executor = Arc::clone(&state.workflow_executor);
+    let def_clone = def.clone();
+    let trigger_payload_clone = trigger_payload.clone();
+    tokio::spawn(async move {
+        match executor
+            .execute(&def_clone, "webhook", trigger_payload_clone)
+            .await
+        {
+            Ok(result) => {
+                tracing::info!(
+                    run_id = %result.run_id,
+                    status = ?result.status,
+                    steps = result.completed_steps.len(),
+                    "webhook-triggered workflow execution completed"
+                );
+            }
+            Err(e) => {
+                tracing::error!(
+                    workflow_id = %def_clone.id,
+                    error = %e,
+                    "webhook-triggered workflow execution failed"
+                );
+            }
+        }
+    });
 
     let elapsed = start.elapsed().as_millis() as u64;
     let resp = ApiResponse::success(
         serde_json::json!({
-            "run_id": run_id.to_string(),
             "workflow_id": def.id.to_string(),
             "workflow_name": def.name,
-            "status": "pending",
+            "status": "submitted",
             "trigger": "webhook",
         }),
         request_id,
         elapsed,
     )
-    .with_link("run", &format!("/api/v1/runs/{}", run_id))
+    .with_link("runs", &format!("/api/v1/workflows/{}/runs", def.id))
     .with_link("workflow", &format!("/api/v1/workflows/{}", def.id));
 
     Ok(Json(resp))

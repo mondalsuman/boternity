@@ -11,7 +11,10 @@ use axum::{Json, Router};
 use serde::Deserialize;
 use uuid::Uuid;
 
+use std::sync::Arc;
+
 use boternity_core::repository::workflow::WorkflowRepository;
+use boternity_core::workflow::executor::WorkflowExecutor;
 use boternity_types::workflow::{WorkflowDefinition, WorkflowRunStatus};
 
 use crate::http::error::AppError;
@@ -199,6 +202,11 @@ pub async fn delete_workflow(
 // ---------------------------------------------------------------------------
 
 /// POST /api/v1/workflows/:id/trigger - Manually trigger a workflow run.
+///
+/// Submits the workflow for background execution via `DagExecutor`. The executor
+/// creates its own `WorkflowRun` record (status: Running) and manages the full
+/// lifecycle. The response returns immediately with a "submitted" status; the
+/// actual run can be found via `GET /workflows/:id/runs`.
 pub async fn trigger_workflow(
     State(state): State<AppState>,
     _auth: Authenticated,
@@ -216,33 +224,49 @@ pub async fn trigger_workflow(
         .map_err(|e| AppError::Internal(e.to_string()))?
         .ok_or_else(|| AppError::Internal("Workflow not found".to_string()))?;
 
-    // Create a new run record
-    let run_id = Uuid::now_v7();
-    let run = boternity_types::workflow::WorkflowRun {
-        id: run_id,
-        workflow_id: def.id,
-        workflow_name: def.name.clone(),
-        status: WorkflowRunStatus::Pending,
-        trigger_type: "manual".to_string(),
-        trigger_payload: if payload.is_null() { None } else { Some(payload) },
-        context: serde_json::json!({"steps": {}}),
-        started_at: chrono::Utc::now(),
-        completed_at: None,
-        error: None,
-        concurrency_key: Some(def.name.clone()),
-    };
+    // Prepare trigger payload
+    let trigger_payload = if payload.is_null() { None } else { Some(payload) };
 
-    state
-        .workflow_repo
-        .create_run(&run)
-        .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+    // Spawn background execution task -- the executor creates its own run record
+    let executor = Arc::clone(&state.workflow_executor);
+    let def_clone = def.clone();
+    let trigger_payload_clone = trigger_payload.clone();
+    tokio::spawn(async move {
+        match executor
+            .execute(&def_clone, "manual", trigger_payload_clone)
+            .await
+        {
+            Ok(result) => {
+                tracing::info!(
+                    run_id = %result.run_id,
+                    status = ?result.status,
+                    steps = result.completed_steps.len(),
+                    "workflow execution completed"
+                );
+            }
+            Err(e) => {
+                tracing::error!(
+                    workflow_id = %def_clone.id,
+                    error = %e,
+                    "workflow execution failed"
+                );
+            }
+        }
+    });
 
     let elapsed = start.elapsed().as_millis() as u64;
-    let run_json = serde_json::to_value(&run).unwrap();
-    let resp = ApiResponse::success(run_json, request_id, elapsed)
-        .with_link("self", &format!("/api/v1/runs/{}", run_id))
-        .with_link("workflow", &format!("/api/v1/workflows/{}", def.id));
+    let resp = ApiResponse::success(
+        serde_json::json!({
+            "workflow_id": def.id.to_string(),
+            "workflow_name": def.name,
+            "status": "submitted",
+            "trigger": "manual",
+        }),
+        request_id,
+        elapsed,
+    )
+    .with_link("runs", &format!("/api/v1/workflows/{}/runs", def.id))
+    .with_link("workflow", &format!("/api/v1/workflows/{}", def.id));
 
     Ok(Json(resp))
 }
@@ -315,6 +339,9 @@ pub async fn get_run(
 }
 
 /// POST /api/v1/runs/:run_id/approve - Approve a paused workflow run.
+///
+/// After transitioning the run to Running, spawns a background task that
+/// calls `DagExecutor::resume()` to continue execution from the last checkpoint.
 pub async fn approve_run(
     State(state): State<AppState>,
     _auth: Authenticated,
@@ -338,12 +365,42 @@ pub async fn approve_run(
         )));
     }
 
-    // Transition to running
-    state
+    // Load the workflow definition for the executor
+    let def = state
         .workflow_repo
-        .update_run_status(&run_id, WorkflowRunStatus::Running, None, None)
+        .get_definition(&run.workflow_id)
         .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+        .map_err(|e| AppError::Internal(e.to_string()))?
+        .ok_or_else(|| {
+            AppError::Internal(format!(
+                "Workflow definition {} not found for run {}",
+                run.workflow_id, run_id
+            ))
+        })?;
+
+    // Spawn background task to resume execution from the last checkpoint.
+    // The executor's resume() method transitions the run status to Running
+    // internally, so we don't need to call update_run_status here.
+    let executor = Arc::clone(&state.workflow_executor);
+    tokio::spawn(async move {
+        match executor.resume(run_id, &def).await {
+            Ok(result) => {
+                tracing::info!(
+                    run_id = %result.run_id,
+                    status = ?result.status,
+                    steps = result.completed_steps.len(),
+                    "resumed workflow execution completed"
+                );
+            }
+            Err(e) => {
+                tracing::error!(
+                    run_id = %run_id,
+                    error = %e,
+                    "resumed workflow execution failed"
+                );
+            }
+        }
+    });
 
     let elapsed = start.elapsed().as_millis() as u64;
     let resp = ApiResponse::success(

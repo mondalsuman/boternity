@@ -11,13 +11,16 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as WorkflowsIndexRouteImport } from './routes/workflows/index'
 import { Route as ChatIndexRouteImport } from './routes/chat/index'
 import { Route as BuilderIndexRouteImport } from './routes/builder/index'
+import { Route as WorkflowsWorkflowIdRouteImport } from './routes/workflows/$workflowId'
 import { Route as ChatSessionIdRouteImport } from './routes/chat/$sessionId'
 import { Route as BuilderWizardRouteImport } from './routes/builder/wizard'
 import { Route as BuilderForgeRouteImport } from './routes/builder/forge'
 import { Route as BotsBotIdRouteRouteImport } from './routes/bots/$botId/route'
 import { Route as BotsBotIdIndexRouteImport } from './routes/bots/$botId/index'
+import { Route as WorkflowsBuilderWorkflowIdRouteImport } from './routes/workflows/builder/$workflowId'
 import { Route as BotsBotIdSoulRouteImport } from './routes/bots/$botId/soul'
 import { Route as BotsBotIdSkillsRouteImport } from './routes/bots/$botId/skills'
 import { Route as BotsBotIdSettingsRouteImport } from './routes/bots/$botId/settings'
@@ -33,6 +36,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WorkflowsIndexRoute = WorkflowsIndexRouteImport.update({
+  id: '/workflows/',
+  path: '/workflows/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ChatIndexRoute = ChatIndexRouteImport.update({
   id: '/chat/',
   path: '/chat/',
@@ -41,6 +49,11 @@ const ChatIndexRoute = ChatIndexRouteImport.update({
 const BuilderIndexRoute = BuilderIndexRouteImport.update({
   id: '/builder/',
   path: '/builder/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkflowsWorkflowIdRoute = WorkflowsWorkflowIdRouteImport.update({
+  id: '/workflows/$workflowId',
+  path: '/workflows/$workflowId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ChatSessionIdRoute = ChatSessionIdRouteImport.update({
@@ -68,6 +81,12 @@ const BotsBotIdIndexRoute = BotsBotIdIndexRouteImport.update({
   path: '/',
   getParentRoute: () => BotsBotIdRouteRoute,
 } as any)
+const WorkflowsBuilderWorkflowIdRoute =
+  WorkflowsBuilderWorkflowIdRouteImport.update({
+    id: '/workflows/builder/$workflowId',
+    path: '/workflows/builder/$workflowId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const BotsBotIdSoulRoute = BotsBotIdSoulRouteImport.update({
   id: '/soul',
   path: '/soul',
@@ -96,12 +115,15 @@ export interface FileRoutesByFullPath {
   '/builder/forge': typeof BuilderForgeRoute
   '/builder/wizard': typeof BuilderWizardRoute
   '/chat/$sessionId': typeof ChatSessionIdRoute
+  '/workflows/$workflowId': typeof WorkflowsWorkflowIdRoute
   '/builder/': typeof BuilderIndexRoute
   '/chat/': typeof ChatIndexRoute
+  '/workflows/': typeof WorkflowsIndexRoute
   '/bots/$botId/chat': typeof BotsBotIdChatRoute
   '/bots/$botId/settings': typeof BotsBotIdSettingsRoute
   '/bots/$botId/skills': typeof BotsBotIdSkillsRoute
   '/bots/$botId/soul': typeof BotsBotIdSoulRoute
+  '/workflows/builder/$workflowId': typeof WorkflowsBuilderWorkflowIdRoute
   '/bots/$botId/': typeof BotsBotIdIndexRoute
 }
 export interface FileRoutesByTo {
@@ -110,12 +132,15 @@ export interface FileRoutesByTo {
   '/builder/forge': typeof BuilderForgeRoute
   '/builder/wizard': typeof BuilderWizardRoute
   '/chat/$sessionId': typeof ChatSessionIdRoute
+  '/workflows/$workflowId': typeof WorkflowsWorkflowIdRoute
   '/builder': typeof BuilderIndexRoute
   '/chat': typeof ChatIndexRoute
+  '/workflows': typeof WorkflowsIndexRoute
   '/bots/$botId/chat': typeof BotsBotIdChatRoute
   '/bots/$botId/settings': typeof BotsBotIdSettingsRoute
   '/bots/$botId/skills': typeof BotsBotIdSkillsRoute
   '/bots/$botId/soul': typeof BotsBotIdSoulRoute
+  '/workflows/builder/$workflowId': typeof WorkflowsBuilderWorkflowIdRoute
   '/bots/$botId': typeof BotsBotIdIndexRoute
 }
 export interface FileRoutesById {
@@ -126,12 +151,15 @@ export interface FileRoutesById {
   '/builder/forge': typeof BuilderForgeRoute
   '/builder/wizard': typeof BuilderWizardRoute
   '/chat/$sessionId': typeof ChatSessionIdRoute
+  '/workflows/$workflowId': typeof WorkflowsWorkflowIdRoute
   '/builder/': typeof BuilderIndexRoute
   '/chat/': typeof ChatIndexRoute
+  '/workflows/': typeof WorkflowsIndexRoute
   '/bots/$botId/chat': typeof BotsBotIdChatRoute
   '/bots/$botId/settings': typeof BotsBotIdSettingsRoute
   '/bots/$botId/skills': typeof BotsBotIdSkillsRoute
   '/bots/$botId/soul': typeof BotsBotIdSoulRoute
+  '/workflows/builder/$workflowId': typeof WorkflowsBuilderWorkflowIdRoute
   '/bots/$botId/': typeof BotsBotIdIndexRoute
 }
 export interface FileRouteTypes {
@@ -143,12 +171,15 @@ export interface FileRouteTypes {
     | '/builder/forge'
     | '/builder/wizard'
     | '/chat/$sessionId'
+    | '/workflows/$workflowId'
     | '/builder/'
     | '/chat/'
+    | '/workflows/'
     | '/bots/$botId/chat'
     | '/bots/$botId/settings'
     | '/bots/$botId/skills'
     | '/bots/$botId/soul'
+    | '/workflows/builder/$workflowId'
     | '/bots/$botId/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -157,12 +188,15 @@ export interface FileRouteTypes {
     | '/builder/forge'
     | '/builder/wizard'
     | '/chat/$sessionId'
+    | '/workflows/$workflowId'
     | '/builder'
     | '/chat'
+    | '/workflows'
     | '/bots/$botId/chat'
     | '/bots/$botId/settings'
     | '/bots/$botId/skills'
     | '/bots/$botId/soul'
+    | '/workflows/builder/$workflowId'
     | '/bots/$botId'
   id:
     | '__root__'
@@ -172,12 +206,15 @@ export interface FileRouteTypes {
     | '/builder/forge'
     | '/builder/wizard'
     | '/chat/$sessionId'
+    | '/workflows/$workflowId'
     | '/builder/'
     | '/chat/'
+    | '/workflows/'
     | '/bots/$botId/chat'
     | '/bots/$botId/settings'
     | '/bots/$botId/skills'
     | '/bots/$botId/soul'
+    | '/workflows/builder/$workflowId'
     | '/bots/$botId/'
   fileRoutesById: FileRoutesById
 }
@@ -188,8 +225,11 @@ export interface RootRouteChildren {
   BuilderForgeRoute: typeof BuilderForgeRoute
   BuilderWizardRoute: typeof BuilderWizardRoute
   ChatSessionIdRoute: typeof ChatSessionIdRoute
+  WorkflowsWorkflowIdRoute: typeof WorkflowsWorkflowIdRoute
   BuilderIndexRoute: typeof BuilderIndexRoute
   ChatIndexRoute: typeof ChatIndexRoute
+  WorkflowsIndexRoute: typeof WorkflowsIndexRoute
+  WorkflowsBuilderWorkflowIdRoute: typeof WorkflowsBuilderWorkflowIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -208,6 +248,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/workflows/': {
+      id: '/workflows/'
+      path: '/workflows'
+      fullPath: '/workflows/'
+      preLoaderRoute: typeof WorkflowsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/chat/': {
       id: '/chat/'
       path: '/chat'
@@ -220,6 +267,13 @@ declare module '@tanstack/react-router' {
       path: '/builder'
       fullPath: '/builder/'
       preLoaderRoute: typeof BuilderIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/workflows/$workflowId': {
+      id: '/workflows/$workflowId'
+      path: '/workflows/$workflowId'
+      fullPath: '/workflows/$workflowId'
+      preLoaderRoute: typeof WorkflowsWorkflowIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/chat/$sessionId': {
@@ -256,6 +310,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/bots/$botId/'
       preLoaderRoute: typeof BotsBotIdIndexRouteImport
       parentRoute: typeof BotsBotIdRouteRoute
+    }
+    '/workflows/builder/$workflowId': {
+      id: '/workflows/builder/$workflowId'
+      path: '/workflows/builder/$workflowId'
+      fullPath: '/workflows/builder/$workflowId'
+      preLoaderRoute: typeof WorkflowsBuilderWorkflowIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/bots/$botId/soul': {
       id: '/bots/$botId/soul'
@@ -315,8 +376,11 @@ const rootRouteChildren: RootRouteChildren = {
   BuilderForgeRoute: BuilderForgeRoute,
   BuilderWizardRoute: BuilderWizardRoute,
   ChatSessionIdRoute: ChatSessionIdRoute,
+  WorkflowsWorkflowIdRoute: WorkflowsWorkflowIdRoute,
   BuilderIndexRoute: BuilderIndexRoute,
   ChatIndexRoute: ChatIndexRoute,
+  WorkflowsIndexRoute: WorkflowsIndexRoute,
+  WorkflowsBuilderWorkflowIdRoute: WorkflowsBuilderWorkflowIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

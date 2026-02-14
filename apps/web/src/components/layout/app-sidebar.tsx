@@ -6,6 +6,7 @@ import {
   MessageCircle,
   Settings,
   Wand2,
+  Workflow,
 } from "lucide-react";
 import { apiFetch } from "@/lib/api-client";
 import type { Bot as BotType } from "@/types/bot";
@@ -152,6 +153,27 @@ export function AppSidebar() {
                   <Link to="/builder">
                     <Wand2 />
                     <span>Create Bot</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Workflows */}
+        <SidebarGroup>
+          <SidebarGroupLabel>Workflows</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  tooltip="Workflows"
+                  isActive={currentPath.startsWith("/workflows")}
+                >
+                  <Link to="/workflows">
+                    <Workflow />
+                    <span>Workflows</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

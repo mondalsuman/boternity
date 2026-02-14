@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-10)
 
 **Core value:** A user can create a bot with a distinct identity, give it skills through an interactive builder, and have meaningful parallel conversations with it -- all running locally with full observability.
-**Current focus:** Phase 8 (Workflows + Pipelines) - Gap closure
+**Current focus:** Phase 8 complete. Ready for Phase 9 (Observability + Monitoring).
 
 ## Current Position
 
 Phase: 8 of 10 (Workflows + Pipelines)
-Plan: 14 of 15 in current phase (gap closure)
-Status: In progress
-Last activity: 2026-02-14 -- Completed 08-14-PLAN.md
+Plan: 15 of 15 in current phase (gap closure)
+Status: Phase complete
+Last activity: 2026-02-14 -- Completed 08-15-PLAN.md
 
-Progress: [██████████████████████████████████████████████████████████████████████████████████████████████████████] 81/82 (99%)
+Progress: [████████████████████████████████████████████████████████████████████████████████████████████████████████] 82/82 (100%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 81
-- Average duration: 6m 14s
-- Total execution time: 505m 34s
+- Total plans completed: 82
+- Average duration: 6m 11s
+- Total execution time: 507m 53s
 
 **By Phase:**
 
@@ -34,11 +34,11 @@ Progress: [███████████████████████
 | 5. Agent Hierarchy + Event System | 8/8 | 28m 00s | 3m 30s |
 | 6. Skill System + WASM Sandbox | 14/14 | 79m 40s | 5m 41s |
 | 7. Builder System | 10/10 | 66m 43s | 6m 40s |
-| 8. Workflows + Pipelines | 14/15 | 94m 03s | 6m 43s |
+| 8. Workflows + Pipelines | 15/15 | 96m 22s | 6m 25s |
 
 **Recent Trend:**
-- Last 5 plans: 08-08 (7m 00s), 08-10 (7m 33s), 08-11 (5m 03s), 08-13 (8m 26s), 08-14 (6m 00s)
-- Trend: Gap closure plans execute at or below average
+- Last 5 plans: 08-10 (7m 33s), 08-11 (5m 03s), 08-13 (8m 26s), 08-14 (6m 00s), 08-15 (2m 19s)
+- Trend: Final gap closure plan executed well below average
 
 *Updated after each plan completion*
 
@@ -390,6 +390,9 @@ Recent decisions affecting current work:
 - [08-14]: DagExecutor::with_execution_context() as separate constructor preserving PlaceholderExecutionContext default for tests
 - [08-14]: trigger_workflow/receive_webhook return "submitted" immediately; executor creates WorkflowRun internally (async job pattern)
 - [08-14]: LiveExecutionContext reuses create_single_provider auto-detection pattern for Anthropic/Bedrock keys
+- [08-15]: CronCallback clones Arc<DagExecutor> and Arc<SqliteWorkflowRepository> per fire (Fn requires reusable closures)
+- [08-15]: Event type extracted via serde_json::to_value + ["type"] field (AgentEvent has no event_type() accessor)
+- [08-15]: Event triggers re-fetched each event for dynamic trigger registration pickup without listener restart
 
 ### Pending Todos
 
@@ -404,5 +407,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 08-14-PLAN.md (gap closure)
+Stopped at: Completed 08-15-PLAN.md (Phase 8 complete)
 Resume file: None

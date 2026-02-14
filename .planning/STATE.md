@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 7 of 10 (Builder System)
-Plan: 6 of 10 in current phase (6 complete: 07-01, 07-02, 07-03, 07-04, 07-05, 07-06)
+Plan: 7 of 10 in current phase (7 complete: 07-01, 07-02, 07-03, 07-04, 07-05, 07-06, 07-07)
 Status: In progress
-Last activity: 2026-02-14 -- Completed 07-06-PLAN.md (SkillBuilder + BotAssembler skill attachment)
+Last activity: 2026-02-14 -- Completed 07-07-PLAN.md (CLI builder wizard + standalone skill create)
 
-Progress: [███████████████████████████████████████████████████████████████░░░░] 62/67 (~93%)
+Progress: [████████████████████████████████████████████████████████████████░░░] 63/67 (~94%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 62
+- Total plans completed: 63
 - Average duration: 6m 10s
-- Total execution time: 381m 50s
+- Total execution time: 388m 31s
 
 **By Phase:**
 
@@ -33,11 +33,11 @@ Progress: [███████████████████████
 | 4. Web UI Core + Fleet Dashboard | 8/8 | 40m 37s | 5m 05s |
 | 5. Agent Hierarchy + Event System | 8/8 | 28m 00s | 3m 30s |
 | 6. Skill System + WASM Sandbox | 14/14 | 79m 40s | 5m 41s |
-| 7. Builder System | 6/10 | 29m 02s | 4m 50s |
+| 7. Builder System | 7/10 | 35m 43s | 5m 06s |
 
 **Recent Trend:**
-- Last 5 plans: 07-02 (4m 00s), 07-03 (7m 00s), 07-04 (2m 50s), 07-05 (5m 00s), 07-06 (5m 00s)
-- Trend: Steady pace -- skill builder and assembler integration
+- Last 5 plans: 07-03 (7m 00s), 07-04 (2m 50s), 07-05 (5m 00s), 07-06 (5m 00s), 07-07 (6m 41s)
+- Trend: Steady pace -- CLI builder wizard and skill creation
 
 *Updated after each plan completion*
 
@@ -323,6 +323,10 @@ Recent decisions affecting current work:
 - [07-06]: attach_skills writes SKILL.md + optional src/lib.rs + skills.toml with builder-created origin tag
 - [07-06]: skill_request_to_build_result converts SkillRequest to SkillBuildResult without LLM (lightweight fallback)
 - [07-06]: All builder-created skills default to TrustTier::Local
+- [07-07]: Build as top-level command (bnity build) instead of overriding bnity create (preserves existing create bot workflow)
+- [07-07]: Generate as SkillCommand variant (bnity skill generate) alongside existing Create for LLM-powered wizard
+- [07-07]: SqliteBuilderMemoryStore gets Clone derive (DatabasePool is Clone, needed for LlmBuilderAgent construction)
+- [07-07]: PurposeCategory serialized via serde_json::to_string for builder memory (consistent with 07-03)
 
 ### Pending Todos
 
@@ -337,5 +341,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 07-06-PLAN.md (SkillBuilder + BotAssembler skill attachment)
+Stopped at: Completed 07-07-PLAN.md (CLI builder wizard + standalone skill create)
 Resume file: None

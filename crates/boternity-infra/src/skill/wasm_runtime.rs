@@ -9,11 +9,13 @@ use boternity_types::skill::{ResourceLimits, TrustTier};
 use wasmtime::{component::Component, Config, Engine};
 
 // Generate Rust bindings from the WIT skill-plugin world.
-// Async behavior is governed by the engine's async_support(true) config,
-// not by the bindgen! macro in wasmtime v40.
+// Exports use async so call_execute/call_get_name/call_get_description
+// are async fn (required when engine has async_support(true)).
+// Imports stay sync since host functions use blocking I/O.
 wasmtime::component::bindgen!({
     world: "skill-plugin",
     path: "../../wit/boternity-skill.wit",
+    exports: { default: async },
 });
 
 /// Wasmtime-based WASM runtime with per-trust-tier engine configurations.

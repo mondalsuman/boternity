@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 6 of 10 (Skill System + WASM Sandbox)
-Plan: 8 of 12 in current phase (9 complete: 06-01, 06-02, 06-03, 06-04, 06-05, 06-06, 06-07, 06-08, 06-09)
+Plan: 10 of 12 in current phase (10 complete: 06-01, 06-02, 06-03, 06-04, 06-05, 06-06, 06-07, 06-08, 06-09, 06-10)
 Status: In progress
-Last activity: 2026-02-14 -- Completed 06-08-PLAN.md (OS-level sandbox)
+Last activity: 2026-02-14 -- Completed 06-10-PLAN.md (agent engine skill integration)
 
-Progress: [██████████████████████████████████████████████████████░] 51/55 (~93%)
+Progress: [██████████████████████████████████████████████████████░] 52/55 (~95%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 51
-- Average duration: 6m 37s
-- Total execution time: 337m 49s
+- Total plans completed: 52
+- Average duration: 6m 33s
+- Total execution time: 340m 39s
 
 **By Phase:**
 
@@ -32,11 +32,11 @@ Progress: [███████████████████████
 | 3. Multi-Provider + Memory | 13/13 | 127m 31s | 9m 49s |
 | 4. Web UI Core + Fleet Dashboard | 8/8 | 40m 37s | 5m 05s |
 | 5. Agent Hierarchy + Event System | 8/8 | 28m 00s | 3m 30s |
-| 6. Skill System + WASM Sandbox | 9/12 | 64m 41s | 7m 11s |
+| 6. Skill System + WASM Sandbox | 10/12 | 67m 31s | 6m 45s |
 
 **Recent Trend:**
-- Last 5 plans: 06-02 (10m 14s), 06-06 (17m 37s), 06-09 (6m 00s), 06-07 (7m 10s), 06-08 (4m 08s)
-- Trend: 06-08 fast execution; platform modules front-loaded for compilation
+- Last 5 plans: 06-06 (17m 37s), 06-09 (6m 00s), 06-07 (7m 10s), 06-08 (4m 08s), 06-10 (2m 50s)
+- Trend: 06-10 fastest plan yet; clean delegation to existing prompt_injector
 
 *Updated after each plan completion*
 
@@ -283,6 +283,10 @@ Recent decisions affecting current work:
 - [06-08]: Seatbelt deny-default with selective allow for system libs, WASM binary, configured paths
 - [06-08]: Landlock ABI v3 with best-effort fallback (partially enforced on older kernels)
 - [06-08]: landlock wired to boternity-infra under cfg(target_os = "linux") dependencies
+- [06-10]: build_with_skills delegates to existing build() + prompt_injector (no code duplication)
+- [06-10]: chain_skills takes &[&InstalledSkill] for flexibility with borrowed references
+- [06-10]: SkillStore initialized with data_dir (skills_dir() is internal to SkillStore)
+- [06-10]: Skill chaining accumulates fuel as sum, memory peak takes maximum across chain
 
 ### Pending Todos
 
@@ -297,5 +301,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 06-08-PLAN.md (OS-level sandbox)
+Stopped at: Completed 06-10-PLAN.md (agent engine skill integration)
 Resume file: None

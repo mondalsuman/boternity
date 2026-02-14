@@ -151,3 +151,155 @@ impl std::fmt::Debug for LoopGuard {
             .finish()
     }
 }
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn normal_exchange_allowed() {
+        let guard = LoopGuard::default();
+        let a = Uuid::now_v7();
+        let b = Uuid::now_v7();
+
+        // Should allow up to max_rate messages
+        for _ in 0..guard.max_rate() {
+            assert!(guard.check(a, b).is_ok());
+        }
+    }
+
+    #[test]
+    fn rate_limit_enforced() {
+        let guard = LoopGuard::new(5, 3, Duration::from_secs(60));
+        let a = Uuid::now_v7();
+        let b = Uuid::now_v7();
+
+        // Send 3 (the limit)
+        for _ in 0..3 {
+            assert!(guard.check(a, b).is_ok());
+        }
+
+        // 4th should fail
+        let result = guard.check(a, b);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("rate limit exceeded"));
+    }
+
+    #[test]
+    fn rate_limit_is_directional() {
+        // A -> B and B -> A are tracked separately
+        let guard = LoopGuard::new(5, 2, Duration::from_secs(60));
+        let a = Uuid::now_v7();
+        let b = Uuid::now_v7();
+
+        // A -> B: 2 messages (at limit)
+        assert!(guard.check(a, b).is_ok());
+        assert!(guard.check(a, b).is_ok());
+        assert!(guard.check(a, b).is_err()); // 3rd fails
+
+        // B -> A: should still be allowed (separate counter)
+        assert!(guard.check(b, a).is_ok());
+        assert!(guard.check(b, a).is_ok());
+        assert!(guard.check(b, a).is_err()); // 3rd fails
+    }
+
+    #[test]
+    fn depth_limit_enforced() {
+        let guard = LoopGuard::new(3, 10, Duration::from_secs(60));
+        let conv = Uuid::now_v7();
+
+        assert_eq!(guard.track_depth(conv).unwrap(), 1);
+        assert_eq!(guard.track_depth(conv).unwrap(), 2);
+        assert_eq!(guard.track_depth(conv).unwrap(), 3);
+
+        // 4th exceeds max_depth=3
+        let result = guard.track_depth(conv);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("depth limit exceeded"));
+    }
+
+    #[test]
+    fn depth_reset_allows_new_chain() {
+        let guard = LoopGuard::new(2, 10, Duration::from_secs(60));
+        let conv = Uuid::now_v7();
+
+        assert!(guard.track_depth(conv).is_ok());
+        assert!(guard.track_depth(conv).is_ok());
+        assert!(guard.track_depth(conv).is_err()); // at limit
+
+        // Reset and try again
+        guard.reset_depth(&conv);
+        assert_eq!(guard.track_depth(conv).unwrap(), 1);
+    }
+
+    #[test]
+    fn separate_conversations_have_independent_depth() {
+        let guard = LoopGuard::new(2, 10, Duration::from_secs(60));
+        let conv_a = Uuid::now_v7();
+        let conv_b = Uuid::now_v7();
+
+        assert!(guard.track_depth(conv_a).is_ok());
+        assert!(guard.track_depth(conv_a).is_ok());
+        assert!(guard.track_depth(conv_a).is_err()); // conv_a at limit
+
+        // conv_b is independent
+        assert!(guard.track_depth(conv_b).is_ok());
+    }
+
+    #[test]
+    fn time_window_resets_rate_counters() {
+        // Use a very short window so we can test reset
+        let guard = LoopGuard::new(5, 2, Duration::from_millis(50));
+        let a = Uuid::now_v7();
+        let b = Uuid::now_v7();
+
+        assert!(guard.check(a, b).is_ok());
+        assert!(guard.check(a, b).is_ok());
+        assert!(guard.check(a, b).is_err()); // at limit
+
+        // Wait for window to expire
+        std::thread::sleep(Duration::from_millis(60));
+
+        // Should be allowed again after window reset
+        assert!(guard.check(a, b).is_ok());
+    }
+
+    #[test]
+    fn reset_all_clears_everything() {
+        let guard = LoopGuard::new(5, 2, Duration::from_secs(60));
+        let a = Uuid::now_v7();
+        let b = Uuid::now_v7();
+        let conv = Uuid::now_v7();
+
+        // Fill up rate and depth
+        guard.check(a, b).unwrap();
+        guard.check(a, b).unwrap();
+        guard.track_depth(conv).unwrap();
+
+        guard.reset_all();
+
+        // Everything should be fresh
+        assert!(guard.check(a, b).is_ok());
+        assert_eq!(guard.track_depth(conv).unwrap(), 1);
+    }
+
+    #[test]
+    fn default_values() {
+        let guard = LoopGuard::default();
+        assert_eq!(guard.max_depth(), 5);
+        assert_eq!(guard.max_rate(), 10);
+    }
+
+    #[test]
+    fn debug_impl() {
+        let guard = LoopGuard::default();
+        let debug = format!("{guard:?}");
+        assert!(debug.contains("LoopGuard"));
+        assert!(debug.contains("max_depth"));
+        assert!(debug.contains("max_rate"));
+    }
+}

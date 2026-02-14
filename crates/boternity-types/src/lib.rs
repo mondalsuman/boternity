@@ -7,6 +7,7 @@
 
 pub mod agent;
 pub mod bot;
+pub mod builder;
 pub mod chat;
 pub mod config;
 pub mod error;

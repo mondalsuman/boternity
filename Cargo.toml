@@ -144,6 +144,9 @@ ratatui = { version = "0.30", features = ["crossterm"] }
 # Linux filesystem sandboxing (behind cfg gate in infra)
 landlock = "0.4"
 
+# JSON Schema generation from Rust types (builder structured output)
+schemars = "1"
+
 # Workspace crates
 boternity-types = { path = "crates/boternity-types" }
 boternity-core = { path = "crates/boternity-core" }

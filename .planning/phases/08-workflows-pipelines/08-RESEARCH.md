@@ -857,6 +857,160 @@ export function useUndoRedo(maxHistory = 50) {
    - What's unclear: How the TypeScript SDK is packaged and consumed -- as an npm package, bundled with the web app, or a standalone CLI tool.
    - Recommendation: Start with a `@boternity/workflow-sdk` package in the monorepo that generates YAML. Distribution can be refined later.
 
+## Deep Dive 1: jexl-eval Expression Completeness
+
+Key findings from empirical testing (cargo run with actual test project):
+
+**Pattern Verification (10/10 patterns tested):**
+| # | Pattern | Status | Notes |
+|---|---------|--------|-------|
+| 1 | Dot-notation (`event.payload.user.name`) | PASS | Works natively |
+| 2 | Array indexing (`event.tags[0]`) | PASS | Works natively |
+| 3 | Boolean operators (`&&`, `||`) | PASS | Works natively |
+| 4 | Comparison (`>`, `<`, `>=`, `<=`, `!=`, `==`) | PASS | Works natively |
+| 5 | String operations (`|lower`, `|upper`) | PASS | Via custom transforms |
+| 6 | Ternary (`condition ? a : b`) | PASS with caveat | Condition MUST be parenthesized: `(x > 5) ? a : b`. Without parens, `?` has higher precedence than comparison operators |
+| 7 | Regex matching | FAIL natively | Use custom `|match('pattern')` transform |
+| 8 | `in` operator | PASS | Works for both array membership and substring |
+| 9 | Null handling | PASS | Undefined fields resolve to null |
+| 10 | Nested boolean with parens | PASS | Works natively |
+
+**Critical limitations:**
+- **No `!` (NOT/negation) operator** -- PR #30 open since May 2023, still unmerged. Workaround: `(expr) == false`
+- **Ternary precedence bug** -- `a > 5 ? x : y` parsed as `a > (5 ? x : y)`. Always parenthesize: `(a > 5) ? x : y`
+
+**Recommendation: Stick with jexl-eval 0.4.0.** Build a `WorkflowEvaluator` wrapper that pre-registers standard transforms (lower, upper, startsWith, endsWith, contains, match, length, trim, split, not). ~50-80 lines of code. Far simpler than switching to cel-interpreter which would require serde_json-to-CEL-Value conversion.
+
+**Standard transforms to register:**
+| Transform | Syntax | Purpose |
+|-----------|--------|---------|
+| `lower` | `value|lower` | Lowercase |
+| `upper` | `value|upper` | Uppercase |
+| `startsWith` | `value|startsWith('prefix')` | Prefix check |
+| `endsWith` | `value|endsWith('suffix')` | Suffix check |
+| `contains` | `value|contains('substr')` | Substring check |
+| `match` | `value|match('^pattern$')` | Regex matching |
+| `length` | `value|length` | String/array length |
+| `not` | `value|not` | Boolean negation workaround |
+
+Confidence: HIGH (empirically verified)
+
+## Deep Dive 2: Durable Execution Patterns
+
+Researched Temporal, Restate, Prefect, Airflow, Dapr, LangGraph, and Persistasaurus.
+
+**Recommended State Machine:**
+
+Workflow Run states (7): `Pending → Running → Paused → Completed | Failed | Crashed | Cancelled`
+- `Paused`: approval gates, human checkpoints
+- `Crashed`: infrastructure failures (distinguished from `Failed` which is application errors)
+- `Cancelled`: user-initiated abort
+
+Step states (6): `Pending → Running → Completed | Failed | Skipped | WaitingApproval`
+
+**SQLite Schema for Checkpointing:**
+- `workflow_runs`: id, workflow_id, status, trigger_payload, context (JSON), started_at, completed_at, error
+- `workflow_steps`: id, run_id, step_id, step_name, step_type, status, attempt, idempotency_key, input, output, started_at, completed_at, error
+
+**Parallel Branch Strategy:** No separate `branch_id` needed. DAG-based execution with `depends_on` relationships. Steps are organized into waves (topological sort). On resume, query completed steps, rebuild context from their outputs, skip them, continue with pending/running steps.
+
+**Crash Recovery Protocol:**
+1. On startup: find `workflow_runs WHERE status = 'running'`
+2. For each: find `workflow_steps WHERE status = 'running'` (stuck during crash)
+3. For idempotent steps (conditional, loop): reset to pending
+4. For side-effecting steps (HTTP, agent): use idempotency key to check completion
+5. Resume from last completed step
+
+**Critical finding: Set `synchronous=FULL` on SQLite** for workflow checkpoint operations. The default `synchronous=NORMAL` in WAL mode is NOT durable against power failures.
+
+**Context Serialization:** JSON blob in SQLite with:
+- 1MB per-step output limit (spill to file for larger)
+- 10MB total context limit
+- JSON blob over structured columns (universal pattern across all engines studied)
+
+**Approval Gates:** Use Paused pattern -- mark run as `paused`, stop executor, resume when approval arrives. No blocking threads.
+
+Confidence: HIGH (verified across 7 workflow engines)
+
+## Deep Dive 3: TypeScript SDK Design
+
+Researched CircleCI Config SDK, Serverless Workflow SDK, Hatchet v1, Inngest v3, Trigger.dev v3, rustyscript.
+
+**Architecture: Build-to-YAML (primary) with optional API push**
+- User writes `.workflow.ts` → runs `npx @boternity/workflow build` → produces `.yaml`
+- Secondary: `npx @boternity/workflow push` calls Boternity REST API directly
+- CircleCI Config SDK proves this exact pattern at scale
+
+**Builder Pattern:** Factory functions (not classes), typed step references for DAG validation
+```typescript
+const gatherNews = workflow.agent('gather-news', { bot: 'researcher', prompt: '...' });
+const analyze = workflow.agent('analyze', { bot: 'analyst', parents: [gatherNews] });
+```
+
+**Type Safety:** Three layers:
+1. Zod schemas for step config validation (generated from Rust JSON Schema via schemars)
+2. Typed parent refs for DAG dependency validation at compile time
+3. ts-rs generates TypeScript interfaces from Rust types
+
+**Rust SDK:** NOT a separate crate. Use `boternity-types` directly with a builder module. Users construct `WorkflowDefinition` structs and serialize to YAML.
+
+**Code Step Execution: Use `rustyscript`** (deno_core/V8 wrapper):
+- TypeScript transpilation built-in
+- Sandboxed by default (no filesystem/network)
+- Clean Rust↔JS data exchange via serde JSON
+- Fresh Runtime per step execution (isolation)
+- Reserve WASM for skill system (Phase 6), use rustyscript for workflow code steps
+
+**Package:** `@boternity/workflow-sdk` in `packages/workflow-sdk/`
+
+Confidence: MEDIUM-HIGH
+
+## Deep Dive 4: Bot-to-Bot Communication Architecture
+
+Researched AutoGen messaging, Tokio actor patterns (Alice Ryhl), existing codebase EventBus/DashMap usage.
+
+**Message Routing: Actor handle pattern (separate from EventBus)**
+- `MessageBus` with per-bot `mpsc::Sender` in `DashMap<Uuid, mpsc::Sender>`
+- Each bot has its own mailbox (mpsc receiver) processed in a dedicated tokio task
+- Separate from EventBus (different semantics: targeted delivery vs broadcast notifications)
+- Bounded channels with backpressure (buffer: 256 messages)
+
+**Sync vs Async Delivery:**
+- `send_and_wait()`: Creates `oneshot::channel`, includes sender in message envelope, waits with 30s default timeout
+- `send()`: Fire-and-forget, no reply channel
+- Bot B processes messages in a SEPARATE task from its active chat (no interruption)
+
+**Pub/Sub Implementation:**
+- Per-topic `broadcast::channel` in `DashMap<String, broadcast::Sender>`
+- Lazy creation (auto-create on first publish)
+- Subscriptions persisted to SQLite for restart recovery
+- At-most-once delivery in-memory + at-least-once via SQLite audit trail
+
+**Message Processing Pipeline:**
+1. Check bot's message_handler skill → if exists, run skill first
+2. If skill returns "handled" → send reply, done
+3. If skill returns "pass_through" or no handler → forward to LLM
+4. Create/reuse bot-to-bot session (tagged `session_type = 'bot-to-bot'`)
+5. Execute via AgentEngine (non-streaming)
+6. Persist exchange to bot-to-bot session
+
+**Loop Prevention (3 layers):**
+1. Delegation depth cap (default: 5)
+2. Exchange rate per bot pair (default: 10 messages per 60 seconds)
+3. Time window reset (prevents permanent blocks)
+
+**Delegation:** Special `send_and_wait()` with `message_type: "delegation"`. Not a separate mechanism. UI shows "Bot A asked Bot B for help" inline. Bot A triggers via a `delegate_to_bot` tool/function call registered in agent capabilities.
+
+**SQLite Schema:** Three tables:
+- `bot_messages`: full audit trail with indexes for pair queries and channel queries
+- `bot_channels`: channel registry
+- `bot_subscriptions`: persisted subscriptions (UNIQUE(bot_id, channel_name))
+- `chat_sessions`: add `session_type` and `peer_bot_id` columns
+
+**New components:** MessageBus, LoopGuard, MessageHandler, MessageRepository trait + SQLite impl, BotMessage type, REST handlers, CLI commands
+
+Confidence: MEDIUM-HIGH
+
 ## Sources
 
 ### Primary (HIGH confidence)
@@ -885,6 +1039,26 @@ export function useUndoRedo(maxHistory = 50) {
 - Workflow engine common pitfalls derived from Apache Airflow and Temporal documentation patterns -- generally applicable but not Rust-specific
 - dagre version and API based on training data -- verify npm package version at install time
 
+### Deep Dive Sources
+- [jexl-eval 0.4.0 empirical testing](https://github.com/TomFrost/jexl) - Expression pattern verification via cargo test suite
+- [jexl-eval PR #30](https://github.com/TomFrost/jexl/pull/30) - Negation operator discussion (unmerged)
+- [Temporal Workflows](https://docs.temporal.io/workflows) - Durable execution patterns, state machines
+- [Restate Durable Execution](https://docs.restate.dev/) - Checkpoint strategies, crash recovery
+- [Prefect Architecture](https://docs.prefect.io/latest/concepts/flows/) - Flow state machines, task states
+- [Apache Airflow](https://airflow.apache.org/docs/apache-airflow/stable/core-concepts/dags.html) - DAG execution, state transitions
+- [Dapr Workflows](https://docs.dapr.io/developing-applications/building-blocks/workflow/) - Workflow orchestration patterns
+- [LangGraph](https://python.langchain.com/docs/langgraph) - Graph-based agent orchestration
+- [Persistasaurus](https://github.com/ssube/persistasaurus) - SQLite checkpoint implementation
+- [CircleCI Config SDK](https://github.com/CircleCI-Public/circleci-config-sdk-ts) - TypeScript-to-YAML builder pattern
+- [Serverless Workflow SDK](https://github.com/serverlessworkflow/sdk-typescript) - Workflow definition builders
+- [Hatchet v1 SDK](https://docs.hatchet.run/sdks/typescript-sdk) - TypeScript workflow SDK patterns
+- [Inngest v3](https://www.inngest.com/docs/typescript) - TypeScript function builders
+- [Trigger.dev v3](https://trigger.dev/docs) - Workflow SDK architecture
+- [rustyscript](https://docs.rs/rustyscript/latest/rustyscript/) - V8 integration, TypeScript execution
+- [AutoGen Messaging](https://microsoft.github.io/autogen/docs/tutorial/conversation-patterns) - Multi-agent communication patterns
+- [Tokio Actor Pattern (Alice Ryhl)](https://ryhl.io/blog/actors-with-tokio/) - Message passing, mailbox pattern
+- [SQLite synchronous=FULL](https://www.sqlite.org/pragma.html#pragma_synchronous) - Durability guarantees in WAL mode
+
 ## Metadata
 
 **Confidence breakdown:**
@@ -893,6 +1067,7 @@ export function useUndoRedo(maxHistory = 50) {
 - Pitfalls: MEDIUM - Based on ecosystem knowledge and official docs; some derived from general workflow engine experience
 - Bot-to-bot communication: MEDIUM - Architecture pattern is sound but novel to this project; no direct library equivalent
 - Visual builder: HIGH - React Flow v12 APIs well-documented with official examples for all required features
+- Deep dives: HIGH for jexl-eval (empirical), HIGH for durable execution (7 engines studied), MEDIUM-HIGH for SDK design (5 SDKs + rustyscript), MEDIUM-HIGH for bot-to-bot (actor pattern + existing patterns)
 
 **Research date:** 2026-02-14
 **Valid until:** 2026-03-14 (30 days -- stack is stable; React Flow and crate versions may get minor updates)

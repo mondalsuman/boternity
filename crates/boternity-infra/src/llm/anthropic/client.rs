@@ -127,6 +127,10 @@ impl AnthropicProvider {
     }
 
     /// Convert a generic [`CompletionRequest`] into an [`AnthropicRequest`].
+    ///
+    /// When `output_config` is present on the request, it is forwarded to the
+    /// Anthropic request body and `stream` is forced to `false` (structured
+    /// output with streaming is not supported for the builder use case).
     fn to_anthropic_request(&self, request: &CompletionRequest, stream: bool) -> AnthropicRequest {
         let messages = request
             .messages
@@ -137,14 +141,22 @@ impl AnthropicProvider {
             })
             .collect();
 
+        // When output_config is present, force stream to false
+        let effective_stream = if request.output_config.is_some() {
+            false
+        } else {
+            stream
+        };
+
         AnthropicRequest {
             model: request.model.clone(),
             max_tokens: request.max_tokens,
             messages,
             system: request.system.clone(),
-            stream,
+            stream: effective_stream,
             temperature: request.temperature,
             stop_sequences: request.stop_sequences.clone(),
+            output_config: request.output_config.clone(),
         }
     }
 }

@@ -10,6 +10,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use boternity_types::llm::OutputConfig;
+
 use super::super::anthropic::types::AnthropicMessage;
 
 /// Request body for AWS Bedrock Claude invoke / invoke-with-response-stream.
@@ -27,6 +29,10 @@ pub struct BedrockRequest {
     pub temperature: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub stop_sequences: Option<Vec<String>>,
+    /// Structured output configuration. When present, constrains the LLM's
+    /// response to match the given JSON schema. Skipped when `None`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub output_config: Option<OutputConfig>,
 }
 
 /// A single chunk in the Bedrock event stream.
@@ -54,6 +60,7 @@ mod tests {
             system: Some("Be helpful.".to_string()),
             temperature: Some(0.7),
             stop_sequences: None,
+            output_config: None,
         };
 
         let json = serde_json::to_value(&req).unwrap();
@@ -63,6 +70,8 @@ mod tests {
         assert!(json.get("model").is_none());
         // stop_sequences skipped when None
         assert!(json.get("stop_sequences").is_none());
+        // output_config should not appear when None
+        assert!(json.get("output_config").is_none());
     }
 
     #[test]

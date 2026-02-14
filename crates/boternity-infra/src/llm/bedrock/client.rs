@@ -200,6 +200,8 @@ impl BedrockProvider {
     }
 
     /// Convert a generic [`CompletionRequest`] into a [`BedrockRequest`].
+    ///
+    /// Forwards `output_config` when present for structured output support.
     fn to_bedrock_request(&self, request: &CompletionRequest) -> BedrockRequest {
         let messages = request
             .messages
@@ -217,6 +219,7 @@ impl BedrockProvider {
             system: request.system.clone(),
             temperature: request.temperature,
             stop_sequences: request.stop_sequences.clone(),
+            output_config: request.output_config.clone(),
         }
     }
 }

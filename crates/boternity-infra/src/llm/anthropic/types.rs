@@ -6,6 +6,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use boternity_types::llm::OutputConfig;
+
 /// Request body for the Anthropic Messages API.
 #[derive(Debug, Clone, Serialize)]
 pub struct AnthropicRequest {
@@ -19,6 +21,10 @@ pub struct AnthropicRequest {
     pub temperature: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub stop_sequences: Option<Vec<String>>,
+    /// Structured output configuration. When present, constrains the LLM's
+    /// response to match the given JSON schema. Skipped when `None`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub output_config: Option<OutputConfig>,
 }
 
 /// A single message in an Anthropic conversation.
@@ -174,6 +180,7 @@ mod tests {
             stream: false,
             temperature: Some(0.7),
             stop_sequences: None,
+            output_config: None,
         };
 
         let json = serde_json::to_value(&req).unwrap();
@@ -181,6 +188,42 @@ mod tests {
         assert_eq!(json["max_tokens"], 1024);
         assert_eq!(json["stream"], false);
         assert!(json.get("stop_sequences").is_none());
+        // output_config should not appear when None
+        assert!(json.get("output_config").is_none());
+    }
+
+    #[test]
+    fn test_anthropic_request_with_output_config() {
+        use boternity_types::llm::{OutputFormat, OutputJsonSchema};
+
+        let req = AnthropicRequest {
+            model: "claude-sonnet-4-20250514".to_string(),
+            max_tokens: 2048,
+            messages: vec![AnthropicMessage {
+                role: "user".to_string(),
+                content: "Hello".to_string(),
+            }],
+            system: None,
+            stream: false,
+            temperature: Some(0.7),
+            stop_sequences: None,
+            output_config: Some(OutputConfig {
+                format: OutputFormat {
+                    type_field: "json_schema".to_string(),
+                    json_schema: OutputJsonSchema {
+                        name: "BuilderTurn".to_string(),
+                        schema: serde_json::json!({"type": "object"}),
+                        strict: Some(true),
+                    },
+                },
+            }),
+        };
+
+        let json = serde_json::to_value(&req).unwrap();
+        assert!(json.get("output_config").is_some());
+        assert_eq!(json["output_config"]["format"]["type"], "json_schema");
+        assert_eq!(json["output_config"]["format"]["json_schema"]["name"], "BuilderTurn");
+        assert_eq!(json["output_config"]["format"]["json_schema"]["strict"], true);
     }
 
     #[test]

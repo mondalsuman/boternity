@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 8 of 10 (Workflows + Pipelines)
-Plan: 8 of 13 in current phase
+Plan: 9 of 13 in current phase
 Status: In progress
-Last activity: 2026-02-14 -- Completed 08-07-PLAN.md
+Last activity: 2026-02-14 -- Completed 08-09-PLAN.md
 
-Progress: [████████████████████████████████████████████████████████████████████████████░░░░░░░░░░░░░░░░░░░░] 74/80 (93%)
+Progress: [██████████████████████████████████████████████████████████████████████████████░░░░░░░░░░░░░░░░░░░] 75/80 (94%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 74
+- Total plans completed: 75
 - Average duration: 6m 17s
-- Total execution time: 465m 34s
+- Total execution time: 471m 32s
 
 **By Phase:**
 
@@ -34,11 +34,11 @@ Progress: [███████████████████████
 | 5. Agent Hierarchy + Event System | 8/8 | 28m 00s | 3m 30s |
 | 6. Skill System + WASM Sandbox | 14/14 | 79m 40s | 5m 41s |
 | 7. Builder System | 10/10 | 66m 43s | 6m 40s |
-| 8. Workflows + Pipelines | 8/13 | 54m 03s | 6m 45s |
+| 8. Workflows + Pipelines | 9/13 | 60m 01s | 6m 40s |
 
 **Recent Trend:**
-- Last 5 plans: 08-03 (8m 00s), 08-12 (5m 00s), 08-06 (5m 26s), 08-04 (7m 00s), 08-07 (13m 11s)
-- Trend: Trigger system plan took longer due to notify version conflict resolution
+- Last 5 plans: 08-12 (5m 00s), 08-06 (5m 26s), 08-04 (7m 00s), 08-07 (13m 11s), 08-09 (5m 58s)
+- Trend: API handler plans execute quickly due to established patterns
 
 *Updated after each plan completion*
 
@@ -367,6 +367,10 @@ Recent decisions affecting current work:
 - [08-07]: notify-debouncer-mini re-exported notify types used to avoid version conflict (debouncer needs notify 7, workspace has 8)
 - [08-07]: Constant-time XOR for bearer token comparison (inline, no extra crate)
 - [08-07]: Human-readable schedules normalized at registration time (fail-fast, not fire-time)
+- [08-09]: Webhook endpoint uses WebhookRegistry auth (not API key Authenticated extractor)
+- [08-09]: Workflow routes via Router::merge pattern for clean handler-local route definitions
+- [08-09]: AppState Phase 8 fields: workflow_repo, message_repo, message_bus, webhook_registry
+- [08-09]: LoopGuard::default() for MessageBus loop prevention in AppState init
 
 ### Pending Todos
 
@@ -381,5 +385,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 08-07-PLAN.md
+Stopped at: Completed 08-09-PLAN.md
 Resume file: None

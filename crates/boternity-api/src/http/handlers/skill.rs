@@ -581,6 +581,25 @@ pub async fn install_skill(
         .install_skill(skill_name, &content, Some(meta), wasm_bytes.as_deref())
         .map_err(|e| AppError::Internal(format!("Failed to install skill: {e}")))?;
 
+    // Ensure Tool-type skills have a WASM binary (pre-compiled or stub)
+    if let Ok((manifest, body)) = boternity_core::skill::manifest::parse_skill_md(&content) {
+        let is_tool = manifest
+            .metadata
+            .as_ref()
+            .and_then(|m| m.skill_type.as_ref())
+            .map(|t| matches!(t, boternity_types::skill::SkillType::Tool))
+            .unwrap_or(false);
+
+        if is_tool {
+            boternity_infra::skill::wasm_compiler::ensure_wasm_binary(
+                &install_path,
+                &body,
+                wasm_bytes.as_deref(),
+            )
+            .map_err(|e| AppError::Internal(format!("Failed to generate WASM: {e}")))?;
+        }
+    }
+
     let elapsed = start.elapsed().as_millis() as u64;
     let resp = ApiResponse::success(
         serde_json::json!({

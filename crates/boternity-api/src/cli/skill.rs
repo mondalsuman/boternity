@@ -444,6 +444,36 @@ async fn handle_install(
         wasm_bytes.as_deref(),
     )?;
 
+    // Ensure Tool-type skills have a WASM binary (pre-compiled or stub)
+    let skill_type = selected
+        .manifest
+        .metadata
+        .as_ref()
+        .and_then(|m| m.skill_type.as_ref());
+
+    if matches!(skill_type, Some(SkillType::Tool)) {
+        use boternity_infra::skill::wasm_compiler;
+
+        // Parse the skill body from content for stub generation
+        let (_manifest, body) = boternity_core::skill::manifest::parse_skill_md(&content)
+            .context("Failed to re-parse skill for WASM compilation")?;
+
+        let wasm_path = wasm_compiler::ensure_wasm_binary(
+            &install_path,
+            &body,
+            wasm_bytes.as_deref(),
+        )
+        .context("Failed to compile/generate WASM for Tool skill")?;
+
+        if !json {
+            println!(
+                "  {} WASM binary at {}",
+                style("*").green(),
+                wasm_path.display()
+            );
+        }
+    }
+
     if json {
         let out = serde_json::json!({
             "name": selected.name,

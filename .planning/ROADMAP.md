@@ -197,7 +197,7 @@ Plans:
   3. Workflows can be triggered manually, on a cron schedule, or by events (webhooks, bot messages) -- all three trigger types work reliably
   4. Bot-to-bot communication works -- one bot can send structured messages to another bot, and workflows can orchestrate multi-bot collaboration
   5. User can manage workflows via CLI (create, trigger, list, check status)
-**Plans**: 13 plans
+**Plans**: 15 plans
 
 Plans:
 - [ ] 08-01-PLAN.md -- Domain types (workflow, message, triggers, steps) and Phase 8 workspace dependencies
@@ -213,6 +213,8 @@ Plans:
 - [ ] 08-11-PLAN.md -- Web UI step config panel, node palette, YAML editor toggle, undo/redo, templates, grouping
 - [ ] 08-12-PLAN.md -- TypeScript SDK package (@boternity/workflow-sdk) and Rust builder helpers
 - [ ] 08-13-PLAN.md -- Live execution visualization, workflow events, service wiring, crash recovery
+- [ ] 08-14-PLAN.md -- [Gap closure] Wire DagExecutor to AppState with real StepExecutionContext, spawn execution from triggers
+- [ ] 08-15-PLAN.md -- [Gap closure] Wire CronScheduler and EventBus listener to call DagExecutor for cron/event triggers
 
 ### Phase 9: MCP Integration
 **Goal**: Bots participate in the MCP ecosystem bidirectionally -- they consume external MCP tools to extend their capabilities and expose themselves as MCP servers so external tools (like Claude Code) can use bots as tools.
@@ -276,6 +278,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 5. Agent Hierarchy + Event System | 8/8 | Complete | 2026-02-13 |
 | 6. Skill System + WASM Sandbox | 14/14 | Complete | 2026-02-14 |
 | 7. Builder System | 10/10 | Complete | 2026-02-14 |
-| 8. Workflows + Pipelines | 0/13 | Not started | - |
+| 8. Workflows + Pipelines | 13/15 | Gap closure | - |
 | 9. MCP Integration | 0/13 | Not started | - |
 | 10. Observability + Cost + Polish | 0/7 | Not started | - |

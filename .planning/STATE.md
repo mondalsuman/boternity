@@ -12,16 +12,16 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 Phase: 8 of 10 (Workflows + Pipelines)
 Plan: 9 of 13 in current phase
 Status: In progress
-Last activity: 2026-02-14 -- Completed 08-09-PLAN.md
+Last activity: 2026-02-14 -- Completed 08-08-PLAN.md
 
-Progress: [██████████████████████████████████████████████████████████████████████████████░░░░░░░░░░░░░░░░░░░] 75/80 (94%)
+Progress: [████████████████████████████████████████████████████████████████████████████████░░░░░░░░░░░░░░░░░░] 76/80 (95%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 75
+- Total plans completed: 76
 - Average duration: 6m 17s
-- Total execution time: 471m 32s
+- Total execution time: 478m 32s
 
 **By Phase:**
 
@@ -34,11 +34,11 @@ Progress: [███████████████████████
 | 5. Agent Hierarchy + Event System | 8/8 | 28m 00s | 3m 30s |
 | 6. Skill System + WASM Sandbox | 14/14 | 79m 40s | 5m 41s |
 | 7. Builder System | 10/10 | 66m 43s | 6m 40s |
-| 8. Workflows + Pipelines | 9/13 | 60m 01s | 6m 40s |
+| 8. Workflows + Pipelines | 10/13 | 67m 01s | 6m 42s |
 
 **Recent Trend:**
-- Last 5 plans: 08-12 (5m 00s), 08-06 (5m 26s), 08-04 (7m 00s), 08-07 (13m 11s), 08-09 (5m 58s)
-- Trend: API handler plans execute quickly due to established patterns
+- Last 5 plans: 08-06 (5m 26s), 08-04 (7m 00s), 08-07 (13m 11s), 08-09 (5m 58s), 08-08 (7m 00s)
+- Trend: CLI command plans execute quickly due to established patterns
 
 *Updated after each plan completion*
 
@@ -371,6 +371,9 @@ Recent decisions affecting current work:
 - [08-09]: Workflow routes via Router::merge pattern for clean handler-local route definitions
 - [08-09]: AppState Phase 8 fields: workflow_repo, message_repo, message_bus, webhook_registry
 - [08-09]: LoopGuard::default() for MessageBus loop prevention in AppState init
+- [08-08]: Lazy repo instantiation in CLI handlers (SqliteWorkflowRepository/SqliteMessageRepository per-command, not in AppState)
+- [08-08]: Channel auto-creation on first subscribe (no separate create-channel step)
+- [08-08]: Workflow status command accepts both workflow name and run UUID for flexibility
 
 ### Pending Todos
 
@@ -385,5 +388,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 08-09-PLAN.md
+Stopped at: Completed 08-08-PLAN.md
 Resume file: None

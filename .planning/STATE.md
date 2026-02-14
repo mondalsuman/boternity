@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 8 of 10 (Workflows + Pipelines)
-Plan: 1 of 13 in current phase
+Plan: 5 of 13 in current phase
 Status: In progress
-Last activity: 2026-02-14 -- Completed 08-01-PLAN.md
+Last activity: 2026-02-14 -- Completed 08-05-PLAN.md
 
-Progress: [█████████████████████████████████████████████████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░] 68/80 (85%)
+Progress: [██████████████████████████████████████████████████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░] 69/80 (86%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 68
-- Average duration: 6m 14s
-- Total execution time: 423m 31s
+- Total plans completed: 69
+- Average duration: 6m 12s
+- Total execution time: 427m 57s
 
 **By Phase:**
 
@@ -34,11 +34,11 @@ Progress: [███████████████████████
 | 5. Agent Hierarchy + Event System | 8/8 | 28m 00s | 3m 30s |
 | 6. Skill System + WASM Sandbox | 14/14 | 79m 40s | 5m 41s |
 | 7. Builder System | 10/10 | 66m 43s | 6m 40s |
-| 8. Workflows + Pipelines | 1/13 | 4m 00s | 4m 00s |
+| 8. Workflows + Pipelines | 2/13 | 8m 26s | 4m 13s |
 
 **Recent Trend:**
-- Last 5 plans: 07-08 (7m 00s), 07-09 (12m 00s), 07-10 (12m 00s), 08-01 (4m 00s)
-- Trend: Phase 8 types-only plan was fast; expect more complex plans ahead
+- Last 5 plans: 07-09 (12m 00s), 07-10 (12m 00s), 08-01 (4m 00s), 08-05 (4m 26s)
+- Trend: Phase 8 core logic plans running fast (~4min)
 
 *Updated after each plan completion*
 
@@ -339,6 +339,10 @@ Recent decisions affecting current work:
 - [08-01]: RetryConfig defaults to max_attempts=3 via serde default function
 - [08-01]: StepUiMetadata optional with skip_serializing_if for clean YAML when no visual data
 - [08-01]: BotMessage uses serde_json::Value for flexible body (not typed enum)
+- [08-05]: Minimal WorkflowContext in expression.rs for evaluation surface (steps, trigger, variables, workflow metadata)
+- [08-05]: JavaScript-like truthiness for expression bool coercion (null/false/0/empty-string = false)
+- [08-05]: match transform uses substring match, not regex (security/simplicity trade-off)
+- [08-05]: RetryHandler is stateless (same pattern as MemoryExtractor) -- callers track attempts
 
 ### Pending Todos
 
@@ -353,5 +357,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 08-01-PLAN.md
+Stopped at: Completed 08-05-PLAN.md
 Resume file: None

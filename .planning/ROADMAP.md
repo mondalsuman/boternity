@@ -18,7 +18,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 4: Web UI Core + Fleet Dashboard** - React app scaffold, chat interface with streaming, fleet dashboard, soul editor with version history, PWA foundation
 - [x] **Phase 5: Agent Hierarchy + Event System** - Sub-agent spawning (sequential + parallel), depth cap enforcement, message passing, event bus, WebSocket live updates, budget enforcement
 - [x] **Phase 6: Skill System + WASM Sandbox** - Skill definition and execution, local skills, WASM sandbox for untrusted skills, registry discovery, permission model, trust tiers
-- [ ] **Phase 7: Builder System** - Universal builder agent, CLI wizard, web builder bot, adaptive question flow, skill creation and attachment via builder
+- [x] **Phase 7: Builder System** - Universal builder agent, CLI wizard, web builder bot, adaptive question flow, skill creation and attachment via builder
 - [ ] **Phase 8: Workflows + Pipelines** - YAML workflow engine, visual builder, SDK, triggers (manual/cron/event), bot-to-bot communication, workflow composition
 - [ ] **Phase 9: MCP Integration** - MCP tool consumption, bot-as-MCP-server exposure, MCP bot management interface, tool sanitization, MCP authentication
 - [ ] **Phase 10: Observability + Cost + Polish** - Visual trace explorer, cost dashboards, budget alerts, gRPC + protocol multiplexing, memory browser, config export, bot templates, scriptable CLI, responsive PWA
@@ -176,16 +176,16 @@ Plans:
 **Plans**: 10 plans
 
 Plans:
-- [ ] 07-01-PLAN.md -- Builder domain types (BuilderTurn, BuilderState, BuilderPhase, PurposeCategory) and OutputConfig extension to CompletionRequest
-- [ ] 07-02-PLAN.md -- Core BuilderAgent trait, BuilderState accumulator, and Forge system prompt builder
-- [ ] 07-03-PLAN.md -- SQLite draft persistence (BuilderDraftStore) and builder memory store for session recall
-- [ ] 07-04-PLAN.md -- Smart defaults per purpose category and BotAssembler for creating bots from BuilderConfig
-- [ ] 07-05-PLAN.md -- LlmBuilderAgent implementation with structured output and output_config provider wiring
-- [ ] 07-06-PLAN.md -- SkillBuilder for LLM-driven skill creation and skill attachment in BotAssembler
-- [ ] 07-07-PLAN.md -- CLI builder wizard (bnity create) with dialoguer multi-choice and standalone skill create
-- [ ] 07-08-PLAN.md -- REST API builder session endpoints and WebSocket handler for Forge chat
-- [ ] 07-09-PLAN.md -- Web UI step-by-step wizard with progress indicator, option cards, and live preview
-- [ ] 07-10-PLAN.md -- Web UI Forge chat bot interface with interactive option buttons and WebSocket conversation
+- [x] 07-01-PLAN.md -- Builder domain types (BuilderTurn, BuilderState, BuilderPhase, PurposeCategory) and OutputConfig extension to CompletionRequest
+- [x] 07-02-PLAN.md -- Core BuilderAgent trait, BuilderState accumulator, and Forge system prompt builder
+- [x] 07-03-PLAN.md -- SQLite draft persistence (BuilderDraftStore) and builder memory store for session recall
+- [x] 07-04-PLAN.md -- Smart defaults per purpose category and BotAssembler for creating bots from BuilderConfig
+- [x] 07-05-PLAN.md -- LlmBuilderAgent implementation with structured output and output_config provider wiring
+- [x] 07-06-PLAN.md -- SkillBuilder for LLM-driven skill creation and skill attachment in BotAssembler
+- [x] 07-07-PLAN.md -- CLI builder wizard (bnity create) with dialoguer multi-choice and standalone skill create
+- [x] 07-08-PLAN.md -- REST API builder session endpoints and WebSocket handler for Forge chat
+- [x] 07-09-PLAN.md -- Web UI step-by-step wizard with progress indicator, option cards, and live preview
+- [x] 07-10-PLAN.md -- Web UI Forge chat bot interface with interactive option buttons and WebSocket conversation
 
 ### Phase 8: Workflows + Pipelines
 **Goal**: Users can define multi-step automations that compose agents and skills into execution chains -- workflows can be defined in YAML, built visually, or written in code, and triggered manually, on schedule, or by events.
@@ -266,7 +266,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 4. Web UI Core + Fleet Dashboard | 8/8 | Complete | 2026-02-13 |
 | 5. Agent Hierarchy + Event System | 8/8 | Complete | 2026-02-13 |
 | 6. Skill System + WASM Sandbox | 14/14 | Complete | 2026-02-14 |
-| 7. Builder System | 0/10 | Not started | - |
+| 7. Builder System | 10/10 | Complete | 2026-02-14 |
 | 8. Workflows + Pipelines | 0/13 | Not started | - |
 | 9. MCP Integration | 0/4 | Not started | - |
 | 10. Observability + Cost + Polish | 0/7 | Not started | - |

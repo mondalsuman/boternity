@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 8 of 10 (Workflows + Pipelines)
-Plan: 5 of 13 in current phase
+Plan: 4 of 13 in current phase
 Status: In progress
-Last activity: 2026-02-14 -- Completed 08-02-PLAN.md
+Last activity: 2026-02-14 -- Completed 08-03-PLAN.md
 
 Progress: [███████████████████████████████████████████████████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░] 70/80 (88%)
 
@@ -34,11 +34,11 @@ Progress: [███████████████████████
 | 5. Agent Hierarchy + Event System | 8/8 | 28m 00s | 3m 30s |
 | 6. Skill System + WASM Sandbox | 14/14 | 79m 40s | 5m 41s |
 | 7. Builder System | 10/10 | 66m 43s | 6m 40s |
-| 8. Workflows + Pipelines | 3/13 | 15m 26s | 5m 09s |
+| 8. Workflows + Pipelines | 4/13 | 23m 26s | 5m 52s |
 
 **Recent Trend:**
-- Last 5 plans: 07-10 (12m 00s), 08-01 (4m 00s), 08-05 (4m 26s), 08-02 (7m 00s)
-- Trend: Phase 8 persistence plans slightly slower than type-only (~5-7min)
+- Last 5 plans: 08-01 (4m 00s), 08-05 (4m 26s), 08-02 (7m 00s), 08-03 (8m 00s)
+- Trend: Core module plans slightly longer due to parallel plan conflict resolution
 
 *Updated after each plan completion*
 
@@ -346,6 +346,10 @@ Recent decisions affecting current work:
 - [08-02]: WorkflowDefinition stored as full JSON blob in SQLite (schema flexibility, no per-field migration)
 - [08-02]: COALESCE unique index for nullable owner_bot_id (SQLite prohibits expressions in inline UNIQUE)
 - [08-02]: Crashed runs detected by status='running' query (simple, heartbeat can be added later)
+- [08-03]: WorkflowContext uses Uuid for run_id (not String) for type safety; to_expression_context converts to string
+- [08-03]: Oversized step outputs truncated to JSON metadata object (_truncated: true) instead of hard error
+- [08-03]: discover_workflows silently skips unparseable YAML files (logged as warnings)
+- [08-03]: Unified WorkflowContext in context.rs replaces minimal version in expression.rs (no type duplication)
 
 ### Pending Todos
 
@@ -360,5 +364,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 08-02-PLAN.md
+Stopped at: Completed 08-03-PLAN.md
 Resume file: None

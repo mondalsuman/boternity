@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-10)
 
 **Core value:** A user can create a bot with a distinct identity, give it skills through an interactive builder, and have meaningful parallel conversations with it -- all running locally with full observability.
-**Current focus:** Phase 8 (Workflows + Pipelines) - Complete
+**Current focus:** Phase 8 (Workflows + Pipelines) - Gap closure
 
 ## Current Position
 
 Phase: 8 of 10 (Workflows + Pipelines)
-Plan: 13 of 13 in current phase
-Status: Phase complete
-Last activity: 2026-02-14 -- Completed 08-13-PLAN.md
+Plan: 14 of 15 in current phase (gap closure)
+Status: In progress
+Last activity: 2026-02-14 -- Completed 08-14-PLAN.md
 
-Progress: [██████████████████████████████████████████████████████████████████████████████████████████████████████] 80/80 (100%)
+Progress: [██████████████████████████████████████████████████████████████████████████████████████████████████████] 81/82 (99%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 80
-- Average duration: 6m 15s
-- Total execution time: 499m 34s
+- Total plans completed: 81
+- Average duration: 6m 14s
+- Total execution time: 505m 34s
 
 **By Phase:**
 
@@ -34,11 +34,11 @@ Progress: [███████████████████████
 | 5. Agent Hierarchy + Event System | 8/8 | 28m 00s | 3m 30s |
 | 6. Skill System + WASM Sandbox | 14/14 | 79m 40s | 5m 41s |
 | 7. Builder System | 10/10 | 66m 43s | 6m 40s |
-| 8. Workflows + Pipelines | 13/13 | 88m 03s | 6m 46s |
+| 8. Workflows + Pipelines | 14/15 | 94m 03s | 6m 43s |
 
 **Recent Trend:**
-- Last 5 plans: 08-09 (5m 58s), 08-08 (7m 00s), 08-10 (7m 33s), 08-11 (5m 03s), 08-13 (8m 26s)
-- Trend: Web UI builder plans execute within expected time range
+- Last 5 plans: 08-08 (7m 00s), 08-10 (7m 33s), 08-11 (5m 03s), 08-13 (8m 26s), 08-14 (6m 00s)
+- Trend: Gap closure plans execute at or below average
 
 *Updated after each plan completion*
 
@@ -387,6 +387,9 @@ Recent decisions affecting current work:
 - [08-13]: PlaceholderExecutionContext as default StepRunner context; real services via with_context()
 - [08-13]: WebSocket workflow subscription opt-in via SubscribeWorkflow command; non-workflow events always forwarded
 - [08-13]: Crash recovery at AppState::init() time marks Running runs as Crashed (no background heartbeat yet)
+- [08-14]: DagExecutor::with_execution_context() as separate constructor preserving PlaceholderExecutionContext default for tests
+- [08-14]: trigger_workflow/receive_webhook return "submitted" immediately; executor creates WorkflowRun internally (async job pattern)
+- [08-14]: LiveExecutionContext reuses create_single_provider auto-detection pattern for Anthropic/Bedrock keys
 
 ### Pending Todos
 
@@ -401,5 +404,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 08-13-PLAN.md (Phase 8 complete)
+Stopped at: Completed 08-14-PLAN.md (gap closure)
 Resume file: None

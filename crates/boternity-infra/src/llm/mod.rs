@@ -116,6 +116,7 @@ pub async fn test_provider_connection(provider: &BoxLlmProvider) -> Result<(), L
         temperature: Some(0.0),
         stream: false,
         stop_sequences: None,
+        output_config: None,
     };
     provider.complete(&request).await?;
     Ok(())

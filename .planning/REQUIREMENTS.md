@@ -33,11 +33,11 @@
 - [ ] **AGNT-04**: Sub-agent depth hard-capped at 3 levels with enforcement at AgentContext level
 - [ ] **AGNT-05**: Sub-agent communication via message passing (parent sends context, child returns result)
 - [ ] **AGNT-06**: Opt-in shared workspace for agents that need shared state
-- [ ] **AGNT-07**: Agent creation via interactive builder bot in web UI chat
-- [ ] **AGNT-08**: Agent creation via CLI wizard with multi-choice questions
-- [ ] **AGNT-09**: Universal builder agent powers both wizard and builder bot
-- [ ] **AGNT-10**: Builder asks adaptive multi-choice questions based on agent purpose (5-10 questions, then offer skip)
-- [ ] **AGNT-11**: Builder assesses required skills, creates them, and attaches to agent
+- [x] **AGNT-07**: Agent creation via interactive builder bot in web UI chat
+- [x] **AGNT-08**: Agent creation via CLI wizard with multi-choice questions
+- [x] **AGNT-09**: Universal builder agent powers both wizard and builder bot
+- [x] **AGNT-10**: Builder asks adaptive multi-choice questions based on agent purpose (5-10 questions, then offer skip)
+- [x] **AGNT-11**: Builder assesses required skills, creates them, and attaches to agent
 - [ ] **AGNT-12**: Per-request token budget enforcement to prevent runaway sub-agent costs
 - [ ] **AGNT-13**: Cycle detection and circuit breakers for sub-agent spawning
 
@@ -48,7 +48,7 @@
 - [x] **SKIL-03**: Skill inheritance hierarchy — child skill inherits parent features plus additions
 - [x] **SKIL-04**: Discover and install skills from skills.sh registry (via find-skills skill or CLI)
 - [x] **SKIL-05**: Discover skills from ComposioHQ/awesome-claude-skills
-- [ ] **SKIL-06**: Universal builder agent creates skills using same mechanism for all paths
+- [x] **SKIL-06**: Universal builder agent creates skills using same mechanism for all paths
 - [x] **SKIL-07**: Permission model — skills declare required capabilities, user approves on install
 - [x] **SKIL-08**: WASM sandbox for untrusted registry skills (Wasmtime with WASI component model)
 - [x] **SKIL-09**: Trust tiers — local skills run with permissions, registry skills run sandboxed
@@ -114,7 +114,7 @@
 - [ ] **CLII-03**: Interactive chat with bots from terminal with streaming
 - [ ] **CLII-04**: Scriptable commands — pipe input/output for automation
 - [ ] **CLII-05**: Workflow management (create, trigger, list, status)
-- [ ] **CLII-06**: Agent creation wizard (interactive multi-choice)
+- [x] **CLII-06**: Agent creation wizard (interactive multi-choice)
 
 ### API Layer
 
@@ -228,11 +228,11 @@
 | AGNT-04 | Phase 5 | Complete |
 | AGNT-05 | Phase 5 | Complete |
 | AGNT-06 | Phase 5 | Complete |
-| AGNT-07 | Phase 7 | Pending |
-| AGNT-08 | Phase 7 | Pending |
-| AGNT-09 | Phase 7 | Pending |
-| AGNT-10 | Phase 7 | Pending |
-| AGNT-11 | Phase 7 | Pending |
+| AGNT-07 | Phase 7 | Complete |
+| AGNT-08 | Phase 7 | Complete |
+| AGNT-09 | Phase 7 | Complete |
+| AGNT-10 | Phase 7 | Complete |
+| AGNT-11 | Phase 7 | Complete |
 | AGNT-12 | Phase 5 | Complete |
 | AGNT-13 | Phase 5 | Complete |
 | SKIL-01 | Phase 6 | Pending |
@@ -240,7 +240,7 @@
 | SKIL-03 | Phase 6 | Pending |
 | SKIL-04 | Phase 6 | Pending |
 | SKIL-05 | Phase 6 | Pending |
-| SKIL-06 | Phase 7 | Pending |
+| SKIL-06 | Phase 7 | Complete |
 | SKIL-07 | Phase 6 | Pending |
 | SKIL-08 | Phase 6 | Pending |
 | SKIL-09 | Phase 6 | Pending |
@@ -288,7 +288,7 @@
 | CLII-03 | Phase 2 | Complete |
 | CLII-04 | Phase 10 | Pending |
 | CLII-05 | Phase 8 | Pending |
-| CLII-06 | Phase 7 | Pending |
+| CLII-06 | Phase 7 | Complete |
 | APIL-01 | Phase 1 | Complete |
 | APIL-02 | Phase 10 | Pending |
 | APIL-03 | Phase 10 | Pending |

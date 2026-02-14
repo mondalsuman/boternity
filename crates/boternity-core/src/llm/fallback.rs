@@ -534,6 +534,7 @@ mod tests {
             temperature: None,
             stream: false,
             stop_sequences: None,
+            output_config: None,
         }
     }
 

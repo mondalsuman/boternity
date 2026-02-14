@@ -73,6 +73,7 @@ fn build_completion_request(
         temperature: Some(context.agent_config.temperature),
         stream: true,
         stop_sequences: None,
+        output_config: None,
     }
 }
 

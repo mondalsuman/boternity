@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-10)
 
 **Core value:** A user can create a bot with a distinct identity, give it skills through an interactive builder, and have meaningful parallel conversations with it -- all running locally with full observability.
-**Current focus:** Phase 7 (Builder System) - Ready to start
+**Current focus:** Phase 7 (Builder System) - Complete
 
 ## Current Position
 
-Phase: 6 of 10 (Skill System + WASM Sandbox)
-Plan: 14 of 14 in current phase (14 complete: 06-01, 06-02, 06-03, 06-04, 06-05, 06-06, 06-07, 06-08, 06-09, 06-10, 06-11, 06-12, 06-13, 06-14)
-Status: Phase complete
-Last activity: 2026-02-14 -- Completed 06-14-PLAN.md (WASM compilation gap closure)
+Phase: 7 of 10 (Builder System) - COMPLETE
+Plan: 10 of 10 in current phase (all complete)
+Status: Complete
+Last activity: 2026-02-14 -- Phase 7 verified (4/4 must-haves passed)
 
-Progress: [██████████████████████████████████████████████████████████░░░░░░░░] 56/67 (~84%)
+Progress: [██████████████████████████████████████████████████████████████████████] 67/67 (100%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 56
-- Average duration: 6m 18s
-- Total execution time: 352m 48s
+- Total plans completed: 67
+- Average duration: 6m 16s
+- Total execution time: 419m 31s
 
 **By Phase:**
 
@@ -33,10 +33,11 @@ Progress: [███████████████████████
 | 4. Web UI Core + Fleet Dashboard | 8/8 | 40m 37s | 5m 05s |
 | 5. Agent Hierarchy + Event System | 8/8 | 28m 00s | 3m 30s |
 | 6. Skill System + WASM Sandbox | 14/14 | 79m 40s | 5m 41s |
+| 7. Builder System | 10/10 | 66m 43s | 6m 40s |
 
 **Recent Trend:**
-- Last 5 plans: 06-10 (2m 50s), 06-11 (6m 01s), 06-12 (0m 00s), 06-13 (2m 53s), 06-14 (3m 15s)
-- Trend: Phase 6 complete; consistent fast velocity on gap closure plans
+- Last 5 plans: 07-06 (5m 00s), 07-07 (6m 41s), 07-08 (7m 00s), 07-09 (12m 00s), 07-10 (12m 00s)
+- Trend: Web UI plans took longer due to manual verification checkpoints
 
 *Updated after each plan completion*
 
@@ -298,6 +299,38 @@ Recent decisions affecting current work:
 - [06-14]: JSON stub marker instead of real WASM binary for registry Tool skills without pre-compiled binaries
 - [06-14]: Stub detection in WasmSkillExecutor returns body as output with zero fuel consumed
 - [06-14]: WASM compilation wired into both CLI and HTTP install handlers
+- [07-01]: OutputFormat as flat struct with serde rename (not tagged enum) to match Claude API shape exactly
+- [07-01]: add_additional_properties_false checks for 'properties' key (not 'type: object') for robustness with anyOf schemas
+- [07-01]: schemars v1 (not 0.8) for latest JSON Schema draft support and serde attribute compatibility
+- [07-02]: BuilderStateExt extension trait (not inherent impl) because BuilderState defined in boternity-types, methods needed in boternity-core
+- [07-02]: new_builder_state() free function constructor (extension traits can't have idiomatic constructors)
+- [07-02]: build_forge_system_prompt takes &BuilderMode (no need to consume owned value)
+- [07-03]: INSERT OR REPLACE for draft upsert (session_id is natural PK)
+- [07-03]: Draft list extracts initial_description and phase from state_json via serde_json::Value (no full BuilderState deserialization)
+- [07-03]: PurposeCategory serialized via serde_json::to_string for SQL WHERE matching
+- [07-03]: Migration date prefix 20260215 to avoid sqlx version conflict with 20260214_004
+- [07-04]: All purpose categories default to claude-sonnet-4-20250514 model (temperature differentiates)
+- [07-04]: classify_purpose first-match-wins priority; Creative before Coding means 'write code' classifies as Creative
+- [07-04]: Assembly overwrites default files from create_bot (write-then-overwrite acceptable per research pitfall 9)
+- [07-04]: Skill attachment deferred to Plan 07-06 (skills_attached returns empty Vec)
+- [07-05]: output_config forces stream=false in Anthropic provider (structured output incompatible with streaming)
+- [07-05]: LlmBuilderAgent generic over M: BuilderMemoryStore for test flexibility (NullMemoryStore in tests)
+- [07-05]: Memory queried per-method call rather than cached on struct (BuilderAgent trait methods take &self not &mut self)
+- [07-05]: MockLlmProvider pattern for testing builder agent without real LLM calls
+- [07-06]: SkillBuilder follows stateless utility pattern (no fields, provider passed per-call) consistent with 02-06
+- [07-06]: suggest_capabilities uses keyword heuristics for 8 capability types without LLM call
+- [07-06]: validate_skill does structural validation only (parse + manifest + heuristic warnings); provider param reserved for future semantic validation
+- [07-06]: attach_skills writes SKILL.md + optional src/lib.rs + skills.toml with builder-created origin tag
+- [07-06]: skill_request_to_build_result converts SkillRequest to SkillBuildResult without LLM (lightweight fallback)
+- [07-06]: All builder-created skills default to TrustTier::Local
+- [07-07]: Build as top-level command (bnity build) instead of overriding bnity create (preserves existing create bot workflow)
+- [07-07]: Generate as SkillCommand variant (bnity skill generate) alongside existing Create for LLM-powered wizard
+- [07-07]: SqliteBuilderMemoryStore gets Clone derive (DatabasePool is Clone, needed for LlmBuilderAgent construction)
+- [07-07]: PurposeCategory serialized via serde_json::to_string for builder memory (consistent with 07-03)
+- [07-08]: LlmBuilderAgent constructed per-request in handlers (stateless pattern, agent state in draft store)
+- [07-08]: WebSocket pre-loads existing draft on connect for transparent session resume
+- [07-08]: CreateSkill endpoint runs full pipeline (generate + validate + install) in single request
+- [07-08]: Reconfigure mode loads existing bot IDENTITY.md and SOUL.md to populate BuilderState
 
 ### Pending Todos
 
@@ -312,5 +345,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 06-14-PLAN.md (WASM compilation gap closure) -- Phase 6 complete
+Stopped at: Phase 7 complete -- all 10 plans executed and verified
 Resume file: None

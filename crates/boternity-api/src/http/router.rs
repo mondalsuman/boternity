@@ -116,6 +116,35 @@ pub fn build_router(state: AppState) -> Router {
         .route(
             "/registry/search",
             get(handlers::skill::search_registry),
+        )
+        // Builder sessions
+        .route(
+            "/builder/sessions",
+            post(handlers::builder::create_builder_session),
+        )
+        .route(
+            "/builder/sessions/{session_id}/answer",
+            post(handlers::builder::submit_answer),
+        )
+        .route(
+            "/builder/sessions/{session_id}/assemble",
+            post(handlers::builder::assemble_bot),
+        )
+        .route(
+            "/builder/sessions/{session_id}/create-skill",
+            post(handlers::builder::create_skill),
+        )
+        .route(
+            "/builder/sessions/{session_id}",
+            get(handlers::builder::get_session).delete(handlers::builder::delete_session),
+        )
+        .route(
+            "/builder/sessions/{session_id}/reconfigure",
+            post(handlers::builder::reconfigure_bot),
+        )
+        .route(
+            "/builder/drafts",
+            get(handlers::builder::list_drafts),
         );
 
     let mut router = Router::new()
@@ -124,6 +153,8 @@ pub fn build_router(state: AppState) -> Router {
         // WebSocket for real-time agent events and bidirectional commands.
         // Outside /api/v1 since WebSocket is not a REST endpoint.
         .route("/ws/events", get(handlers::ws::ws_handler))
+        // WebSocket for builder Forge chat (bot + skill creation).
+        .route("/ws/builder/{session_id}", get(handlers::builder_ws::builder_ws_handler))
         .layer(cors)
         .layer(TraceLayer::new_for_http())
         .with_state(state);

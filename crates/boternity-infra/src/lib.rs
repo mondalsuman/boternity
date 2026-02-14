@@ -4,6 +4,7 @@
 //! SQLite storage, OS keychain integration, filesystem adapters, and cryptographic
 //! operations (AES-256-GCM vault, SHA-256 hashing).
 
+pub mod builder;
 pub mod config;
 pub mod crypto;
 pub mod filesystem;

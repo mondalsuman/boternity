@@ -13,6 +13,7 @@ chrono = { workspace = true }
 semver = { workspace = true }
 serde_yaml_ng = { workspace = true }
 thiserror = { workspace = true }
+schemars = { workspace = true }
 
 [dev-dependencies]
 toml = { workspace = true }

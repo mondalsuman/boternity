@@ -86,6 +86,7 @@ fn build_completion_request(context: &AgentContext, user_message: &str) -> Compl
         temperature: Some(context.agent_config.temperature),
         stream: true,
         stop_sequences: None,
+        output_config: None,
     }
 }
 

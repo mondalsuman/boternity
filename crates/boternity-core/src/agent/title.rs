@@ -60,6 +60,7 @@ pub async fn generate_title(
         temperature: Some(0.3),
         stream: false,
         stop_sequences: None,
+        output_config: None,
     };
 
     let response = provider.complete(&request).await?;

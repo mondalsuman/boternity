@@ -42,6 +42,8 @@ use boternity_infra::sqlite::memory::SqliteMemoryRepository;
 use boternity_infra::sqlite::pool::DatabasePool;
 use boternity_infra::sqlite::provider_health::SqliteProviderHealthStore;
 use boternity_infra::sqlite::secret::SqliteSecretRepository;
+use boternity_infra::builder::sqlite_draft_store::SqliteBuilderDraftStore;
+use boternity_infra::builder::sqlite_memory_store::SqliteBuilderMemoryStore;
 use boternity_infra::sqlite::skill_audit::SqliteSkillAuditLog;
 use boternity_infra::sqlite::soul::SqliteSoulRepository;
 use boternity_infra::storage::filesystem::LocalFileStore;
@@ -82,6 +84,8 @@ pub type ConcreteFileIndexer = FileIndexer<FastEmbedEmbedder>;
 /// file_store, file_indexer, kv_store, audit_log, provider_health_store.
 ///
 /// Phase 6 additions: skill_store, wasm_runtime, skill_audit_log.
+///
+/// Phase 7 additions: builder_draft_store, builder_memory_store.
 #[derive(Clone)]
 pub struct AppState {
     pub bot_service: Arc<ConcreteBotService>,
@@ -130,6 +134,12 @@ pub struct AppState {
     pub wasm_runtime: Arc<WasmRuntime>,
     /// SQLite-backed audit log for skill invocations.
     pub skill_audit_log: Arc<SqliteSkillAuditLog>,
+
+    // --- Phase 7 services ---
+    /// SQLite-backed builder draft persistence for auto-save/resume.
+    pub builder_draft_store: Arc<SqliteBuilderDraftStore>,
+    /// SQLite-backed builder memory for cross-session suggestion recall.
+    pub builder_memory_store: Arc<SqliteBuilderMemoryStore>,
 }
 
 impl AppState {
@@ -265,6 +275,14 @@ impl AppState {
         // Skill audit log (SQLite)
         let skill_audit_log = Arc::new(SqliteSkillAuditLog::new(db_pool.clone()));
 
+        // --- Phase 7 services ---
+
+        // Builder draft persistence (auto-save/resume)
+        let builder_draft_store = Arc::new(SqliteBuilderDraftStore::new(db_pool.clone()));
+
+        // Builder memory (cross-session suggestion recall)
+        let builder_memory_store = Arc::new(SqliteBuilderMemoryStore::new(db_pool.clone()));
+
         Ok(Self {
             bot_service: Arc::new(bot_service),
             soul_service: Arc::new(api_soul_service),
@@ -288,6 +306,8 @@ impl AppState {
             skill_store,
             wasm_runtime,
             skill_audit_log,
+            builder_draft_store,
+            builder_memory_store,
         })
     }
 

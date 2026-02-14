@@ -5,6 +5,7 @@
 //! `boternity-infra` or any database/IO crate.
 
 pub mod agent;
+pub mod builder;
 pub mod chat;
 pub mod event;
 pub mod llm;

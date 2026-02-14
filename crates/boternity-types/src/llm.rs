@@ -60,6 +60,47 @@ pub struct CompletionRequest {
     pub stream: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub stop_sequences: Option<Vec<String>>,
+    /// Optional structured output configuration.
+    /// When present, constrains the LLM's response to match the given JSON schema.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub output_config: Option<OutputConfig>,
+}
+
+// ---------------------------------------------------------------------------
+// Structured output types
+// ---------------------------------------------------------------------------
+
+/// Configuration for structured output.
+///
+/// Maps to Claude's `output_config` request parameter.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OutputConfig {
+    pub format: OutputFormat,
+}
+
+/// Output format specification.
+///
+/// The `type` field (serialized as `"type"`) identifies the format kind.
+/// Currently only `"json_schema"` is supported.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OutputFormat {
+    /// The format type. Must be `"json_schema"`.
+    #[serde(rename = "type")]
+    pub type_field: String,
+    /// The JSON schema specification.
+    pub json_schema: OutputJsonSchema,
+}
+
+/// JSON schema specification for structured output.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OutputJsonSchema {
+    /// A descriptive name for the schema.
+    pub name: String,
+    /// The JSON Schema that the output must conform to.
+    pub schema: serde_json::Value,
+    /// Whether to enforce strict schema adherence.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub strict: Option<bool>,
 }
 
 /// Response from an LLM provider for a non-streaming completion.
@@ -411,5 +452,40 @@ mod tests {
         let config: FallbackChainConfig = serde_json::from_str(json).unwrap();
         assert_eq!(config.rate_limit_queue_timeout_ms, 5000);
         assert!((config.cost_warning_multiplier - 3.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_output_config_serialization() {
+        let config = OutputConfig {
+            format: OutputFormat {
+                type_field: "json_schema".to_string(),
+                json_schema: OutputJsonSchema {
+                    name: "test".to_string(),
+                    schema: serde_json::json!({"type": "object"}),
+                    strict: Some(true),
+                },
+            },
+        };
+        let json = serde_json::to_value(&config).unwrap();
+        assert_eq!(json["format"]["type"], "json_schema");
+        assert_eq!(json["format"]["json_schema"]["name"], "test");
+        assert_eq!(json["format"]["json_schema"]["strict"], true);
+    }
+
+    #[test]
+    fn test_completion_request_without_output_config() {
+        let request = CompletionRequest {
+            model: "test".to_string(),
+            messages: vec![],
+            system: None,
+            max_tokens: 100,
+            temperature: None,
+            stream: false,
+            stop_sequences: None,
+            output_config: None,
+        };
+        let json = serde_json::to_value(&request).unwrap();
+        // output_config should not appear when None (skip_serializing_if)
+        assert!(json.get("output_config").is_none());
     }
 }

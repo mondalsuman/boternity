@@ -119,6 +119,9 @@ pub enum SkillCommand {
     /// Launch the interactive TUI skill browser.
     Browse,
 
+    /// Interactive LLM-powered skill builder wizard.
+    Generate,
+
     /// Check for skill updates.
     Update {
         /// Update all skills (otherwise specify a name).
@@ -166,6 +169,9 @@ pub async fn handle_skill_command(
         }
         SkillCommand::Publish { name } => {
             handle_publish(&name, state, json)?;
+        }
+        SkillCommand::Generate => {
+            super::skill_create::run_skill_create(state).await?;
         }
         SkillCommand::Browse => {
             handle_browse(state).await?;

@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-10)
 
 **Core value:** A user can create a bot with a distinct identity, give it skills through an interactive builder, and have meaningful parallel conversations with it -- all running locally with full observability.
-**Current focus:** Phase 7 (Builder System) - Complete
+**Current focus:** Phase 8 (Workflows + Pipelines) - In Progress
 
 ## Current Position
 
-Phase: 7 of 10 (Builder System) - COMPLETE
-Plan: 10 of 10 in current phase (all complete)
-Status: Complete
-Last activity: 2026-02-14 -- Phase 7 verified (4/4 must-haves passed)
+Phase: 8 of 10 (Workflows + Pipelines)
+Plan: 1 of 13 in current phase
+Status: In progress
+Last activity: 2026-02-14 -- Completed 08-01-PLAN.md
 
-Progress: [██████████████████████████████████████████████████████████████████████] 67/67 (100%)
+Progress: [█████████████████████████████████████████████████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░] 68/80 (85%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 67
-- Average duration: 6m 16s
-- Total execution time: 419m 31s
+- Total plans completed: 68
+- Average duration: 6m 14s
+- Total execution time: 423m 31s
 
 **By Phase:**
 
@@ -34,10 +34,11 @@ Progress: [███████████████████████
 | 5. Agent Hierarchy + Event System | 8/8 | 28m 00s | 3m 30s |
 | 6. Skill System + WASM Sandbox | 14/14 | 79m 40s | 5m 41s |
 | 7. Builder System | 10/10 | 66m 43s | 6m 40s |
+| 8. Workflows + Pipelines | 1/13 | 4m 00s | 4m 00s |
 
 **Recent Trend:**
-- Last 5 plans: 07-06 (5m 00s), 07-07 (6m 41s), 07-08 (7m 00s), 07-09 (12m 00s), 07-10 (12m 00s)
-- Trend: Web UI plans took longer due to manual verification checkpoints
+- Last 5 plans: 07-08 (7m 00s), 07-09 (12m 00s), 07-10 (12m 00s), 08-01 (4m 00s)
+- Trend: Phase 8 types-only plan was fast; expect more complex plans ahead
 
 *Updated after each plan completion*
 
@@ -331,6 +332,13 @@ Recent decisions affecting current work:
 - [07-08]: WebSocket pre-loads existing draft on connect for transparent session resume
 - [07-08]: CreateSkill endpoint runs full pipeline (generate + validate + install) in single request
 - [07-08]: Reconfigure mode loads existing bot IDENTITY.md and SOUL.md to populate BuilderState
+- [08-01]: WorkflowOwner tagged enum (Bot/Global) for scoped vs cross-bot workflows
+- [08-01]: StepConfig internally tagged by type for clean YAML representation
+- [08-01]: 7-state WorkflowRunStatus (Pending/Running/Paused/Completed/Failed/Crashed/Cancelled)
+- [08-01]: 6-state WorkflowStepStatus (Pending/Running/Completed/Failed/Skipped/WaitingApproval)
+- [08-01]: RetryConfig defaults to max_attempts=3 via serde default function
+- [08-01]: StepUiMetadata optional with skip_serializing_if for clean YAML when no visual data
+- [08-01]: BotMessage uses serde_json::Value for flexible body (not typed enum)
 
 ### Pending Todos
 
@@ -345,5 +353,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Phase 7 complete -- all 10 plans executed and verified
+Stopped at: Completed 08-01-PLAN.md
 Resume file: None

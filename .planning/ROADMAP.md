@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: Multi-Provider + Memory** - Additional LLM providers with fallback chains, long-term vector memory, shared memory with trust partitioning, per-bot storage
 - [x] **Phase 4: Web UI Core + Fleet Dashboard** - React app scaffold, chat interface with streaming, fleet dashboard, soul editor with version history, PWA foundation
 - [x] **Phase 5: Agent Hierarchy + Event System** - Sub-agent spawning (sequential + parallel), depth cap enforcement, message passing, event bus, WebSocket live updates, budget enforcement
-- [ ] **Phase 6: Skill System + WASM Sandbox** - Skill definition and execution, local skills, WASM sandbox for untrusted skills, registry discovery, permission model, trust tiers
+- [x] **Phase 6: Skill System + WASM Sandbox** - Skill definition and execution, local skills, WASM sandbox for untrusted skills, registry discovery, permission model, trust tiers
 - [ ] **Phase 7: Builder System** - Universal builder agent, CLI wizard, web builder bot, adaptive question flow, skill creation and attachment via builder
 - [ ] **Phase 8: Workflows + Pipelines** - YAML workflow engine, visual builder, SDK, triggers (manual/cron/event), bot-to-bot communication, workflow composition
 - [ ] **Phase 9: MCP Integration** - MCP tool consumption, bot-as-MCP-server exposure, MCP bot management interface, tool sanitization, MCP authentication
@@ -149,20 +149,20 @@ Plans:
 **Plans**: 14 plans
 
 Plans:
-- [ ] 06-01-PLAN.md -- Skill domain types (SkillManifest, TrustTier, Capability, permissions, audit) and Phase 6 workspace dependencies
-- [ ] 06-02-PLAN.md -- SKILL.md manifest parser (agentskills.io format) and filesystem skill store (~/.boternity/skills/)
-- [ ] 06-03-PLAN.md -- Permission model (CapabilityEnforcer, granular grants/revocation) and SQLite audit logging
-- [ ] 06-04-PLAN.md -- Dependency resolution (petgraph DAG + toposort) and inheritance composition (mixin, max 3 levels)
-- [ ] 06-05-PLAN.md -- WIT interface definition (boternity:skill) and Wasmtime runtime configuration (dual engines per trust tier)
-- [ ] 06-06-PLAN.md -- SkillExecutor trait, prompt-based skill injection (progressive disclosure), and local skill executor
-- [ ] 06-07-PLAN.md -- WASM sandboxed executor (capability-gated host imports, ResourceLimiter, fresh Store per invocation)
-- [ ] 06-08-PLAN.md -- OS-level sandbox (macOS Seatbelt + Linux Landlock subprocess model) for defense-in-depth
-- [ ] 06-09-PLAN.md -- Registry discovery (GitHub API, skills.sh, ComposioHQ) with pluggable registry trait and local caching
-- [ ] 06-10-PLAN.md -- Agent integration (SystemPromptBuilder skills, skill chaining) and AppState wiring
-- [ ] 06-11-PLAN.md -- CLI skill commands (create, install, list, inspect, browse) and ratatui TUI skill browser
-- [ ] 06-12-PLAN.md -- REST API skill handlers and web UI skill management page (Skills tab in bot detail)
-- [ ] 06-13-PLAN.md -- [Gap closure] Wire OS sandbox into WASM executor for defense-in-depth (SECU-07, SKIL-10)
-- [ ] 06-14-PLAN.md -- [Gap closure] WASM compilation step in registry install flow (SKIL-08, SKIL-02)
+- [x] 06-01-PLAN.md -- Skill domain types (SkillManifest, TrustTier, Capability, permissions, audit) and Phase 6 workspace dependencies
+- [x] 06-02-PLAN.md -- SKILL.md manifest parser (agentskills.io format) and filesystem skill store (~/.boternity/skills/)
+- [x] 06-03-PLAN.md -- Permission model (CapabilityEnforcer, granular grants/revocation) and SQLite audit logging
+- [x] 06-04-PLAN.md -- Dependency resolution (petgraph DAG + toposort) and inheritance composition (mixin, max 3 levels)
+- [x] 06-05-PLAN.md -- WIT interface definition (boternity:skill) and Wasmtime runtime configuration (dual engines per trust tier)
+- [x] 06-06-PLAN.md -- SkillExecutor trait, prompt-based skill injection (progressive disclosure), and local skill executor
+- [x] 06-07-PLAN.md -- WASM sandboxed executor (capability-gated host imports, ResourceLimiter, fresh Store per invocation)
+- [x] 06-08-PLAN.md -- OS-level sandbox (macOS Seatbelt + Linux Landlock subprocess model) for defense-in-depth
+- [x] 06-09-PLAN.md -- Registry discovery (GitHub API, skills.sh, ComposioHQ) with pluggable registry trait and local caching
+- [x] 06-10-PLAN.md -- Agent integration (SystemPromptBuilder skills, skill chaining) and AppState wiring
+- [x] 06-11-PLAN.md -- CLI skill commands (create, install, list, inspect, browse) and ratatui TUI skill browser
+- [x] 06-12-PLAN.md -- REST API skill handlers and web UI skill management page (Skills tab in bot detail)
+- [x] 06-13-PLAN.md -- [Gap closure] Wire OS sandbox into WASM executor for defense-in-depth (SECU-07, SKIL-10)
+- [x] 06-14-PLAN.md -- [Gap closure] WASM compilation step in registry install flow (SKIL-08, SKIL-02)
 
 ### Phase 7: Builder System
 **Goal**: Users can create fully-configured agents and skills through an interactive guided experience -- a universal builder agent powers both the CLI wizard and the web UI builder bot, asking adaptive questions and assembling the result.
@@ -258,7 +258,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 3. Multi-Provider + Memory | 13/13 | Complete | 2026-02-12 |
 | 4. Web UI Core + Fleet Dashboard | 8/8 | Complete | 2026-02-13 |
 | 5. Agent Hierarchy + Event System | 8/8 | Complete | 2026-02-13 |
-| 6. Skill System + WASM Sandbox | 12/14 | Gap closure | - |
+| 6. Skill System + WASM Sandbox | 14/14 | Complete | 2026-02-14 |
 | 7. Builder System | 0/10 | Not started | - |
 | 8. Workflows + Pipelines | 0/6 | Not started | - |
 | 9. MCP Integration | 0/4 | Not started | - |

@@ -5,7 +5,7 @@
 See: .planning/PROJECT.md (updated 2026-02-10)
 
 **Core value:** A user can create a bot with a distinct identity, give it skills through an interactive builder, and have meaningful parallel conversations with it -- all running locally with full observability.
-**Current focus:** Phase 6 (Skill System + WASM Sandbox) - Complete
+**Current focus:** Phase 7 (Builder System) - Ready to start
 
 ## Current Position
 

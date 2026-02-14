@@ -11,4 +11,5 @@ pub mod defaults;
 pub mod draft_store;
 pub mod memory;
 pub mod prompt;
+pub mod skill_builder;
 pub mod state;
